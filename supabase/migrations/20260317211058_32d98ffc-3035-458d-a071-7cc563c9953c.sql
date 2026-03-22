@@ -1,0 +1,1 @@
+UPDATE public.produto SET store_id = '382ffc7c-b88f-482e-9795-4a1c446b051b' WHERE store_id IS NULL;

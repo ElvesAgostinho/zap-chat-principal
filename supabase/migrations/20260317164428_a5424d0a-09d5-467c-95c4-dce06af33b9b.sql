@@ -1,0 +1,1 @@
+ALTER TABLE public.stores ADD COLUMN bot_active boolean DEFAULT true;

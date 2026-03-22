@@ -1,0 +1,1 @@
+ALTER TABLE public.mensagens ADD COLUMN IF NOT EXISTS media_url text, ADD COLUMN IF NOT EXISTS media_type text;

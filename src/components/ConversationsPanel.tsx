@@ -1,0 +1,175 @@
+import { useState, useMemo, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Search, Bot, User, Clock, ChevronRight, Loader2, MessageSquare, Image as ImageIcon } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner';
+
+interface MsgRow { lead_id: string | null; lead_nome: string | null; conteudo: string; tipo: string; created_at: string; is_bot: boolean; respondido_por_nome: string | null; }
+interface LeadRow { id: string; nome: string; telefone: string; controle_conversa: string; precisa_humano: boolean; foto_url?: string | null; }
+
+interface Conversation {
+  leadId: string; leadName: string; phone: string; lastMessage: string; lastMessageTime: string;
+  lastDirection: string; isBot: boolean; lastResponderName: string | null; unreadCount: number;
+  controleConversa: string; precisaHumano: boolean; fotoUrl?: string | null;
+}
+
+export default function ConversationsPanel() {
+  const navigate = useNavigate();
+  const { storeId } = useAuth();
+  const [search, setSearch] = useState('');
+  const [filter, setFilter] = useState<'all' | 'unread' | 'bot' | 'human'>('all');
+  const [messages, setMessages] = useState<MsgRow[]>([]);
+  const [leads, setLeads] = useState<LeadRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+
+  useEffect(() => {
+    if (!storeId) { setLoading(false); return; }
+    const fetchData = async () => {
+      setLoading(true);
+      const loadMessages = () => (supabase as any).from('mensagens').select('lead_id, lead_nome, conteudo, tipo, created_at, is_bot, respondido_por_nome').eq('loja_id', storeId).order('created_at', { ascending: false });
+      const loadLeads = () => (supabase as any).from('leads').select('id, nome, telefone, controle_conversa, precisa_humano, foto_url').eq('loja_id', storeId);
+      const [{ data: initialMessages }, { data: initialLeads }, { data: storeData }] = await Promise.all([loadMessages(), loadLeads(), (supabase as any).from('lojas').select('instance_name, instance_status').eq('id', storeId).maybeSingle()]);
+      let nextMessages = initialMessages || [];
+      let nextLeads = initialLeads || [];
+      if (nextMessages.length === 0 && storeData?.instance_name && storeData?.instance_status === 'connected') {
+        await supabase.functions.invoke('whatsapp-connection', { body: { action: 'force_sync', instance: storeData.instance_name, store_id: storeId } });
+        const [{ data: syncedMessages }, { data: syncedLeads }] = await Promise.all([loadMessages(), loadLeads()]);
+        nextMessages = syncedMessages || [];
+        nextLeads = syncedLeads || [];
+      }
+      setMessages(nextMessages);
+      setLeads(nextLeads);
+      setLoading(false);
+    };
+    fetchData();
+    const channel = supabase.channel('mensagens-rt').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens' }, (payload: any) => {
+      const newMsg = payload.new as MsgRow & { loja_id: string };
+      if (newMsg.loja_id === storeId) setMessages(prev => [newMsg, ...prev]);
+    }).subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [storeId]);
+
+  const conversations = useMemo<Conversation[]>(() => {
+    const grouped = new Map<string, MsgRow[]>();
+    messages.forEach(msg => { if (!msg.lead_id) return; const existing = grouped.get(msg.lead_id) || []; existing.push(msg); grouped.set(msg.lead_id, existing); });
+    return Array.from(grouped.entries()).map(([leadId, msgs]) => {
+      const sorted = [...msgs].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      const last = sorted[0];
+      const lead = leads.find(l => l.id === leadId);
+      return { leadId, leadName: last.lead_nome || lead?.nome || `Lead #${leadId.slice(0, 6)}`, phone: lead?.telefone || '', lastMessage: last.conteudo, lastMessageTime: last.created_at, lastDirection: last.tipo, isBot: last.is_bot || false, lastResponderName: last.respondido_por_nome || null, unreadCount: sorted.filter(m => m.tipo === 'recebida').length, controleConversa: lead?.controle_conversa || 'bot', precisaHumano: lead?.precisa_humano || false, fotoUrl: lead?.foto_url };
+    }).sort((a, b) => new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime());
+  }, [messages, leads]);
+
+  const filtered = useMemo(() => {
+    let list = conversations;
+    if (search) { const q = search.toLowerCase(); list = list.filter(c => c.leadName.toLowerCase().includes(q) || c.phone.includes(q)); }
+    if (filter === 'unread') list = list.filter(c => c.unreadCount > 0);
+    if (filter === 'bot') list = list.filter(c => c.isBot);
+    if (filter === 'human') list = list.filter(c => !c.isBot);
+    return list;
+  }, [conversations, search, filter]);
+
+  const formatTime = (ts: string) => {
+    const d = new Date(ts); const now = new Date();
+    const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000);
+    if (diffDays === 0) return d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    if (diffDays === 1) return 'Ontem';
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  };
+
+  const filters = [{ id: 'all' as const, label: 'Todas' }, { id: 'unread' as const, label: 'Não lidas' }, { id: 'bot' as const, label: 'Bot' }, { id: 'human' as const, label: 'Humano' }];
+
+  const handleSyncProfiles = async () => {
+    if (!storeId) return;
+    setSyncing(true);
+    try {
+      console.log('Invoking sync-profiles action...');
+      const { data, error } = await supabase.functions.invoke('whatsapp-webhook', {
+        body: { action: 'sync_all_profiles', store_id: storeId }
+      });
+      console.log('Sync response:', data, error);
+      if (error) throw error;
+      
+      const count = data?.processed ?? 0;
+      toast.success(`${count} fotos sincronizadas com sucesso!`);
+      // Reload lead data to show new photos
+      const { data: nextLeads } = await (supabase as any).from('leads').select('id, nome, telefone, controle_conversa, precisa_humano, foto_url').eq('loja_id', storeId);
+      if (nextLeads) setLeads(nextLeads);
+    } catch (err: any) {
+      console.error('Error syncing profiles:', err);
+      toast.error('Erro ao sincronizar fotos. Verifique a conexão.');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4 animate-fade-in-up">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+        <div className="flex-1 flex items-center px-3 bg-card rounded-xl border border-border focus-within:border-primary/50 transition-all hover:border-border/80">
+          <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar conversa..."
+            className="w-full bg-transparent py-2.5 px-2 text-[13px] font-medium text-foreground placeholder:text-muted-foreground outline-none border-none" />
+        </div>
+        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide flex-shrink-0 items-center">
+          {filters.map(f => (
+            <button key={f.id} onClick={() => setFilter(f.id)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all
+                ${filter === f.id ? 'gradient-primary text-white shadow-glow' : 'bg-card text-muted-foreground border border-border hover:bg-muted'}`}>
+              {f.label}
+            </button>
+          ))}
+          <div className="w-px h-6 bg-border mx-1" />
+          <button 
+            onClick={handleSyncProfiles}
+            disabled={syncing}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-muted text-foreground border border-border hover:bg-accent transition-all disabled:opacity-50"
+            title="Sincronizar fotos do WhatsApp"
+          >
+            {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">Sincronizar Fotos</span>
+          </button>
+        </div>
+      </div>
+      {loading && <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-[hsl(var(--whatsapp-mid))]" /></div>}
+      {!loading && (
+        <div className="space-y-1.5">
+          <AnimatePresence mode="popLayout">
+            {filtered.map(conv => (
+              <motion.button key={conv.leadId} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={() => navigate(`/chat?lead=${conv.leadId}`)}
+                className="w-full bg-card rounded-2xl px-4 py-3 shadow-card border border-border/50 flex items-center gap-3 text-left hover:bg-accent/30 transition-all hover:shadow-elevated"
+              >
+                <div className="relative flex-shrink-0">
+                  <div className="w-11 h-11 rounded-full overflow-hidden bg-accent flex items-center justify-center border border-border/50">
+                    {conv.fotoUrl ? (
+                      <img src={conv.fotoUrl} alt={conv.leadName} className="w-full h-full object-cover" onError={(e) => { (e.target as any).src = ''; (e.target as any).style.display = 'none'; }} />
+                    ) : null}
+                    <span className="text-accent-foreground font-semibold text-sm">{conv.leadName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
+                  </div>
+                  {conv.unreadCount > 0 && <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-[hsl(var(--whatsapp-mid))] text-white text-[10px] font-bold flex items-center justify-center px-1 border-2 border-card">{conv.unreadCount}</span>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-0.5">
+                    <h3 className="font-semibold text-sm text-foreground truncate">{conv.leadName}</h3>
+                    <time className="text-[10px] text-muted-foreground flex-shrink-0">{formatTime(conv.lastMessageTime)}</time>
+                  </div>
+                  <div className="flex items-center gap-1.5 opacity-90">
+                    {conv.precisaHumano ? <span className="relative flex h-2.5 w-2.5 flex-shrink-0"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[hsl(var(--badge-red))] opacity-75" /><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[hsl(var(--badge-red))]" /></span>
+                    : conv.isBot ? <Bot className="w-3.5 h-3.5 text-[hsl(var(--whatsapp-mid))] flex-shrink-0 mb-[1px]" /> : <User className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mb-[1px]" />}
+                    <p className="text-[12px] leading-none text-muted-foreground truncate">{conv.lastDirection === 'enviada' ? (conv.lastResponderName ? <span className="font-semibold text-foreground/70">{conv.lastResponderName}: </span> : <span className="font-semibold text-foreground/70">Você: </span>) : ''}{conv.lastMessage}</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground/40 flex-shrink-0" />
+              </motion.button>
+            ))}
+          </AnimatePresence>
+          {filtered.length === 0 && <div className="flex flex-col items-center justify-center py-12 text-muted-foreground"><MessageSquare className="w-10 h-10 mb-3 opacity-40" /><p className="text-sm font-medium">Nenhuma conversa</p></div>}
+        </div>
+      )}
+    </div>
+  );
+}

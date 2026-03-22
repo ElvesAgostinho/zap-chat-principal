@@ -1,0 +1,19 @@
+project_id = "lzjbdoeufeyqrijfazoc"
+
+[functions.send-whatsapp]
+verify_jwt = false
+
+[functions.whatsapp-connection]
+verify_jwt = false
+
+[functions.manage-instance]
+verify_jwt = false
+
+[functions.ai-sales-bot]
+verify_jwt = false
+
+[functions.whatsapp-webhook]
+verify_jwt = false
+
+[functions.follow-up-scheduler]
+verify_jwt = false

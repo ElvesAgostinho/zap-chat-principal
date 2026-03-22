@@ -1,0 +1,725 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
+};
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+const parseBody = async (res: Response) => {
+  const text = await res.text();
+  if (!text) return null;
+  try { return JSON.parse(text); } catch { return { raw: text }; }
+};
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  const json = (data: any, status = 200) =>
+    new Response(JSON.stringify(data), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+
+  const EVOLUTION_API_KEY = Deno.env.get('EVOLUTION_API_KEY');
+  const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
+  if (!EVOLUTION_API_KEY || !EVOLUTION_API_URL) {
+    return json({ error: 'EVOLUTION_API_KEY or EVOLUTION_API_URL not configured' }, 500);
+  }
+
+  const rawUrl = EVOLUTION_API_URL.replace(/\/+$/, '');
+  const baseUrl = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
+  const apiHeaders = { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY };
+
+  const evo = async (path: string, init: RequestInit = {}) => {
+    const res = await fetch(`${baseUrl}${path}`, { ...init, headers: apiHeaders });
+    const data = await parseBody(res);
+    return { ok: res.ok, status: res.status, data };
+  };
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const sb = createClient(supabaseUrl, supabaseKey);
+
+  const updateInstanceStatus = async (storeId: string | null, instanceName: string, status: string) => {
+    if (!storeId) return;
+    try {
+      await sb.from('lojas').update({ instance_status: status, instance_name: instanceName }).eq('id', storeId);
+    } catch (e) {
+      console.error('Instance status update failed:', e);
+    }
+  };
+
+  const extractQr = (payload: any) => ({
+    base64: payload?.base64 || payload?.qrcode?.base64 || null,
+    pairingCode: payload?.pairingCode || payload?.qrcode?.pairingCode || null,
+  });
+
+  const extractList = (payload: any, keys: string[]) => {
+    if (Array.isArray(payload)) return payload;
+    for (const key of keys) {
+      if (Array.isArray(payload?.[key])) return payload[key];
+    }
+    return [] as any[];
+  };
+
+  const extractMessageText = (message: any) => {
+    if (!message) return '[Mídia]';
+    const text = message?.conversation ||
+      message?.extendedTextMessage?.text ||
+      message?.imageMessage?.caption ||
+      message?.videoMessage?.caption ||
+      message?.documentMessage?.caption ||
+      message?.buttonsResponseMessage?.selectedDisplayText ||
+      message?.listResponseMessage?.title ||
+      '';
+    if (text) return text;
+    // Media label fallback
+    if (message.imageMessage) return '[📷 Imagem]';
+    if (message.videoMessage) return '[📹 Vídeo]';
+    if (message.audioMessage || message.pttMessage) return '[🎵 Áudio]';
+    if (message.documentMessage) return '[📄 Documento]';
+    if (message.stickerMessage) return '[🏷️ Sticker]';
+    if (message.contactMessage || message.contactsArrayMessage) return '[👤 Contacto]';
+    if (message.locationMessage || message.liveLocationMessage) return '[📍 Localização]';
+    return '[Mídia]';
+  };
+
+  const parseMessageTimestamp = (raw: any) => {
+    const value = typeof raw === 'object'
+      ? raw?.low ?? raw?.high ?? raw?.value ?? raw?.seconds
+      : raw;
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric <= 0) return new Date().toISOString();
+    return new Date(numeric > 1_000_000_000_000 ? numeric : numeric * 1000).toISOString();
+  };
+
+  const autoSetupWebhook = async (instanceName: string) => {
+    const webhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook`;
+    try {
+      // Try v2 format with ONLY valid v2 enum events
+      const result = await evo(`/webhook/set/${instanceName}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          webhook: {
+            url: webhookUrl,
+            enabled: true,
+            webhookByEvents: false,
+            webhookBase64: false,
+            events: [
+              'MESSAGES_UPSERT',
+              'MESSAGES_UPDATE',
+              'CONNECTION_UPDATE',
+              'CONTACTS_UPDATE',
+            ],
+          },
+        }),
+      });
+      console.log(`[autoSetupWebhook] instance=${instanceName}, ok=${result.ok}, response=${JSON.stringify(result.data).slice(0, 300)}`);
+
+      // If v2 failed, try v1 format (/webhook)
+      if (!result.ok) {
+        const resultV1 = await evo(`/webhook/${instanceName}`, {
+          method: 'POST',
+          body: JSON.stringify({
+            url: webhookUrl,
+            enabled: true,
+            webhookByEvents: false,
+            events: ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'CONNECTION_UPDATE'],
+          }),
+        });
+        console.log(`[autoSetupWebhook] v1 fallback instance=${instanceName}, ok=${resultV1.ok}, response=${JSON.stringify(resultV1.data).slice(0, 300)}`);
+      }
+    } catch (e) {
+      console.error('[autoSetupWebhook] failed:', e);
+    }
+  };
+
+  const extractChatPreview = (chat: any) => {
+    const candidate =
+      chat?.lastMessage?.message ||
+      chat?.lastMessage ||
+      chat?.lastmessage ||
+      chat?.lastmsg?.message ||
+      chat?.message ||
+      null;
+
+    const content = typeof candidate === 'string'
+      ? candidate
+      : extractMessageText(candidate?.message || candidate);
+
+    const fromMe = Boolean(
+      chat?.lastMessage?.key?.fromMe ||
+      chat?.lastmessage?.key?.fromMe ||
+      chat?.lastmsg?.key?.fromMe ||
+      chat?.fromMe
+    );
+
+    const createdAt =
+      chat?.updatedAt ||
+      parseMessageTimestamp(
+        chat?.lastMessage?.messageTimestamp ||
+        chat?.lastmessage?.messageTimestamp ||
+        chat?.lastmsg?.messageTimestamp ||
+        chat?.conversationTimestamp ||
+        chat?.timestamp
+      );
+
+    return {
+      conteudo: content || '[Conversa importada do WhatsApp]',
+      tipo: fromMe ? 'enviada' : 'recebida',
+      created_at: createdAt,
+    };
+  };
+
+  const ensureLeadForPhone = async (storeId: string, phone: string, fallbackName: string) => {
+    const { data: existingLead } = await sb
+      .from('leads')
+      .select('id, nome')
+      .eq('telefone', phone)
+      .eq('loja_id', storeId)
+      .maybeSingle();
+
+    if (existingLead) {
+      // Update name if current name is just a phone number and we have a better name
+      if (fallbackName && fallbackName !== phone && (!existingLead.nome || existingLead.nome === phone || /^\+?\d[\d\s\-()]+$/.test(existingLead.nome))) {
+        await sb.from('leads').update({ nome: fallbackName }).eq('id', existingLead.id);
+        return { id: existingLead.id, name: fallbackName };
+      }
+      return { id: existingLead.id, name: existingLead.nome || fallbackName };
+    }
+
+    const { data: newLead, error: leadError } = await sb
+      .from('leads')
+      .insert({
+        nome: fallbackName,
+        telefone: phone,
+        fonte: 'whatsapp',
+        loja_id: storeId,
+        interesse: 'Histórico importado do WhatsApp',
+        status: 'novo',
+        bot_enabled: true,
+        controle_conversa: 'bot',
+        precisa_humano: false,
+        tags: ['importado'],
+      })
+      .select('id, nome')
+      .single();
+
+    if (leadError || !newLead) {
+      console.error('[sync] lead insert failed:', leadError);
+      return null;
+    }
+
+    return { id: newLead.id, name: newLead.nome || fallbackName };
+  };
+
+  const formatPhoneDisplay = (phone: string) => {
+    if (phone.startsWith('55') && (phone.length === 13 || phone.length === 12)) {
+      const ddd = phone.slice(2, 4);
+      const rest = phone.slice(4);
+      if (rest.length === 9) return `+55 ${ddd} ${rest.slice(0, 5)}-${rest.slice(5)}`;
+      if (rest.length === 8) return `+55 ${ddd} ${rest.slice(0, 4)}-${rest.slice(4)}`;
+    }
+    if (phone.startsWith('351') && phone.length === 12) {
+      return `+351 ${phone.slice(3, 6)} ${phone.slice(6, 9)} ${phone.slice(9)}`;
+    }
+    if (phone.startsWith('1') && phone.length === 11) {
+      return `+1 (${phone.slice(1, 4)}) ${phone.slice(4, 7)}-${phone.slice(7)}`;
+    }
+    if (phone.startsWith('54') && (phone.length === 12 || phone.length === 13)) {
+      const rest = phone.slice(2);
+      const area = rest.slice(0, 2);
+      const num = rest.slice(2);
+      if (num.length === 8) return `+54 ${area} ${num.slice(0, 4)}-${num.slice(4)}`;
+      if (num.length === 9) return `+54 ${area} ${num.slice(0, 5)}-${num.slice(5)}`;
+    }
+    if (phone.startsWith('44') && phone.length === 12) {
+      return `+44 ${phone.slice(2, 6)} ${phone.slice(6)}`;
+    }
+    if (phone.startsWith('34') && phone.length === 11) {
+      return `+34 ${phone.slice(2, 5)} ${phone.slice(5, 8)} ${phone.slice(8)}`;
+    }
+    if (phone.startsWith('33') && phone.length === 11) {
+      return `+33 ${phone.slice(2, 3)} ${phone.slice(3, 5)} ${phone.slice(5, 7)} ${phone.slice(7, 9)} ${phone.slice(9)}`;
+    }
+    if (phone.startsWith('49') && phone.length >= 12 && phone.length <= 13) {
+      return `+49 ${phone.slice(2, 5)} ${phone.slice(5)}`;
+    }
+    if (phone.startsWith('258') && phone.length === 12) {
+      return `+258 ${phone.slice(3, 5)} ${phone.slice(5, 8)} ${phone.slice(8)}`;
+    }
+    if (phone.startsWith('244') && phone.length === 12) {
+      return `+244 ${phone.slice(3, 6)} ${phone.slice(6, 9)} ${phone.slice(9)}`;
+    }
+    if (phone.length >= 10) {
+      const rest = phone.length > 11 ? phone.slice(3) : phone.length > 10 ? phone.slice(2) : phone.slice(1);
+      const cc = phone.slice(0, phone.length - rest.length);
+      const chunks: string[] = [];
+      for (let i = 0; i < rest.length; i += 3) {
+        chunks.push(rest.slice(i, Math.min(i + 3, rest.length)));
+      }
+      return `+${cc} ${chunks.join(' ')}`;
+    }
+    return `+${phone}`;
+  };
+
+  /** Fetch contacts from Evolution API to get pushNames */
+  const fetchContacts = async (instanceName: string): Promise<Map<string, string>> => {
+    const contactMap = new Map<string, string>();
+    try {
+      const result = await evo(`/chat/findContacts/${instanceName}`, { method: 'POST', body: JSON.stringify({}) });
+      console.log(`[fetchContacts] findContacts [${result.status}]`);
+      if (result.ok) {
+        const contacts = extractList(result.data, ['data', 'contacts', 'records']);
+        for (const c of contacts) {
+          const jid = String(c?.id || c?.remoteJid || c?.jid || '');
+          if (!jid.endsWith('@s.whatsapp.net')) continue;
+          const phone = jid.replace(/@s\.whatsapp\.net$/, '');
+          const name = c?.pushName || c?.name || c?.notify || c?.verifiedName || '';
+          if (name && name !== phone) {
+            contactMap.set(phone, name);
+          }
+        }
+        console.log(`[fetchContacts] Got ${contactMap.size} contacts with names`);
+      }
+    } catch (e) {
+      console.error('[fetchContacts] failed:', e);
+    }
+    return contactMap;
+  };
+
+  const syncPreviewFromEvolution = async (storeId: string | null, instanceName: string, force = false) => {
+    if (!storeId) return { importedMessages: 0, importedLeads: 0, skipped: 'no_store' };
+
+    if (!force) {
+      const { count: existingCount } = await sb
+        .from('mensagens')
+        .select('id', { count: 'exact', head: true })
+        .eq('loja_id', storeId);
+
+      if ((existingCount || 0) > 0) {
+        return { importedMessages: 0, importedLeads: 0, skipped: 'already_seeded' };
+      }
+    }
+
+    // Fetch contacts for pushName resolution
+    const contactNames = await fetchContacts(instanceName);
+
+    const chatsResult = await evo(`/chat/findChats/${instanceName}`, { method: 'POST' });
+    console.log(`[syncPreview] findChats [${chatsResult.status}]`);
+    if (!chatsResult.ok) {
+      return { importedMessages: 0, importedLeads: 0, skipped: 'find_chats_failed', status: chatsResult.status };
+    }
+
+    const chats = extractList(chatsResult.data, ['data', 'chats', 'records', 'contacts']);
+
+    // Collect all phone numbers from chats
+    const chatPhones = new Set<string>();
+
+    // Get existing leads for dedup
+    const { data: existingLeads } = await sb
+      .from('leads')
+      .select('id, telefone')
+      .eq('loja_id', storeId);
+    const existingPhones = new Set((existingLeads || []).map((l: any) => l.telefone));
+
+    const previewRows: any[] = [];
+    let importedLeads = 0;
+
+    for (const chat of chats) {
+      const remoteJid = String(chat?.remoteJid || chat?.id || chat?.jid || chat?.key?.remoteJid || '');
+      if (!remoteJid || !remoteJid.endsWith('@s.whatsapp.net')) continue;
+
+      const phone = remoteJid.replace(/@s\.whatsapp\.net$/, '');
+      if (!phone || phone === '0' || phone === 'status' || phone.length < 7) continue;
+
+      chatPhones.add(phone);
+
+      // Use pushName from chat, then contacts, then formatted phone
+      const pushName = chat?.pushName || chat?.name || chat?.subject || contactNames.get(phone) || '';
+      const leadName = pushName || formatPhoneDisplay(phone);
+
+      const lead = await ensureLeadForPhone(storeId, phone, leadName);
+      if (!lead) continue;
+      if (!existingPhones.has(phone)) importedLeads += 1;
+
+      // Check if we already have a message for this lead (dedup)
+      const { count: existingMsgCount } = await sb
+        .from('mensagens')
+        .select('id', { count: 'exact', head: true })
+        .eq('lead_id', lead.id)
+        .eq('loja_id', storeId);
+
+      if ((existingMsgCount || 0) > 0) continue;
+
+      const preview = extractChatPreview(chat);
+      previewRows.push({
+        lead_id: lead.id,
+        lead_nome: lead.name,
+        conteudo: preview.conteudo,
+        tipo: preview.tipo,
+        is_bot: false,
+        loja_id: storeId,
+        created_at: preview.created_at,
+      });
+    }
+
+    // Also import contacts that have pushName but may not have recent chats
+    for (const [phone, name] of contactNames) {
+      if (chatPhones.has(phone)) continue; // already handled
+      if (phone.length < 7) continue;
+
+      const lead = await ensureLeadForPhone(storeId, phone, name);
+      if (!lead) continue;
+      if (!existingPhones.has(phone)) importedLeads += 1;
+    }
+
+    if (!previewRows.length && importedLeads === 0) {
+      return { importedMessages: 0, importedLeads, skipped: 'no_new_previews' };
+    }
+
+    if (previewRows.length > 0) {
+      const { error: insertError } = await sb.from('mensagens').insert(previewRows);
+      if (insertError) {
+        console.error('[syncPreview] preview insert failed:', insertError);
+        return { importedMessages: 0, importedLeads, skipped: 'preview_insert_failed' };
+      }
+    }
+
+    console.log(`[syncPreview] imported ${previewRows.length} conversations, ${importedLeads} new leads for ${instanceName}`);
+    return { importedMessages: previewRows.length, importedLeads };
+  };
+
+  const syncChatHistoryFromEvolution = async (storeId: string | null, instanceName: string, rawPhone: string | null) => {
+    if (!storeId || !rawPhone) return { importedMessages: 0, skipped: 'missing_params' };
+
+    const phone = rawPhone.replace(/\D/g, '');
+    if (!phone) return { importedMessages: 0, skipped: 'invalid_phone' };
+
+    const lead = await ensureLeadForPhone(storeId, phone, phone);
+    if (!lead) return { importedMessages: 0, skipped: 'lead_error' };
+
+    const { data: existingLocal } = await sb
+      .from('mensagens')
+      .select('conteudo, created_at, tipo')
+      .eq('lead_id', lead.id)
+      .order('created_at', { ascending: true });
+
+    const existingKeys = new Set((existingLocal || []).map((msg: any) => `${msg.tipo}|${msg.created_at}|${msg.conteudo}`));
+
+    const messagesResult = await evo(`/chat/findMessages/${instanceName}`, {
+      method: 'POST',
+      body: JSON.stringify({ where: { key: { remoteJid: `${phone}@s.whatsapp.net` } } }),
+    });
+
+    console.log(`[syncChat] findMessages ${phone} [${messagesResult.status}]`);
+    if (!messagesResult.ok) {
+      return { importedMessages: 0, skipped: 'find_messages_failed', status: messagesResult.status };
+    }
+
+    const messages = extractList(messagesResult.data, ['data', 'messages', 'records']).sort((a: any, b: any) => {
+      const aTs = new Date(parseMessageTimestamp(a?.messageTimestamp)).getTime();
+      const bTs = new Date(parseMessageTimestamp(b?.messageTimestamp)).getTime();
+      return aTs - bTs;
+    });
+
+    // Also try to get pushName from messages
+    let bestName = lead.name;
+    for (const msg of messages) {
+      const pn = msg?.pushName || msg?.verifiedBizName || '';
+      if (pn && pn !== phone && !msg?.key?.fromMe) {
+        bestName = pn;
+        break;
+      }
+    }
+    // Update lead name if we found a better one
+    if (bestName !== lead.name && bestName !== phone) {
+      await sb.from('leads').update({ nome: bestName }).eq('id', lead.id);
+    }
+
+    const rows = messages
+      .map((message: any) => ({
+        lead_id: lead.id,
+        lead_nome: bestName,
+        conteudo: extractMessageText(message?.message),
+        tipo: message?.key?.fromMe ? 'enviada' : 'recebida',
+        is_bot: false,
+        loja_id: storeId,
+        created_at: parseMessageTimestamp(message?.messageTimestamp),
+      }))
+      .filter((row: any) => !existingKeys.has(`${row.tipo}|${row.created_at}|${row.conteudo}`));
+
+    if (!rows.length) {
+      return { importedMessages: 0, skipped: 'already_synced' };
+    }
+
+    for (let i = 0; i < rows.length; i += 200) {
+      const chunk = rows.slice(i, i + 200);
+      const { error: insertError } = await sb.from('mensagens').insert(chunk);
+      if (insertError) {
+        console.error('[syncChat] message insert failed:', insertError);
+        return { importedMessages: i, skipped: 'message_insert_failed' };
+      }
+    }
+
+    console.log(`[syncChat] imported ${rows.length} messages for ${phone}`);
+    return { importedMessages: rows.length };
+  };
+
+  const ensureInstance = async (instanceName: string) => {
+    const create = await evo('/instance/create', {
+      method: 'POST',
+      body: JSON.stringify({ instanceName, qrcode: true, integration: 'WHATSAPP-BAILEYS' }),
+    });
+    console.log(`ensureInstance create [${create.status}]:`, JSON.stringify(create.data));
+    return create;
+  };
+
+  const getConnectionState = async (instanceName: string): Promise<string> => {
+    const { ok, status, data } = await evo(`/instance/connectionState/${instanceName}`, { method: 'GET' });
+    if (!ok) {
+      if (status === 404) return 'not_found';
+      return 'error';
+    }
+    const state = data?.instance?.state || data?.state;
+    return state || 'unknown';
+  };
+
+  try {
+    const body = await req.json();
+    const { action, instance, store_id } = body;
+    const instanceName = instance || 'default';
+
+    // ============================================================
+    // ACTION: generate_qrcode
+    // ============================================================
+    if (action === 'generate_qrcode' || action === 'qrcode') {
+      console.log(`[generate_qrcode] instance=${instanceName}, store_id=${store_id}`);
+
+      const currentState = await getConnectionState(instanceName);
+      console.log(`[generate_qrcode] current state: ${currentState}`);
+
+      if (currentState === 'open' || currentState === 'connected') {
+        await updateInstanceStatus(store_id, instanceName, 'connected');
+        await autoSetupWebhook(instanceName);
+        const sync = await syncPreviewFromEvolution(store_id, instanceName);
+        return json({ success: true, status: 'connected', message: 'Instância já está conectada', sync });
+      }
+
+      const createResult = await ensureInstance(instanceName);
+      const createQr = extractQr(createResult.data);
+
+      if (createQr.base64) {
+        await updateInstanceStatus(store_id, instanceName, 'qr_pending');
+        return json({ success: true, status: 'qr_ready', data: createQr });
+      }
+
+      const connect = await evo(`/instance/connect/${instanceName}`, { method: 'GET' });
+      console.log(`[generate_qrcode] connect [${connect.status}]:`, JSON.stringify(connect.data).slice(0, 200));
+
+      if (connect.ok) {
+        const connectQr = extractQr(connect.data);
+        if (connectQr.base64 || connectQr.pairingCode) {
+          await updateInstanceStatus(store_id, instanceName, 'qr_pending');
+          return json({ success: true, status: 'qr_ready', data: connectQr });
+        }
+        const state = connect.data?.instance?.state || connect.data?.state;
+        if (state === 'open' || state === 'connected') {
+          await updateInstanceStatus(store_id, instanceName, 'connected');
+          await autoSetupWebhook(instanceName);
+          const sync = await syncPreviewFromEvolution(store_id, instanceName);
+          return json({ success: true, status: 'connected', message: 'Conectado com sucesso', sync });
+        }
+      }
+
+      if (connect.status === 404 || !connect.ok) {
+        console.log(`[generate_qrcode] connect failed, forcing recreate`);
+
+        try { await evo(`/instance/logout/${instanceName}`, { method: 'DELETE' }); } catch {}
+        await sleep(500);
+        try { await evo(`/instance/delete/${instanceName}`, { method: 'DELETE' }); } catch {}
+        await sleep(1500);
+
+        const recreate = await evo('/instance/create', {
+          method: 'POST',
+          body: JSON.stringify({ instanceName, qrcode: true, integration: 'WHATSAPP-BAILEYS' }),
+        });
+
+        const recreateQr = extractQr(recreate.data);
+        if (recreateQr.base64) {
+          await updateInstanceStatus(store_id, instanceName, 'qr_pending');
+          return json({ success: true, status: 'qr_ready', data: recreateQr });
+        }
+
+        await sleep(1000);
+        const reconnect = await evo(`/instance/connect/${instanceName}`, { method: 'GET' });
+        const reconnectQr = extractQr(reconnect.data);
+
+        if (reconnectQr.base64 || reconnectQr.pairingCode) {
+          await updateInstanceStatus(store_id, instanceName, 'qr_pending');
+          return json({ success: true, status: 'qr_ready', data: reconnectQr });
+        }
+
+        return json({ success: false, status: 'error', error: 'Não foi possível gerar QR Code. Tente reiniciar.' }, 500);
+      }
+
+      return json({ success: false, status: 'error', error: 'Estado inesperado. Tente reiniciar a instância.' }, 500);
+    }
+
+    if (action === 'sync_history' || action === 'sync_preview') {
+      const sync = await syncPreviewFromEvolution(store_id, instanceName);
+      return json({ success: true, status: 'sync_complete', instance: instanceName, sync });
+    }
+
+    if (action === 'force_sync') {
+      console.log(`[force_sync] Cleaning ALL data and re-syncing for store=${store_id}`);
+      
+      // Delete ALL messages for this store first
+      await sb.from('mensagens').delete().eq('loja_id', store_id);
+      console.log(`[force_sync] Deleted all messages for store`);
+      
+      // Delete ALL leads for this store (they'll be re-created)
+      await sb.from('leads').delete().eq('loja_id', store_id);
+      console.log(`[force_sync] Deleted all leads for store`);
+      
+      const sync = await syncPreviewFromEvolution(store_id, instanceName, true);
+      return json({ success: true, status: 'force_sync_complete', instance: instanceName, sync });
+    }
+
+    if (action === 'sync_chat') {
+      const sync = await syncChatHistoryFromEvolution(store_id, instanceName, body.phone || null);
+      return json({ success: true, status: 'sync_chat_complete', instance: instanceName, sync });
+    }
+
+    // ============================================================
+    // ACTION: check_connection
+    // ============================================================
+    if (action === 'check_connection' || action === 'status') {
+      const state = await getConnectionState(instanceName);
+      console.log(`[check_connection] instance=${instanceName}, state=${state}`);
+
+      let status: string;
+      let sync: any = null;
+      if (state === 'open' || state === 'connected') {
+        status = 'connected';
+        await updateInstanceStatus(store_id, instanceName, 'connected');
+        await autoSetupWebhook(instanceName);
+        sync = await syncPreviewFromEvolution(store_id, instanceName);
+      } else if (state === 'not_found') {
+        status = 'not_found';
+        await updateInstanceStatus(store_id, instanceName, 'disconnected');
+      } else if (state === 'connecting') {
+        status = 'connecting';
+      } else {
+        status = 'disconnected';
+        await updateInstanceStatus(store_id, instanceName, 'disconnected');
+      }
+
+      return json({ success: true, status, state, instance: instanceName, sync });
+    }
+
+    // ============================================================
+    // ACTION: test_message
+    // ============================================================
+    if (action === 'test_message') {
+      const { phone } = body;
+      if (!phone) return json({ error: 'phone is required for test_message' }, 400);
+
+      const state = await getConnectionState(instanceName);
+      if (state !== 'open' && state !== 'connected') {
+        return json({ success: false, status: 'not_connected', error: 'Instância não está conectada' });
+      }
+
+      const testMsg = `✅ VendaZap - Teste de conexão realizado com sucesso!\n\n📅 ${new Date().toLocaleString('pt-BR')}\n🔗 Instância: ${instanceName}`;
+      const send = await evo(`/message/sendText/${instanceName}`, {
+        method: 'POST',
+        body: JSON.stringify({ number: phone.replace(/\D/g, ''), text: testMsg }),
+      });
+
+      if (send.ok) {
+        return json({ success: true, status: 'test_sent', message: 'Mensagem de teste enviada com sucesso' });
+      }
+
+      const errorDetail = send.data?.response?.message || send.data?.error || 'Falha ao enviar';
+      return json({ success: false, status: 'test_failed', error: errorDetail });
+    }
+
+    // ============================================================
+    // ACTION: logout
+    // ============================================================
+    if (action === 'logout') {
+      const { data } = await evo(`/instance/logout/${instanceName}`, { method: 'DELETE' });
+      await updateInstanceStatus(store_id, instanceName, 'disconnected');
+      return json({ success: true, data });
+    }
+
+    // ============================================================
+    // ACTION: restart
+    // ============================================================
+    if (action === 'restart') {
+      console.log(`[restart] instance=${instanceName}`);
+
+      try { await evo(`/instance/logout/${instanceName}`, { method: 'DELETE' }); } catch {}
+      await sleep(500);
+      try { await evo(`/instance/delete/${instanceName}`, { method: 'DELETE' }); } catch {}
+      await sleep(1500);
+
+      const create = await evo('/instance/create', {
+        method: 'POST',
+        body: JSON.stringify({ instanceName, qrcode: true, integration: 'WHATSAPP-BAILEYS' }),
+      });
+
+      const createQr = extractQr(create.data);
+      if (createQr.base64 || createQr.pairingCode) {
+        await updateInstanceStatus(store_id, instanceName, 'qr_pending');
+        return json({ success: true, status: 'qr_ready', data: createQr });
+      }
+
+      await sleep(1000);
+      const connect = await evo(`/instance/connect/${instanceName}`, { method: 'GET' });
+      const connectQr = extractQr(connect.data);
+
+      if (connectQr.base64 || connectQr.pairingCode) {
+        await updateInstanceStatus(store_id, instanceName, 'qr_pending');
+        return json({ success: true, status: 'qr_ready', data: connectQr });
+      }
+
+      if (!connect.ok) {
+        return json({ success: false, error: `Falha ao reiniciar [${connect.status}]` }, 500);
+      }
+
+      return json({ success: true, status: 'restarted', data: connect.data });
+    }
+
+    // ============================================================
+    // ACTION: setup_webhook
+    // ============================================================
+    if (action === 'setup_webhook') {
+      const webhookUrl = body.webhookUrl;
+      if (!webhookUrl) return json({ error: 'webhookUrl required' }, 400);
+
+      const result = await evo(`/webhook/set/${instanceName}`, {
+        method: 'POST',
+        body: JSON.stringify({
+          webhook: {
+            url: webhookUrl,
+            enabled: true,
+            webhookByEvents: false,
+            webhookBase64: false,
+            events: ['MESSAGES_UPSERT', 'MESSAGES_UPDATE', 'CONNECTION_UPDATE', 'QRCODE_UPDATED',
+                     'messages.upsert', 'messages.update', 'connection.update', 'qrcode.updated'],
+          },
+        }),
+      });
+
+      return json({ success: result.ok, data: result.data });
+    }
+
+    return json({ error: 'Invalid action. Use: generate_qrcode, check_connection, test_message, logout, restart, setup_webhook, force_sync, sync_chat' }, 400);
+  } catch (error: unknown) {
+    console.error('WhatsApp connection error:', error);
+    const msg = error instanceof Error ? error.message : 'Unknown error';
+    return json({ success: false, error: msg }, 500);
+  }
+});

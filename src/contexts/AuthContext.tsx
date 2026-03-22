@@ -1,0 +1,262 @@
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import type { Session, User } from '@supabase/supabase-js';
+
+export type MembershipState = 'loading' | 'linked' | 'pending' | 'rejected' | 'unlinked' | 'error' | 'super_admin';
+
+interface AuthState {
+  user: User | null;
+  session: Session | null;
+  role: string | null;
+  storeId: string | null;
+  status: string | null;
+  userName: string | null;
+  loading: boolean;
+  membershipState: MembershipState;
+  isSuperAdmin: boolean;
+  signOut: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthState>({
+  user: null,
+  session: null,
+  role: null,
+  storeId: null,
+  status: null,
+  userName: null,
+  loading: true,
+  membershipState: 'loading',
+  isSuperAdmin: false,
+  signOut: async () => {},
+});
+
+export const useAuth = () => useContext(AuthContext);
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const withTimeout = async <T,>(promise: Promise<T>, ms: number, message: string): Promise<T> => {
+  let timeoutId: number | undefined;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(message)), ms);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) {
+      window.clearTimeout(timeoutId);
+    }
+  }
+};
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [role, setRole] = useState<string | null>(null);
+  const [storeId, setStoreId] = useState<string | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [userName, setUserName] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [membershipState, setMembershipState] = useState<MembershipState>('loading');
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const versionRef = useRef(0);
+
+  const clearMembership = () => {
+    setRole(null);
+    setStoreId(null);
+    setStatus(null);
+    setUserName(null);
+    setIsSuperAdmin(false);
+  };
+
+  const checkSuperAdmin = async (userId: string): Promise<boolean> => {
+    try {
+      const { data, error } = await (supabase as any)
+        .from('super_admins')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      return !error && !!data;
+    } catch {
+      return false;
+    }
+  };
+
+  const fetchMembership = async () => {
+    let lastError: unknown = null;
+
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      try {
+        const result = await withTimeout<any>(
+          (supabase as any).rpc('get_my_membership'),
+          4000,
+          'get_my_membership timeout'
+        );
+
+        if (result?.error) {
+          lastError = result.error;
+        } else {
+          return Array.isArray(result?.data) ? (result.data[0] ?? null) : (result?.data ?? null);
+        }
+      } catch (error) {
+        lastError = error;
+      }
+
+      if (attempt < 2) {
+        await delay(300 * (attempt + 1));
+      }
+    }
+
+    throw lastError ?? new Error('Failed to resolve membership');
+  };
+
+  const resolveAuthState = async (nextSession: Session | null, version: number) => {
+    if (versionRef.current !== version) return;
+
+    if (!nextSession?.user) {
+      setSession(null);
+      setUser(null);
+      clearMembership();
+      setMembershipState('unlinked');
+      setLoading(false);
+      return;
+    }
+
+    setSession(nextSession);
+    setUser(nextSession.user);
+
+    try {
+      // Check super admin first
+      const superAdmin = await checkSuperAdmin(nextSession.user.id);
+      if (versionRef.current !== version) return;
+
+      if (superAdmin) {
+        setIsSuperAdmin(true);
+        setRole('super_admin');
+        setStatus('aprovado');
+        setUserName(nextSession.user.user_metadata?.full_name || 'Super Admin');
+        setStoreId(null);
+        setMembershipState('super_admin');
+        setLoading(false);
+        return;
+      }
+
+      // Normal membership flow
+      const membership = await fetchMembership();
+      if (versionRef.current !== version) return;
+
+      if (!membership) {
+        clearMembership();
+        setMembershipState('unlinked');
+        return;
+      }
+
+      setRole(membership.role ?? null);
+      setStatus(membership.status ?? null);
+      setUserName(membership.nome ?? null);
+
+      if (membership.status === 'aprovado') {
+        setStoreId(membership.loja_id ?? null);
+        setMembershipState('linked');
+      } else if (membership.status === 'pendente') {
+        setStoreId(null);
+        setMembershipState('pending');
+      } else if (membership.status === 'rejeitado') {
+        setStoreId(null);
+        setMembershipState('rejected');
+      } else {
+        setStoreId(null);
+        setMembershipState('unlinked');
+      }
+    } catch (error) {
+      if (versionRef.current !== version) return;
+      console.error('resolveAuthState error:', error);
+      clearMembership();
+      setMembershipState('error');
+    } finally {
+      if (versionRef.current === version) {
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+
+    const scheduleResolve = (nextSession: Session | null) => {
+      const version = ++versionRef.current;
+      setLoading(true);
+      setMembershipState('loading');
+
+      window.setTimeout(() => {
+        if (!mounted) return;
+        void resolveAuthState(nextSession, version);
+      }, 0);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (!mounted || event === 'INITIAL_SESSION') return;
+      scheduleResolve(nextSession);
+    });
+
+    const initFallback = window.setTimeout(() => {
+      if (!mounted) return;
+      console.warn('Auth initialization timeout');
+      versionRef.current += 1;
+      setSession(null);
+      setUser(null);
+      clearMembership();
+      setMembershipState('error');
+      setLoading(false);
+    }, 8000);
+
+    void (async () => {
+      try {
+        const { data } = await withTimeout(
+          supabase.auth.getSession(),
+          5000,
+          'getSession timeout'
+        );
+
+        if (!mounted) return;
+        window.clearTimeout(initFallback);
+        scheduleResolve(data.session);
+      } catch (error) {
+        if (!mounted) return;
+        window.clearTimeout(initFallback);
+        console.error('getSession failed:', error);
+        versionRef.current += 1;
+        setSession(null);
+        setUser(null);
+        clearMembership();
+        setMembershipState('error');
+        setLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+      window.clearTimeout(initFallback);
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const signOut = async () => {
+    versionRef.current += 1;
+    await supabase.auth.signOut();
+    setUser(null);
+    setSession(null);
+    clearMembership();
+    setMembershipState('unlinked');
+    setLoading(false);
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{ user, session, role, storeId, status, userName, loading, membershipState, isSuperAdmin, signOut }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+}
