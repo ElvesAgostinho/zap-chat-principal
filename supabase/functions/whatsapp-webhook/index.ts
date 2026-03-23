@@ -648,20 +648,57 @@ Deno.serve(async (req) => {
                   }
                 }
 
-                // Auto scheduling
+                // Auto scheduling ENTERPRISE
                 if (botData.schedule_data && storeId) {
                   const sd = botData.schedule_data;
                   try {
-                    await supabase.from('agendamentos').insert({
-                      loja_id: storeId, lead_id: leadId,
-                      cliente_nome: leadName, cliente_telefone: phone,
-                      servico: sd.servico || null,
-                      data_hora: sd.data_hora,
-                      duracao_min: 60,
-                    });
-                    console.log(`[webhook] ✅ Appointment created for ${leadName}: ${sd.servico} at ${sd.data_hora}`);
+                    if (sd.action === 'create' || sd.action === 'reschedule') {
+                      const { data: appointment, error: schedErr } = await supabase.from('agendamentos').upsert({
+                        loja_id: storeId,
+                        lead_id: leadId,
+                        cliente_nome: leadName,
+                        cliente_telefone: phone,
+                        servico: sd.servico || 'Consulta/Serviço',
+                        data_hora: sd.data_hora,
+                        status: 'pendente', // Wait for human confirmation
+                        duracao_min: 60,
+                      }, { onConflict: 'loja_id,lead_id,status', ignoreDuplicates: false }).select().single();
+
+                      if (!schedErr) {
+                        console.log(`[webhook] ✅ Appointment ${sd.action}d for ${leadName}: ${sd.data_hora}`);
+                        // Create Notification
+                        await supabase.from('notificacoes').insert({
+                          loja_id: storeId,
+                          lead_id: leadId,
+                          tipo: 'agendamento',
+                          titulo: sd.action === 'create' ? 'Novo Agendamento' : 'Agendamento Remarcado',
+                          mensagem: `${leadName} ${sd.action === 'create' ? 'marcou' : 'remarcou'} ${sd.servico || 'um serviço'} para ${new Date(sd.data_hora).toLocaleString('pt-AO')}`,
+                          link: '/scheduling'
+                        });
+                      } else {
+                        throw schedErr;
+                      }
+                    } else if (sd.action === 'cancel') {
+                      const { error: cancelErr } = await supabase.from('agendamentos')
+                        .update({ status: 'cancelado' })
+                        .eq('lead_id', leadId)
+                        .eq('loja_id', storeId)
+                        .eq('status', 'pendente'); // Only cancel pending ones via bot
+                      
+                      if (!cancelErr) {
+                        console.log(`[webhook] ❌ Appointment cancelled for ${leadName}`);
+                         await supabase.from('notificacoes').insert({
+                          loja_id: storeId,
+                          lead_id: leadId,
+                          tipo: 'agendamento',
+                          titulo: 'Agendamento Cancelado',
+                          mensagem: `${leadName} cancelou o agendamento pendente.`,
+                          link: '/scheduling'
+                        });
+                      }
+                    }
                   } catch (schedErr) {
-                    console.error('[webhook] Schedule creation error:', schedErr);
+                    console.error('[webhook] Schedule error:', schedErr);
                   }
                 }
 

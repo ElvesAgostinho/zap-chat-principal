@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, TrendingUp, ShoppingBag, DollarSign, AlertTriangle, Clock, XCircle, LogOut, Trash2 } from 'lucide-react';
+import { Plus, TrendingUp, ShoppingBag, DollarSign, AlertTriangle, Clock, XCircle, LogOut, Trash2, MessageSquare, Truck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,14 +16,14 @@ import DashboardPanel from '@/components/DashboardPanel';
 import AlertsPanel from '@/components/AlertsPanel';
 import StoreConfigPanel from '@/components/StoreConfigPanel';
 import ConversationsPanel from '@/components/ConversationsPanel';
+import AutomationPanel from '@/components/AutomationPanel';
+import DeliveryPanel from '@/components/DeliveryPanel';
 import SchedulingPanel from '@/components/SchedulingPanel';
 import PipelinePanel from '@/components/PipelinePanel';
 import StockPanel from '@/components/StockPanel';
 import AdminPanel from '@/pages/AdminPanel';
 import { formatCurrency } from '@/data/mock';
-import { Produto, Lead, Venda } from '@/types';
-
-type Tab = 'dashboard' | 'orders' | 'chat' | 'clients' | 'products' | 'campaigns' | 'alerts' | 'settings' | 'admin' | 'schedule' | 'pipeline' | 'stock';
+import { Produto, Lead, Venda, Tab } from '@/types';
 
 const TAB_TITLES: Record<Tab, string> = {
   dashboard: 'Painel Geral',
@@ -38,6 +38,8 @@ const TAB_TITLES: Record<Tab, string> = {
   schedule: 'Agenda',
   pipeline: 'Pipeline',
   stock: 'Estoque',
+  automation: 'Automação Zap',
+  delivery: 'Logística',
 };
 
 export default function Index() {
@@ -57,6 +59,7 @@ export default function Index() {
   const [products, setProducts] = useState<Produto[]>([]);
   const [leads, setLeads] = useState<Lead[]>([]);
   const [vendas, setVendas] = useState<Venda[]>([]);
+  const [agents, setAgents] = useState<{id: string, nome: string}[]>([]);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Produto | null>(null);
   const [showAddLead, setShowAddLead] = useState(false);
@@ -68,15 +71,17 @@ export default function Index() {
 
   const fetchAll = useCallback(async () => {
     if (!storeId) return;
-    const [{ data: p }, { data: l }, { data: v }, { data: loja }] = await Promise.all([
+    const [{ data: p }, { data: l }, { data: v }, { data: a }, { data: loja }] = await Promise.all([
       (supabase as any).from('produtos').select('*').eq('loja_id', storeId).order('criado_em', { ascending: false }),
       (supabase as any).from('leads').select('*').eq('loja_id', storeId).order('criado_em', { ascending: false }),
       (supabase as any).from('vendas').select('*').eq('loja_id', storeId).order('criado_em', { ascending: false }),
+      (supabase as any).from('usuarios_loja').select('user_id, nome').eq('loja_id', storeId).eq('status', 'aprovado'),
       (supabase as any).from('lojas').select('nome, codigo_unico').eq('id', storeId).maybeSingle(),
     ]);
     setProducts(p || []);
     setLeads(l || []);
     setVendas(v || []);
+    setAgents(a?.map((agent: any) => ({ id: agent.user_id, nome: agent.nome || 'Agente' })) || []);
     if (loja) { setStoreName(loja.nome || ''); setStoreCode(loja.codigo_unico || ''); }
   }, [storeId]);
 
@@ -163,7 +168,16 @@ export default function Index() {
   const renderTabContent = () => {
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardPanel vendas={vendas} leads={leads} products={products} alertCount={alertCount} />;
+        return (
+          <DashboardPanel 
+            vendas={vendas} 
+            leads={leads} 
+            products={products} 
+            alertCount={alertCount} 
+            onAddLead={() => setShowAddLead(true)}
+            onAddProduct={() => setShowAddProduct(true)}
+          />
+        );
       case 'orders':
         return (
           <div className="space-y-6">
@@ -192,8 +206,9 @@ export default function Index() {
             </div>
           </div>
         );
-      case 'chat': return <ConversationsPanel />;
-      case 'alerts': return <AlertsPanel />;
+      case 'chat': return <ConversationsPanel initialLeads={leads} initialAgents={agents} />;
+      case 'delivery': return <DeliveryPanel initialVendas={vendas.filter(v => v.status_entrega !== 'entregue')} />;
+      case 'alerts': return <AlertsPanel initialLeads={leads.filter(l => l.precisa_humano)} />;
       case 'schedule': return <SchedulingPanel />;
       case 'pipeline': return <PipelinePanel leads={leads} />;
       case 'stock': return <StockPanel products={products} onUpdate={fetchAll} onAddProduct={() => { setEditingProduct(null); setShowAddProduct(true); }} onDeleteProduct={(id) => supabase.from('produtos').delete().eq('id', id).then(fetchAll)} onEditProduct={(p) => { setEditingProduct(p); setShowAddProduct(true); }} />;
@@ -226,6 +241,7 @@ export default function Index() {
           </div>
         );
       case 'campaigns': return <CampaignsPanel storeId={storeId} products={products} />;
+      case 'automation': return <AutomationPanel />;
       case 'settings': return <StoreConfigPanel />;
       case 'admin': return role === 'admin' ? <AdminPanel /> : null;
       default: return null;

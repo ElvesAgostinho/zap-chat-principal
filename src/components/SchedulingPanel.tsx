@@ -128,10 +128,11 @@ export default function SchedulingPanel() {
     return d.toDateString() === selectedDate.toDateString() && a.status !== 'cancelado';
   }).sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime());
 
-  const upcomingCount = agendamentos.filter(a => new Date(a.data_hora) >= new Date() && a.status === 'agendado').length;
+  const upcomingCount = agendamentos.filter(a => new Date(a.data_hora) >= new Date() && (a.status === 'confirmado' || a.status === 'pendente')).length;
 
   const statusColor: Record<string, string> = {
-    agendado: 'bg-blue-100 text-blue-700',
+    pendente: 'bg-orange-100 text-orange-700 animate-pulse',
+    confirmado: 'bg-blue-100 text-blue-700',
     concluido: 'bg-primary/10 text-primary',
     cancelado: 'bg-destructive/10 text-destructive',
   };
@@ -248,14 +249,23 @@ export default function SchedulingPanel() {
                 <span>• {ag.duracao_min} min</span>
               </div>
               {ag.notas && <p className="text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded-lg">{ag.notas}</p>}
-              {ag.status === 'agendado' && (
+              {(ag.status === 'confirmado' || ag.status === 'pendente') && (
                 <div className="flex gap-2">
-                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => handleComplete(ag.id)}
-                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-medium">
-                    <CheckCircle className="w-3.5 h-3.5" />Concluir
-                  </motion.button>
+                  {ag.status === 'pendente' && (
+                    <motion.button whileTap={{ scale: 0.95 }} onClick={() => (supabase as any).from('agendamentos').update({ status: 'confirmado' }).eq('id', ag.id).then(() => fetchData())}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-medium">
+                      <CheckCircle className="w-3.5 h-3.5" />Confirmar
+                    </motion.button>
+                  )}
+                  {ag.status === 'confirmado' && (
+                    <motion.button whileTap={{ scale: 0.95 }} onClick={() => handleComplete(ag.id)}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-medium">
+                      <CheckCircle className="w-3.5 h-3.5" />Concluir
+                    </motion.button>
+                  )}
                   <motion.button whileTap={{ scale: 0.95 }} onClick={() => handleCancel(ag.id)}
-                    className="px-3 py-2 rounded-xl bg-destructive/10 text-destructive text-xs font-medium">
+                    className="px-3 py-2 rounded-xl bg-destructive/10 text-destructive text-xs font-medium"
+                    title="Cancelar">
                     <XCircle className="w-3.5 h-3.5" />
                   </motion.button>
                 </div>

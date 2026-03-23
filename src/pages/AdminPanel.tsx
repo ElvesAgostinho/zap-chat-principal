@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { UsuarioLoja } from '@/types';
+import ApiIntegrationPanel from '@/components/ApiIntegrationPanel';
 
 interface LojaRow {
   id: string;
@@ -18,18 +19,21 @@ interface LojaRow {
 }
 
 export default function AdminPanel() {
-  const { signOut, storeId } = useAuth();
+  const { signOut, storeId, plano, isSuperAdmin } = useAuth();
   const { toast } = useToast();
   const [loja, setLoja] = useState<LojaRow | null>(null);
   const [employees, setEmployees] = useState<UsuarioLoja[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState<'geral' | 'api'>('geral');
+  
+  const isPro = plano === 'profissional' || plano === 'enterprise' || isSuperAdmin;
 
   const fetchData = async () => {
     setLoading(true);
     if (!storeId) { setLoading(false); return; }
     const [{ data: lojaData }, { data: empData }] = await Promise.all([
-      (supabase as any).from('lojas').select('id, nome, telefone, codigo_unico, instance_name, instance_status, criado_em').eq('id', storeId).maybeSingle(),
+      (supabase as any).from('lojas').select('id, nome, telefone, codigo_unico, instance_name, instance_status, criado_em, plano, status_aprovacao').eq('id', storeId).maybeSingle(),
       (supabase as any).from('usuarios_loja').select('*').eq('loja_id', storeId).order('criado_em', { ascending: false }),
     ]);
     setLoja(lojaData);
@@ -106,13 +110,33 @@ export default function AdminPanel() {
       <div className="flex items-center justify-between">
         <div>
           <p className="text-metadata mb-1">VendaZap</p>
-          <h1 className="text-display text-lg">Painel Admin</h1>
+          <h1 className="text-display text-lg">Configurações Master</h1>
         </div>
-        <motion.button whileTap={{ scale: 0.95 }} onClick={signOut} className="px-3 py-2 rounded-xl bg-secondary text-foreground text-sm font-medium">Sair</motion.button>
+        <div className="flex items-center gap-2">
+          <div className="flex bg-secondary p-1 rounded-xl">
+            <button 
+              onClick={() => setActiveTab('geral')}
+              className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'geral' ? 'bg-white shadow-sm text-foreground' : 'text-muted-foreground'}`}
+            >
+              Geral
+            </button>
+            {isPro && (
+              <button 
+                onClick={() => setActiveTab('api')}
+                className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === 'api' ? 'bg-white shadow-sm text-foreground' : 'text-muted-foreground'}`}
+              >
+                Integrações
+              </button>
+            )}
+          </div>
+          <motion.button whileTap={{ scale: 0.95 }} onClick={signOut} className="px-3 py-2 rounded-xl bg-secondary text-foreground text-sm font-medium">Sair</motion.button>
+        </div>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+      ) : activeTab === 'api' ? (
+        <ApiIntegrationPanel />
       ) : loja && (
         <>
           {/* Store Code - Prominent */}

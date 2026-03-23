@@ -12,12 +12,17 @@ import LoginPage from "./pages/LoginPage";
 import AdminPanel from "./pages/AdminPanel";
 import SuperAdminPanel from "./pages/SuperAdminPanel";
 import SignupPage from "./pages/SignupPage";
+import CatalogPage from "./pages/CatalogPage";
+import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
+import PendingApprovalScreen from "./components/PendingApprovalScreen";
+import CookieConsent from "./components/CookieConsent";
+import FloatingSupportBot from "./components/FloatingSupportBot";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children, adminOnly = false, superAdminOnly = false }: { children: React.ReactNode; adminOnly?: boolean; superAdminOnly?: boolean }) {
-  const { user, role, loading, isSuperAdmin } = useAuth();
+  const { user, role, loading, isSuperAdmin, statusLoja } = useAuth();
 
   if (loading) {
     return (
@@ -29,13 +34,19 @@ function ProtectedRoute({ children, adminOnly = false, superAdminOnly = false }:
 
   if (!user) return <Navigate to="/login" replace />;
   if (superAdminOnly && !isSuperAdmin) return <Navigate to="/" replace />;
+  
+  // If store is pending approval, redirect to a special state or screen
+  if (!isSuperAdmin && statusLoja === 'pendente_aprovacao') {
+    return <PendingApprovalScreen />;
+  }
+
   if (adminOnly && role !== 'admin' && !isSuperAdmin) return <Navigate to="/" replace />;
 
   return <>{children}</>;
 }
 
 function AppRoutes() {
-  const { user, role, loading, isSuperAdmin } = useAuth();
+  const { user, role, loading, isSuperAdmin, statusLoja } = useAuth();
 
   if (loading) {
     return (
@@ -52,15 +63,26 @@ function AppRoutes() {
       <Route
         path="/"
         element={
-          <ProtectedRoute>
-            {isSuperAdmin ? <SuperAdminPanel /> : <Index />}
-          </ProtectedRoute>
+          user ? (
+            <ProtectedRoute>
+              {isSuperAdmin ? (
+                <SuperAdminPanel />
+              ) : statusLoja === 'pendente_aprovacao' ? (
+                <PendingApprovalScreen />
+              ) : (
+                <Index />
+              )}
+            </ProtectedRoute>
+          ) : (
+            <LandingPage />
+          )
         }
       />
       <Route path="/entregas" element={<ProtectedRoute><DeliveryPanel /></ProtectedRoute>} />
       <Route path="/chat" element={<ProtectedRoute><ChatPanel /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute adminOnly><AdminPanel /></ProtectedRoute>} />
       <Route path="/super-admin" element={<ProtectedRoute superAdminOnly><SuperAdminPanel /></ProtectedRoute>} />
+      <Route path="/loja/:storeCode" element={<CatalogPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
@@ -71,9 +93,11 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <CookieConsent />
       <BrowserRouter>
         <AuthProvider>
           <AppRoutes />
+          <FloatingSupportBot />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>

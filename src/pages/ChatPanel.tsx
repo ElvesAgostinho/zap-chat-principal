@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Send, Bot, User, Loader2, Paperclip, Image, FileText, Mic, X, Camera, UserCheck, RotateCcw, Download, Check, CheckCheck, MessageSquare, Plus, CalendarClock } from 'lucide-react';
+import { ArrowLeft, Send, Bot, User, Loader2, Paperclip, Image, FileText, Mic, X, Camera, UserCheck, RotateCcw, Download, Check, CheckCheck, MessageSquare, Plus, CalendarClock, Info, ChevronLeft, LayoutDashboard, History, Settings } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -56,12 +56,22 @@ export default function ChatPanel() {
   const [sending, setSending] = useState(false);
   const [showAttach, setShowAttach] = useState(false);
   const [mediaPreview, setMediaPreview] = useState<{ file: File; url: string; type: string } | null>(null);
+  const [showProfile, setShowProfile] = useState(false);
+  const [timeline, setTimeline] = useState<any[]>([]);
+  const [loadingTimeline, setLoadingTimeline] = useState(false);
+  const [atendenteId, setAtendenteId] = useState<string | null>(null);
+  const [status, setStatus] = useState<string>('Novo');
+  const [agents, setAgents] = useState<any[]>([]);
+  const [fonte, setFonte] = useState<string>('');
+  const [uploadingProfile, setUploadingProfile] = useState(false);
+
   const endRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const profileFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!leadId) return;
-    (supabase as any).from('leads').select('nome, telefone, controle_conversa, precisa_humano, foto_url').eq('id', leadId).maybeSingle()
+    (supabase as any).from('leads').select('nome, telefone, controle_conversa, precisa_humano, foto_url, atendente_id, fonte, status').eq('id', leadId).maybeSingle()
       .then(({ data }: any) => {
         if (data) { 
           setLeadName(data.nome || 'Lead'); 
@@ -69,6 +79,9 @@ export default function ChatPanel() {
           setControleConversa(data.controle_conversa || 'bot'); 
           setPrecisaHumano(data.precisa_humano === true); 
           setLeadFoto(data.foto_url || null);
+          setAtendenteId(data.atendente_id);
+          setFonte(data.fonte || '');
+          setStatus(data.status || 'Novo');
         }
       });
 
@@ -77,8 +90,54 @@ export default function ChatPanel() {
         .then(({ data }: any) => {
           if (data) setStoreBotActive(data.bot_ativo !== false);
         });
+      
+      (supabase as any).from('usuarios_loja').select('id, nome').eq('loja_id', storeId)
+        .then(({ data }: any) => { if (data) setAgents(data); });
     }
   }, [leadId, storeId]);
+
+  const fetchTimeline = async () => {
+    if (!leadId) return;
+    setLoadingTimeline(true);
+    const { data } = await (supabase as any)
+      .from('lead_eventos')
+      .select('*')
+      .eq('lead_id', leadId)
+      .order('criado_em', { ascending: false });
+    setTimeline(data || []);
+    setLoadingTimeline(false);
+  };
+
+  useEffect(() => {
+    if (showProfile) fetchTimeline();
+  }, [showProfile, leadId]);
+
+  const handleProfileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !leadId || !storeId) return;
+    
+    setUploadingProfile(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `leads/${leadId}_${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from('media').upload(path, file);
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from('media').getPublicUrl(path);
+      const publicUrl = urlData.publicUrl;
+
+      const { error: updateError } = await (supabase as any).from('leads').update({ foto_url: publicUrl }).eq('id', leadId);
+      if (updateError) throw updateError;
+
+      setLeadFoto(publicUrl);
+      toast.success('Foto de perfil atualizada!');
+      fetchTimeline();
+    } catch (err: any) {
+      toast.error('Erro ao subir foto: ' + err.message);
+    } finally {
+      setUploadingProfile(false);
+    }
+  };
 
   useEffect(() => {
     if (!leadId) return;
@@ -230,155 +289,291 @@ export default function ChatPanel() {
   const isHumanMode = controleConversa === 'humano';
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-[hsl(var(--whatsapp-bg))] overflow-hidden">
-      {/* Header */}
-      <div className="px-4 py-2.5 flex items-center gap-3 flex-shrink-0 bg-[hsl(var(--whatsapp-dark))] shadow-md z-10">
-        <button onClick={() => navigate(-1)} className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div className="w-10 h-10 rounded-full overflow-hidden bg-white/10 flex items-center justify-center flex-shrink-0 border border-white/10 shadow-inner">
-          {leadFoto ? (
-            <img src={leadFoto} alt={leadName} className="w-full h-full object-cover" onError={(e) => { (e.target as any).src = ''; (e.target as any).style.display = 'none'; }} />
-          ) : null}
-          <span className="text-white font-bold text-sm tracking-tight">{leadName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
-        </div>
-        <div className="flex-1 min-w-0">
-          <h2 className="font-bold text-white text-[15px] truncate">{leadName}</h2>
-          <p className="text-[10px] text-white/40 uppercase tracking-widest font-semibold">{leadPhone || 'Sem telefone'}</p>
-        </div>
-        <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold shadow-sm 
-          ${!storeBotActive ? 'bg-red-500/20 text-red-200 border border-red-500/30' : 
-            isHumanMode ? 'bg-orange-500/20 text-orange-200 border border-orange-500/30' : 
-            'bg-emerald-500/20 text-emerald-200 border border-emerald-500/30'}`}>
-          {!storeBotActive ? (
-            <><X className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none">BOT DESATIVADO</span></>
-          ) : isHumanMode ? (
-            <><User className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none">ATENDIMENTO HUMANO</span></>
-          ) : (
-            <><Bot className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none">BOT ATIVO</span></>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={scheduleFollowup} className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors" title="Agendar Follow-up" >
-            <CalendarClock className="w-5 h-5" />
+    <div className="fixed inset-0 flex bg-[hsl(var(--whatsapp-bg))] overflow-hidden">
+      <div className={`flex-1 flex flex-col h-full transition-all duration-300 ${showProfile ? 'mr-[350px]' : ''}`}>
+        {/* Header */}
+        <div className="px-4 py-2.5 flex items-center gap-3 flex-shrink-0 bg-[hsl(var(--whatsapp-dark))] shadow-md z-10">
+          <button onClick={() => navigate(-1)} className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors">
+            <ArrowLeft className="w-5 h-5" />
           </button>
-          {isHumanMode ? (
-            <button onClick={returnToBot} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 text-white/90 text-[11px] font-bold hover:bg-white/20 transition-all">
-              <RotateCcw className="w-3.5 h-3.5 mb-[1px]" /> <span className="leading-none">Bot</span>
-            </button>
-          ) : (
-            <button onClick={assumeConversation} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-white text-[11px] font-bold hover:bg-primary/90 transition-all shadow-glow">
-              <UserCheck className="w-3.5 h-3.5 mb-[1px]" /> <span className="leading-none">Assumir</span>
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Human attention banner */}
-      <AnimatePresence>
-        {precisaHumano && (
-          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-orange-500/95 backdrop-blur-md px-4 py-2 flex items-center gap-3 overflow-hidden">
-            <div className="flex-shrink-0 w-2 h-2 rounded-full bg-white animate-pulse" />
-            <p className="text-[11px] text-white font-black uppercase tracking-widest">Aguardando Resposta Manual</p>
-            <button onClick={assumeConversation} className="ml-auto text-[10px] bg-white text-orange-600 px-3 py-1 rounded-full font-black uppercase tracking-tighter hover:bg-orange-50 transition-colors">Resolver Agora</button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Messages area with dynamic height */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 chat-bg relative scroll-smooth overflow-x-hidden">
-        {loading && <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary/50" /></div>}
-        {!loading && messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center h-full opacity-30 select-none grayscale translate-y-[-10%]">
-            <MessageSquare className="w-16 h-16 mb-4 text-primary" />
-            <p className="text-sm font-bold uppercase tracking-[0.2em]">Inicie a conversa</p>
+          <div className="w-10 h-10 rounded-full overflow-hidden bg-white/10 flex items-center justify-center flex-shrink-0 border border-white/10 shadow-inner">
+            {leadFoto ? (
+              <img src={leadFoto} alt={leadName} className="w-full h-full object-cover" onError={(e) => { (e.target as any).src = ''; (e.target as any).style.display = 'none'; }} />
+            ) : null}
+            <span className="text-white font-bold text-sm tracking-tight">{leadName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
           </div>
-        )}
-        {messages.map(msg => {
-          const isSent = msg.tipo !== 'recebida';
-          return (
-            <motion.div key={msg.id} initial={{ opacity: 0, scale: 0.95, y: 5 }} animate={{ opacity: 1, scale: 1, y: 0 }} className={`flex ${isSent ? 'justify-end' : 'justify-start'}`}>
-              <div className={`relative max-w-[85%] sm:max-w-[70%] px-2.5 py-1.5 shadow-sm
-                ${isSent
-                  ? 'bg-[#d9fdd3] dark:bg-[#005c4b] text-[#111b21] dark:text-[#e9edef] rounded-[10px] rounded-tr-[0px] border-b border-black/[0.04]'
-                  : 'bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-[10px] rounded-tl-[0px] border-b border-black/[0.04]'
-                }`}
-              >
-                {msg.media_url && msg.media_type && (
-                  <div className="mb-1 rounded-lg overflow-hidden mt-1"><MessageMedia url={msg.media_url} type={msg.media_type} /></div>
-                )}
-                {msg.conteudo && (() => {
-                  const isPlaceholder = /^\[([📷📹🎵📄🏷️👤📍]|Mídia)/.test(msg.conteudo) || msg.conteudo === '[Mídia]' || typeof msg.conteudo !== 'string';
-                  if (isPlaceholder && msg.media_url) return null;
-                  
-                  // Highlight system notifications differently
-                  if (msg.conteudo.startsWith('[SISTEMA]')) {
-                     return <p className="whitespace-pre-wrap break-words text-[13px] leading-snug font-medium italic text-orange-600 dark:text-orange-400 p-2 bg-orange-50 dark:bg-orange-950/30 rounded-lg">{msg.conteudo.replace('[SISTEMA] ', '')}</p>;
-                  }
-                  
-                  return <p className="whitespace-pre-wrap break-words text-[14px] leading-[19px] mt-0.5 px-1 font-normal">{msg.conteudo}</p>;
-                })()}
-                <div className={`flex items-center gap-1 mt-1 justify-end opacity-60 float-right ml-3 pt-1 text-[10px]`}>
-                  {isSent && !msg.is_bot && msg.respondido_por_nome && <span className="font-bold uppercase tracking-widest text-[#005c4b] dark:text-[#d9fdd3]/80 opacity-70">{msg.respondido_por_nome}</span>}
-                  <time className="font-medium text-[#667781] dark:text-[#8696a0]">{formatTime(msg.created_at)}</time>
-                  {isSent && msg.is_bot && <Bot className="w-3 h-3 text-[#667781] dark:text-[#8696a0]" />}
-                  {isSent && !msg.is_bot && <CheckCheck className="w-[15px] h-[15px] text-[#53bdeb] dark:text-[#53bdeb]" />}
+          <div className="flex-1 min-w-0">
+            <h2 className="font-bold text-white text-[15px] truncate">{leadName}</h2>
+            <p className="text-[10px] text-white/40 uppercase tracking-widest font-semibold">{leadPhone || 'Sem telefone'}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setShowProfile(!showProfile)} 
+              className={`p-2 rounded-xl transition-all ${showProfile ? 'bg-primary text-white shadow-glow' : 'text-white/80 hover:text-white hover:bg-white/10'}`}
+              title="Informações do Lead"
+            >
+              <Info className="w-5 h-5" />
+            </button>
+            <div className={`hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold shadow-sm 
+              ${!storeBotActive ? 'bg-red-500/20 text-red-200 border border-red-500/30' : 
+                isHumanMode ? 'bg-orange-500/20 text-orange-200 border border-orange-500/30' : 
+                'bg-emerald-500/20 text-emerald-200 border border-emerald-500/30'}`}>
+              {!storeBotActive ? (
+                <><X className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none text-red-200">BOT OFF</span></>
+              ) : isHumanMode ? (
+                <><User className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none text-orange-200">HUMANO</span></>
+              ) : (
+                <><Bot className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none text-emerald-200">BOT</span></>
+              )}
+            </div>
+            <button onClick={scheduleFollowup} className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors" title="Agendar Follow-up" >
+              <CalendarClock className="w-5 h-5" />
+            </button>
+            {isHumanMode ? (
+              <button onClick={returnToBot} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 text-white/90 text-[11px] font-bold hover:bg-white/20 transition-all">
+                <RotateCcw className="w-3.5 h-3.5 mb-[1px]" /> <span className="leading-none">Bot</span>
+              </button>
+            ) : (
+              <button onClick={assumeConversation} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-white text-[11px] font-bold hover:bg-primary/90 transition-all shadow-glow">
+                <UserCheck className="w-3.5 h-3.5 mb-[1px]" /> <span className="leading-none">Assumir</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Human attention banner */}
+        <AnimatePresence>
+          {precisaHumano && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-orange-500/95 backdrop-blur-md px-4 py-2 flex items-center gap-3 overflow-hidden">
+              <div className="flex-shrink-0 w-2 h-2 rounded-full bg-white animate-pulse" />
+              <p className="text-[11px] text-white font-black uppercase tracking-widest">Aguardando Resposta Manual</p>
+              <button onClick={assumeConversation} className="ml-auto text-[10px] bg-white text-orange-600 px-3 py-1 rounded-full font-black uppercase tracking-tighter hover:bg-orange-50 transition-colors">Resolver Agora</button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Messages area with dynamic height */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 chat-bg relative scroll-smooth overflow-x-hidden">
+          {loading && <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary/50" /></div>}
+          {!loading && messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full opacity-30 select-none grayscale translate-y-[-10%]">
+              <MessageSquare className="w-16 h-16 mb-4 text-primary" />
+              <p className="text-sm font-bold uppercase tracking-[0.2em]">Inicie a conversa</p>
+            </div>
+          )}
+          {messages.map(msg => {
+            const isSent = msg.tipo !== 'recebida';
+            return (
+              <motion.div key={msg.id} initial={{ opacity: 0, scale: 0.95, y: 5 }} animate={{ opacity: 1, scale: 1, y: 0 }} className={`flex ${isSent ? 'justify-end' : 'justify-start'}`}>
+                <div className={`relative max-w-[85%] sm:max-w-[70%] px-2.5 py-1.5 shadow-sm
+                  ${isSent
+                    ? 'bg-[#d9fdd3] dark:bg-[#005c4b] text-[#111b21] dark:text-[#e9edef] rounded-[10px] rounded-tr-[0px] border-b border-black/[0.04]'
+                    : 'bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-[10px] rounded-tl-[0px] border-b border-black/[0.04]'
+                  }`}
+                >
+                  {msg.media_url && msg.media_type && (
+                    <div className="mb-1 rounded-lg overflow-hidden mt-1"><MessageMedia url={msg.media_url} type={msg.media_type} /></div>
+                  )}
+                  {msg.conteudo && (() => {
+                    const isPlaceholder = /^\[([📷📹🎵📄🏷️👤📍]|Mídia)/.test(msg.conteudo) || msg.conteudo === '[Mídia]' || typeof msg.conteudo !== 'string';
+                    if (isPlaceholder && msg.media_url) return null;
+                    
+                    // Highlight system notifications differently
+                    if (msg.conteudo.startsWith('[SISTEMA]')) {
+                       return <p className="whitespace-pre-wrap break-words text-[13px] leading-snug font-medium italic text-orange-600 dark:text-orange-400 p-2 bg-orange-50 dark:bg-orange-950/30 rounded-lg">{msg.conteudo.replace('[SISTEMA] ', '')}</p>;
+                    }
+                    
+                    return <p className="whitespace-pre-wrap break-words text-[14px] leading-[19px] mt-0.5 px-1 font-normal">{msg.conteudo}</p>;
+                  })()}
+                  <div className={`flex items-center gap-1 mt-1 justify-end opacity-60 float-right ml-3 pt-1 text-[10px]`}>
+                    {isSent && !msg.is_bot && msg.respondido_por_nome && <span className="font-bold uppercase tracking-widest text-[#005c4b] dark:text-[#d9fdd3]/80 opacity-70">{msg.respondido_por_nome}</span>}
+                    <time className="font-medium text-[#667781] dark:text-[#8696a0]">{formatTime(msg.created_at)}</time>
+                    {isSent && msg.is_bot && <Bot className="w-3 h-3 text-[#667781] dark:text-[#8696a0]" />}
+                    {isSent && !msg.is_bot && <CheckCheck className="w-[15px] h-[15px] text-[#53bdeb] dark:text-[#53bdeb]" />}
+                  </div>
+                  <div className="clear-both" />
                 </div>
-                <div className="clear-both" />
+              </motion.div>
+            );
+          })}
+          <div ref={endRef} />
+        </div>
+
+        {/* Media & Attach Controls */}
+        <AnimatePresence>
+          {mediaPreview && (
+            <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} className="bg-card border-t border-border p-4 flex items-center gap-4 z-20">
+              <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-secondary shadow-elevated border border-border">
+                {mediaPreview.type === 'image' ? <img src={mediaPreview.url} alt="preview" className="w-full h-full object-cover" /> : <FileText className="w-8 h-8 text-primary" />}
+                <button onClick={clearMedia} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-destructive text-white shadow-lg flex items-center justify-center translate-x-1/3 -translate-y-1/3 border-2 border-card"><X className="w-3.5 h-3.5" /></button>
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-bold text-foreground truncate">{mediaPreview.file.name}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">{mediaPreview.type}</p>
               </div>
             </motion.div>
-          );
-        })}
-        <div ref={endRef} />
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {showAttach && (
+            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-card/95 backdrop-blur-md border-t border-border px-6 py-4 flex gap-8 justify-center z-20">
+              <button onClick={() => handleFileSelect('image/*')} className="flex flex-col items-center gap-2 group"><div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-all border border-primary/10 shadow-sm"><Image className="w-6 h-6 text-primary" /></div><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Foto</span></button>
+              <button onClick={() => handleFileSelect('video/*')} className="flex flex-col items-center gap-2 group"><div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500/20 transition-all border border-amber-500/10 shadow-sm"><Camera className="w-6 h-6 text-amber-500" /></div><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Vídeo</span></button>
+              <button onClick={() => handleFileSelect('*/*')} className="flex flex-col items-center gap-2 group"><div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-all border border-blue-500/10 shadow-sm"><FileText className="w-6 h-6 text-blue-500" /></div><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Doc</span></button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <input ref={fileRef} type="file" className="hidden" onChange={onFileChange} />
+
+        {/* Input bar - More contrast and border */}
+        <footer className="bg-card border-t-2 border-primary/20 bg-gradient-to-b from-card to-secondary/30 px-4 py-3 pb-6 sm:pb-3 flex gap-3 flex-shrink-0 z-30 min-h-[76px] items-end">
+          <button onClick={() => setShowAttach(!showAttach)} className={`w-11 h-11 flex-shrink-0 rounded-2xl flex items-center justify-center transition-all ${showAttach ? 'bg-primary text-white shadow-glow' : 'bg-muted text-muted-foreground hover:bg-muted/80 border border-border'}`}>
+            <Plus className="w-5 h-5" />
+          </button>
+          <div className="flex-1 relative flex items-end">
+            <textarea
+              rows={1}
+              value={input} onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendMessage())}
+              placeholder="Escreva sua mensagem aqui..."
+              className="w-full bg-background text-foreground text-[15px] font-medium rounded-2xl pl-4 pr-12 py-3 focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all resize-none min-h-[44px] max-h-[120px] shadow-sm border border-border/60"
+            />
+            <button onClick={sendMessage} disabled={sending || (!input.trim() && !mediaPreview)}
+              className="absolute right-1.5 bottom-1.5 w-[34px] h-[34px] rounded-xl bg-primary text-white flex items-center justify-center disabled:opacity-30 hover:scale-105 active:scale-95 transition-all shadow-glow">
+              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 ml-0.5" />}
+            </button>
+          </div>
+        </footer>
       </div>
 
-      {/* Media & Attach Controls */}
+      {/* Sidebar Profile & Timeline */}
       <AnimatePresence>
-        {mediaPreview && (
-          <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 50, opacity: 0 }} className="bg-card border-t border-border p-4 flex items-center gap-4 z-20">
-            <div className="relative w-16 h-16 rounded-2xl overflow-hidden bg-secondary shadow-elevated border border-border">
-              {mediaPreview.type === 'image' ? <img src={mediaPreview.url} alt="preview" className="w-full h-full object-cover" /> : <FileText className="w-8 h-8 text-primary" />}
-              <button onClick={clearMedia} className="absolute top-1 right-1 w-6 h-6 rounded-full bg-destructive text-white shadow-lg flex items-center justify-center translate-x-1/3 -translate-y-1/3 border-2 border-card"><X className="w-3.5 h-3.5" /></button>
+        {showProfile && (
+          <motion.aside
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed right-0 top-0 bottom-0 w-[350px] bg-background border-l border-border shadow-2xl z-40 flex flex-col"
+          >
+            <div className="p-6 border-b border-border bg-card">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-black text-foreground uppercase tracking-wider text-xs">Perfil do Lead</h3>
+                <button onClick={() => setShowProfile(false)} className="p-2 rounded-xl bg-secondary text-muted-foreground hover:text-foreground">
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex flex-col items-center">
+                <div 
+                  className="w-24 h-24 rounded-[32px] bg-secondary border-4 border-card shadow-card overflow-hidden flex items-center justify-center relative group"
+                  onClick={() => profileFileRef.current?.click()}
+                >
+                  {uploadingProfile ? (
+                     <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  ) : leadFoto ? (
+                    <img src={leadFoto} className="w-full h-full object-cover" />
+                  ) : (
+                    <User className="w-10 h-10 text-muted-foreground/30" />
+                  )}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
+                    <Camera className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+                <input ref={profileFileRef} type="file" accept="image/*" className="hidden" onChange={handleProfileUpload} />
+                <h4 className="mt-4 font-black text-xl text-foreground text-center line-clamp-1">{leadName}</h4>
+                <p className="text-sm text-muted-foreground font-mono">{leadPhone}</p>
+                <div className="mt-3 flex gap-2">
+                   <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest">{fonte || 'Origem desconhecida'}</span>
+                </div>
+              </div>
             </div>
-            <div className="flex-1">
-              <p className="text-xs font-bold text-foreground truncate">{mediaPreview.file.name}</p>
-              <p className="text-[10px] text-muted-foreground uppercase">{mediaPreview.type}</p>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-8">
+              {/* Responsibility & Status */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-muted-foreground mb-3">
+                  <LayoutDashboard className="w-4 h-4 text-primary" />
+                  <span className="text-[10px] font-black uppercase tracking-widest">Controles e Status</span>
+                </div>
+                <div className="space-y-4 bg-secondary/30 p-4 rounded-3xl border border-border/40">
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-2 px-1">Status do Pipeline</label>
+                    <select 
+                      value={status}
+                      onChange={(e) => {
+                         const val = e.target.value;
+                         setStatus(val);
+                         (supabase as any).from('leads').update({ status: val }).eq('id', leadId).then(() => {
+                           fetchTimeline();
+                           toast.success(`Status: ${val}`);
+                         });
+                      }}
+                      className="w-full bg-card px-4 py-3 rounded-2xl border border-border/60 text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none"
+                    >
+                      {['Novo', 'Interessado', 'Aguardando', 'Vendido', 'Perdido'].map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-2 px-1">Atendente Responsável</label>
+                    <select 
+                      value={atendenteId || 'none'}
+                      onChange={(e) => {
+                         const val = e.target.value === 'none' ? null : e.target.value;
+                         setAtendenteId(val);
+                         (supabase as any).from('leads').update({ atendente_id: val }).eq('id', leadId).then(() => {
+                           fetchTimeline();
+                           toast.success('Atendente alterado!');
+                         });
+                      }}
+                      className="w-full bg-card px-4 py-3 rounded-2xl border border-border/60 text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none"
+                    >
+                      <option value="none">Nenhum Atendente</option>
+                      {agents.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Timeline */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <History className="w-4 h-4 text-primary" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">Linha do Tempo</span>
+                  </div>
+                  <button onClick={fetchTimeline} disabled={loadingTimeline} className="p-1.5 rounded-lg hover:bg-secondary text-primary transition-colors disabled:opacity-30">
+                     <RotateCcw className={`w-3.5 h-3.5 ${loadingTimeline ? 'animate-spin' : ''}`} />
+                  </button>
+                </div>
+                
+                <div className="relative space-y-6 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-[2px] before:bg-border/60">
+                  {timeline.map((event, idx) => (
+                    <div key={event.id} className="relative pl-8 animate-fade-in-up" style={{ animationDelay: `${idx * 0.1}s` }}>
+                      <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-background border-2 border-primary flex items-center justify-center z-10">
+                        {event.tipo === 'mudanca_status' ? <LayoutDashboard className="w-3 h-3 text-primary" /> : <Info className="w-3 h-3 text-primary" />}
+                      </div>
+                      <p className="text-xs font-bold text-foreground leading-tight">{event.descritivo}</p>
+                      <p className="text-[10px] text-muted-foreground mt-1 tabular-nums">{new Date(event.criado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
+                    </div>
+                  ))}
+                  
+                  {timeline.length === 0 && !loadingTimeline && (
+                    <div className="text-center py-10 opacity-30 italic text-[11px] text-muted-foreground">Sem histórico registrado.</div>
+                  )}
+                </div>
+              </div>
             </div>
-          </motion.div>
+
+            <div className="p-6 border-t border-border bg-card">
+              <button disabled className="w-full py-4 rounded-2xl bg-secondary text-muted-foreground font-black text-[10px] uppercase tracking-widest opacity-50 cursor-not-allowed">
+                Exportar Histórico PDF
+              </button>
+            </div>
+          </motion.aside>
         )}
       </AnimatePresence>
-
-      <AnimatePresence>
-        {showAttach && (
-          <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }} className="bg-card/95 backdrop-blur-md border-t border-border px-6 py-4 flex gap-8 justify-center z-20">
-            <button onClick={() => handleFileSelect('image/*')} className="flex flex-col items-center gap-2 group"><div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-all border border-primary/10 shadow-sm"><Image className="w-6 h-6 text-primary" /></div><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Foto</span></button>
-            <button onClick={() => handleFileSelect('video/*')} className="flex flex-col items-center gap-2 group"><div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center group-hover:bg-amber-500/20 transition-all border border-amber-500/10 shadow-sm"><Camera className="w-6 h-6 text-amber-500" /></div><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Vídeo</span></button>
-            <button onClick={() => handleFileSelect('*/*')} className="flex flex-col items-center gap-2 group"><div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 transition-all border border-blue-500/10 shadow-sm"><FileText className="w-6 h-6 text-blue-500" /></div><span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Doc</span></button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <input ref={fileRef} type="file" className="hidden" onChange={onFileChange} />
-
-      {/* Input bar - More contrast and border */}
-      <footer className="bg-card border-t-2 border-primary/20 bg-gradient-to-b from-card to-secondary/30 px-4 py-3 pb-6 sm:pb-3 flex gap-3 flex-shrink-0 z-30 min-h-[76px] items-end">
-        <button onClick={() => setShowAttach(!showAttach)} className={`w-11 h-11 flex-shrink-0 rounded-2xl flex items-center justify-center transition-all ${showAttach ? 'bg-primary text-white shadow-glow' : 'bg-muted text-muted-foreground hover:bg-muted/80 border border-border'}`}>
-          <Plus className="w-5 h-5" />
-        </button>
-        <div className="flex-1 relative flex items-end">
-          <textarea
-            rows={1}
-            value={input} onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && (e.preventDefault(), sendMessage())}
-            placeholder="Escreva sua mensagem aqui..."
-            className="w-full bg-background text-foreground text-[15px] font-medium rounded-2xl pl-4 pr-12 py-3 focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all resize-none min-h-[44px] max-h-[120px] shadow-sm border border-border/60"
-          />
-          <button onClick={sendMessage} disabled={sending || (!input.trim() && !mediaPreview)}
-            className="absolute right-1.5 bottom-1.5 w-[34px] h-[34px] rounded-xl bg-primary text-white flex items-center justify-center disabled:opacity-30 hover:scale-105 active:scale-95 transition-all shadow-glow">
-            {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 ml-0.5" />}
-          </button>
-        </div>
-      </footer>
     </div>
   );
 }

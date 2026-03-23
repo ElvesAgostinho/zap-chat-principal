@@ -1,26 +1,30 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { DollarSign, ShoppingBag, Users, TrendingUp, AlertTriangle, Copy, BarChart3, Bell, ArrowUpRight, ArrowDownRight, Target, Calendar } from 'lucide-react';
+import { DollarSign, ShoppingBag, Users, TrendingUp, AlertTriangle, Copy, BarChart3, Bell, ArrowUpRight, ArrowDownRight, Target, Calendar, MessageSquare, Plus, Download } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Produto, Lead, Venda } from '@/types';
 import { formatCurrency } from '@/data/mock';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { exportToCSV } from '@/utils/export';
 
 interface DashboardPanelProps {
   vendas: Venda[];
   leads: Lead[];
   products: Produto[];
   alertCount: number;
+  onAddLead?: () => void;
+  onAddProduct?: () => void;
 }
 
 const PIPELINE_COLORS = ['hsl(210, 14%, 60%)', 'hsl(217, 91%, 60%)', 'hsl(43, 96%, 56%)', 'hsl(153, 60%, 40%)'];
 
-export default function DashboardPanel({ vendas, leads, products, alertCount }: DashboardPanelProps) {
+export default function DashboardPanel({ vendas, leads, products, alertCount, onAddLead, onAddProduct }: DashboardPanelProps) {
   const { role, storeId } = useAuth();
   const [storeCode, setStoreCode] = useState<string | null>(null);
   const [period, setPeriod] = useState<'7d' | '30d' | 'all'>('7d');
+  const [activeTab, setActiveTab] = useState<'geral' | 'insights'>('geral');
 
   useEffect(() => {
     if (!storeId || role !== 'admin') return;
@@ -29,6 +33,26 @@ export default function DashboardPanel({ vendas, leads, products, alertCount }: 
   }, [storeId, role]);
 
   const totalSales = vendas.filter(v => v.status !== 'cancelado').reduce((s, v) => s + (v.valor || 0), 0);
+  
+  const totalCost = useMemo(() => {
+    return vendas.filter(v => v.status !== 'cancelado').reduce((s, v) => {
+      const p = products.find(prod => prod.nome === v.produto);
+      return s + ((p?.custo_unitario || 0) * (v.quantidade || 1));
+    }, 0);
+  }, [vendas, products]);
+
+  const realProfit = totalSales - totalCost;
+
+  const revenueForecast = useMemo(() => {
+    const now = new Date();
+    const daysSinceStart = now.getDate();
+    const dailyAvg = totalSales / Math.max(1, daysSinceStart);
+    const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    return dailyAvg * totalDays;
+  }, [totalSales]);
+
+  const coldLeadsCount = leads.filter(l => l.precisa_humano && l.status !== 'cliente').length;
+
   const pendingOrders = vendas.filter(v => v.status === 'pendente').length;
   const paidOrders = vendas.filter(v => v.pagamento_status === 'pago').length;
   const deliveredOrders = vendas.filter(v => v.status_entrega === 'entregue').length;
@@ -42,7 +66,7 @@ export default function DashboardPanel({ vendas, leads, products, alertCount }: 
   const chartData = useMemo(() => {
     const days = period === '7d' ? 7 : period === '30d' ? 30 : 90;
     const now = new Date();
-    const data: { date: string; vendas: number; valor: number }[] = [];
+    const data: { date: string; vendas: number; valor: number; lucro: number }[] = [];
 
     for (let i = days - 1; i >= 0; i--) {
       const d = new Date(now);
@@ -52,14 +76,21 @@ export default function DashboardPanel({ vendas, leads, products, alertCount }: 
         const vDate = new Date(v.criado_em);
         return vDate.toDateString() === d.toDateString() && v.status !== 'cancelado';
       });
+      const dayRevenue = dayVendas.reduce((s, v) => s + (v.valor || 0), 0);
+      const dayCost = dayVendas.reduce((s, v) => {
+        const p = products.find(prod => prod.nome === v.produto);
+        return s + ((p?.custo_unitario || 0) * (v.quantidade || 1));
+      }, 0);
+
       data.push({
         date: dateStr,
         vendas: dayVendas.length,
-        valor: dayVendas.reduce((s, v) => s + (v.valor || 0), 0),
+        valor: dayRevenue,
+        lucro: dayRevenue - dayCost,
       });
     }
     return data;
-  }, [vendas, period]);
+  }, [vendas, period, products]);
 
   // Pipeline donut data
   const pipelineData = useMemo(() => {
@@ -86,10 +117,10 @@ export default function DashboardPanel({ vendas, leads, products, alertCount }: 
   }, [chartData]);
 
   const stats = [
-    { icon: DollarSign, label: 'Receita Total', value: formatCurrency(totalSales), color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10', trend: trend, showTrend: true },
-    { icon: ShoppingBag, label: 'Pedidos', value: vendas.length.toString(), color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10', trend: 0, showTrend: false },
-    { icon: Users, label: 'Leads / Clientes', value: `${leads.length - clientCount} / ${clientCount}`, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10', trend: 0, showTrend: false },
-    { icon: TrendingUp, label: 'Taxa Conversão', value: `${conversionRate}%`, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10', trend: 0, showTrend: false },
+    { icon: DollarSign, label: 'Lucro Real', value: formatCurrency(realProfit), color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10', trend: trend, showTrend: true },
+    { icon: TrendingUp, label: 'Previsão Mês', value: formatCurrency(revenueForecast), color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10', trend: 0, showTrend: false },
+    { icon: Users, label: 'Leads Ativos', value: `${leads.length - clientCount}`, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10', trend: 0, showTrend: false },
+    { icon: AlertTriangle, label: 'Leads Frios', value: coldLeadsCount.toString(), color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10', trend: 0, showTrend: false },
   ];
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -105,244 +136,208 @@ export default function DashboardPanel({ vendas, leads, products, alertCount }: 
 
   return (
     <div className="space-y-6 animate-fade-in-up">
-      {/* Top Header Actions */}
-      <div className="flex items-center justify-end">
-        {storeCode && (
-          <button
-            onClick={() => { navigator.clipboard.writeText(storeCode); toast.success('Código copiado!'); }}
-            className="flex items-center gap-2 bg-card/80 backdrop-blur-sm px-4 py-2 rounded-2xl text-xs font-bold shadow-card border border-border/40 hover:shadow-elevated transition-all group"
-          >
-            <span className="text-muted-foreground uppercase tracking-widest text-[9px]">Código da Loja</span>
-            <span className="font-mono text-foreground">{storeCode}</span>
-            <Copy className="w-3.5 h-3.5 text-primary group-hover:scale-110 transition-transform" />
-          </button>
-        )}
+      {/* Tabs */}
+      <div className="flex border-b border-border mb-2">
+        <button 
+          onClick={() => setActiveTab('geral')}
+          className={`px-6 py-2.5 text-xs font-black uppercase tracking-widest transition-all relative ${activeTab === 'geral' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+        >
+          Visão Geral
+          {activeTab === 'geral' && <motion.div layoutId="tab-active" className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full" />}
+        </button>
+        <button 
+          onClick={() => setActiveTab('insights')}
+          className={`px-6 py-2.5 text-xs font-black uppercase tracking-widest transition-all relative ${activeTab === 'insights' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+        >
+          Insights de ROI
+          {activeTab === 'insights' && <motion.div layoutId="tab-active" className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full" />}
+        </button>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {stats.map((stat, i) => (
+      {activeTab === 'geral' ? (
+        <div className="space-y-6">
+          {/* Store Link */}
           <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 12 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.06 }}
-            className="bg-card p-4 rounded-2xl shadow-card border border-border/50 stat-card"
+            className="bg-gradient-to-r from-primary/10 via-violet-500/5 to-transparent p-5 rounded-3xl border border-primary/20 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6"
           >
-            <div className="flex items-center justify-between mb-3">
-              <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center`}>
-                <stat.icon className={`w-5 h-5 ${stat.color}`} />
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center text-white shadow-glow flex-shrink-0">
+                <ShoppingBag className="w-6 h-6" />
               </div>
-              {stat.showTrend && stat.trend !== 0 && (
-                <span className={`flex items-center gap-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
-                  stat.trend > 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-600 dark:text-red-400'
-                }`}>
-                  {stat.trend > 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                  {Math.abs(stat.trend)}%
+              <div>
+                <h3 className="font-bold text-foreground">Sua Loja está Online! 🚀</h3>
+                <p className="text-xs text-muted-foreground">Compartilhe o link do seu catálogo para receber pedidos no WhatsApp.</p>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+              <div className="flex-1 md:flex-none flex items-center gap-2 bg-card px-4 py-2.5 rounded-2xl border border-border/60 shadow-sm group min-w-[200px]">
+                <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[150px]">
+                  {window.location.origin}/loja/{storeCode || '...'}
                 </span>
-              )}
-            </div>
-            <p className="text-xl font-bold text-foreground tabular-nums">{stat.value}</p>
-            <p className="text-[11px] text-muted-foreground mt-0.5">{stat.label}</p>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Alerts */}
-      {alertCount > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4 flex items-center gap-3"
-        >
-          <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center flex-shrink-0">
-            <Bell className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-amber-800 dark:text-amber-200">{alertCount} lead(s) aguardando atendimento</p>
-            <p className="text-xs text-amber-600/70 dark:text-amber-400/70">Clique em Alertas para atender</p>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Low stock alert */}
-      {lowStockProducts.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-red-500/10 dark:bg-red-500/5 border border-red-500/20 rounded-2xl p-4 flex items-center gap-3"
-        >
-          <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center flex-shrink-0">
-            <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium text-red-800 dark:text-red-200">{lowStockProducts.length} produto(s) com estoque baixo</p>
-            <p className="text-xs text-red-600/70 dark:text-red-400/70">{lowStockProducts.map(p => p.nome).join(', ')}</p>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Sales chart */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="lg:col-span-2 bg-card rounded-2xl p-5 shadow-card border border-border/50"
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-primary" />
-                Vendas
-              </h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Evolução de receita</p>
-            </div>
-            <div className="flex gap-1 bg-secondary rounded-lg p-0.5">
-              {(['7d', '30d', 'all'] as const).map(p => (
                 <button
-                  key={p}
-                  onClick={() => setPeriod(p)}
-                  className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
-                    period === p ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'
-                  }`}
+                  onClick={() => { 
+                    if (storeCode) {
+                      navigator.clipboard.writeText(`${window.location.origin}/loja/${storeCode}`); 
+                      toast.success('Link copiado!'); 
+                    }
+                  }}
+                  className="p-1.5 hover:bg-secondary rounded-lg transition-colors"
                 >
-                  {p === '7d' ? '7 dias' : p === '30d' ? '30 dias' : 'Tudo'}
+                  <Copy className="w-3.5 h-3.5 text-primary" />
                 </button>
-              ))}
+              </div>
+              
+              <button
+                onClick={() => {
+                  const msg = encodeURIComponent(`Confira nosso catálogo online: ${window.location.origin}/loja/${storeCode}`);
+                  window.open(`https://wa.me/?text=${msg}`, '_blank');
+                }}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-2xl font-bold text-xs shadow-glow-emerald transition-all"
+              >
+                <MessageSquare className="w-4 h-4 fill-current" /> Compartilhar
+              </button>
             </div>
-          </div>
-          <div className="h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`} />
-                <Tooltip content={<CustomTooltip />} />
-                <Area type="monotone" dataKey="valor" stroke="hsl(var(--primary))" strokeWidth={2.5} fill="url(#salesGradient)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </motion.div>
+          </motion.div>
 
-        {/* Pipeline donut */}
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-card rounded-2xl p-5 shadow-card border border-border/50"
-        >
-          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4">
-            <Target className="w-4 h-4 text-primary" />
-            Pipeline
-          </h3>
-          {pipelineData.length > 0 ? (
-            <>
-              <div className="flex justify-center">
-                <div className="w-[160px] h-[160px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pipelineData}
-                        dataKey="count"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={45}
-                        outerRadius={72}
-                        paddingAngle={3}
-                        strokeWidth={0}
-                      >
-                        {pipelineData.map((_, idx) => (
-                          <Cell key={idx} fill={PIPELINE_COLORS[idx % PIPELINE_COLORS.length]} />
-                        ))}
-                      </Pie>
-                    </PieChart>
-                  </ResponsiveContainer>
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {stats.map((stat, i) => (
+              <motion.div key={stat.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className="bg-card p-4 rounded-2xl shadow-card border border-border/50 stat-card">
+                <div className="flex items-center justify-between mb-3">
+                  <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center`}><stat.icon className={`w-5 h-5 ${stat.color}`} /></div>
+                  {stat.showTrend && stat.trend !== 0 && (
+                    <span className={`flex items-center gap-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${stat.trend > 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-600 dark:text-red-400'}`}>
+                      {stat.trend > 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}{Math.abs(stat.trend)}%
+                    </span>
+                  )}
+                </div>
+                <p className="text-xl font-bold text-foreground tabular-nums">{stat.value}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">{stat.label}</p>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="lg:col-span-2 bg-card rounded-2xl p-5 shadow-card border border-border/50">
+              <div className="flex items-center justify-between mb-4">
+                <div><h3 className="text-sm font-semibold text-foreground flex items-center gap-2"><BarChart3 className="w-4 h-4 text-primary" />Vendas</h3><p className="text-xs text-muted-foreground mt-0.5">Evolução de receita</p></div>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={() => exportToCSV(vendas, 'relatorio_vendas')}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border hover:bg-secondary text-[10px] font-black uppercase tracking-widest transition-all"
+                >
+                  <Download className="w-3.5 h-3.5" /> Exportar Dados
+                </button>
+                <div className="flex gap-1 bg-secondary rounded-lg p-0.5">
+                  {(['7d', '30d', 'all'] as const).map(p => (
+                    <button key={p} onClick={() => setPeriod(p)} className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${period === p ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground'}`}>{p === '7d' ? '7 dias' : p === '30d' ? '30 dias' : 'Tudo'}</button>
+                  ))}
                 </div>
               </div>
-              <div className="space-y-1.5 mt-3">
-                {pipelineData.map((stage, idx) => (
-                  <div key={stage.name} className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: PIPELINE_COLORS[idx % PIPELINE_COLORS.length] }} />
-                    <span className="text-xs text-muted-foreground flex-1">{stage.name}</span>
-                    <span className="text-xs font-semibold text-foreground tabular-nums">{stage.count}</span>
+            </div>
+            <div className="h-[200px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+                  <defs><linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} /><stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} /></linearGradient></defs>
+                  <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area type="monotone" dataKey="valor" stroke="hsl(var(--primary))" strokeWidth={2.5} fill="url(#salesGradient)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
+
+            <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-card rounded-2xl p-5 shadow-card border border-border/50">
+              <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-4"><Target className="w-4 h-4 text-primary" />Pipeline</h3>
+              {pipelineData.length > 0 ? (
+                <>
+                  <div className="flex justify-center"><div className="w-[160px] h-[160px]"><ResponsiveContainer width="100%" height="100%"><PieChart><Pie data={pipelineData} dataKey="count" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={72} paddingAngle={3} strokeWidth={0}>{pipelineData.map((_, idx) => (<Cell key={idx} fill={PIPELINE_COLORS[idx % PIPELINE_COLORS.length]} />))}</Pie></PieChart></ResponsiveContainer></div></div>
+                  <div className="space-y-1.5 mt-3">{pipelineData.map((stage, idx) => (<div key={stage.name} className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: PIPELINE_COLORS[idx % PIPELINE_COLORS.length] }} /><span className="text-xs text-muted-foreground flex-1">{stage.name}</span><span className="text-xs font-semibold text-foreground tabular-nums">{stage.count}</span></div>))}</div>
+                </>
+              ) : (<div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground"><Target className="w-8 h-8 opacity-30 mb-2" /><p className="text-xs">Sem leads</p></div>)}
+            </motion.div>
+          </div>
+
+          {/* Orders Quick Bar */}
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="bg-card rounded-2xl p-5 shadow-card border border-border/50">
+            <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2"><Calendar className="w-4 h-4 text-primary" />Status dos Pedidos</h3>
+            <div className="flex gap-2">
+              {[{ label: 'Pendentes', count: pendingOrders, color: 'bg-amber-500' }, { label: 'Pagos', count: paidOrders, color: 'bg-blue-500' }, { label: 'Entregues', count: deliveredOrders, color: 'bg-emerald-500' }].map(s => (
+                <div key={s.label} className="flex-1 text-center"><div className={`${s.color} text-white text-xl font-bold rounded-xl py-3 mb-1.5`}>{s.count}</div><p className="text-[10px] text-muted-foreground font-medium">{s.label}</p></div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Recent Orders */}
+          {recentVendas.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="bg-card rounded-2xl p-5 shadow-card border border-border/50">
+              <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2"><ShoppingBag className="w-4 h-4 text-primary" />Pedidos Recentes</h3>
+              <div className="space-y-1.5">
+                {recentVendas.map(v => (
+                  <div key={v.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-secondary/40 hover:bg-secondary/70 transition-colors">
+                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0"><ShoppingBag className="w-4 h-4 text-primary" /></div>
+                    <div className="flex-1 min-w-0"><p className="text-xs font-medium text-foreground truncate">{v.cliente_nome || 'Cliente'}</p><p className="text-[11px] text-muted-foreground">{v.produto} · {formatCurrency(v.valor)}</p></div>
+                    <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${v.status === 'pendente' ? 'bg-amber-500/10 text-amber-700' : 'bg-emerald-500/10 text-emerald-700'}`}>{v.status}</span>
                   </div>
                 ))}
               </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-[200px] text-muted-foreground">
-              <Target className="w-8 h-8 opacity-30 mb-2" />
-              <p className="text-xs">Sem leads</p>
-            </div>
+            </motion.div>
           )}
-        </motion.div>
-      </div>
-
-      {/* Pipeline quick bar */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35 }}
-        className="bg-card rounded-2xl p-4 shadow-card border border-border/50"
-      >
-        <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-primary" />
-          Status dos Pedidos
-        </h3>
-        <div className="flex gap-2">
-          {[
-            { label: 'Pendentes', count: pendingOrders, color: 'bg-amber-500' },
-            { label: 'Pagos', count: paidOrders, color: 'bg-blue-500' },
-            { label: 'Entregues', count: deliveredOrders, color: 'bg-emerald-500' },
-          ].map(s => (
-            <div key={s.label} className="flex-1 text-center">
-              <div className={`${s.color} text-white text-xl font-bold rounded-xl py-3 mb-1.5 transition-transform hover:scale-[1.02]`}>{s.count}</div>
-              <p className="text-[10px] text-muted-foreground font-medium">{s.label}</p>
-            </div>
-          ))}
         </div>
-      </motion.div>
-
-      {/* Recent orders */}
-      {recentVendas.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-card rounded-2xl p-5 shadow-card border border-border/50"
-        >
-          <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-            <ShoppingBag className="w-4 h-4 text-primary" />
-            Pedidos Recentes
-          </h3>
-          <div className="space-y-1.5">
-            {recentVendas.map(v => (
-              <div key={v.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-secondary/40 hover:bg-secondary/70 transition-colors">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                  <ShoppingBag className="w-4 h-4 text-primary" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium text-foreground truncate">{v.cliente_nome || 'Cliente'}</p>
-                  <p className="text-[11px] text-muted-foreground">{v.produto} · {formatCurrency(v.valor)}</p>
-                </div>
-                <span className={`text-[10px] font-semibold px-2.5 py-1 rounded-full ${
-                  v.status === 'pendente' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300' :
-                  v.status === 'pago' ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300' :
-                  v.status === 'cancelado' ? 'bg-red-500/10 text-red-700 dark:text-red-300' :
-                  'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
-                }`}>{v.status}</span>
+      ) : (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="bg-card rounded-3xl p-6 border border-border/50 shadow-card">
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><BarChart3 className="w-5 h-5 text-primary" />Receita vs Lucro</h3>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData}>
+                    <defs>
+                      <linearGradient id="revenue" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.1} /><stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} /></linearGradient>
+                      <linearGradient id="profit" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.1} /><stop offset="95%" stopColor="#10b981" stopOpacity={0} /></linearGradient>
+                    </defs>
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Area type="monotone" dataKey="valor" name="Receita" stroke="hsl(var(--primary))" strokeWidth={3} fill="url(#revenue)" />
+                    <Area type="monotone" dataKey="lucro" name="Lucro" stroke="#10b981" strokeWidth={3} fill="url(#profit)" />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
-            ))}
+            </div>
+
+            <div className="bg-card rounded-3xl p-6 border border-border/50 shadow-card">
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><ShoppingBag className="w-5 h-5 text-primary" />Performance por Produto</h3>
+              <div className="space-y-4">
+                {products.slice(0, 5).map(p => {
+                  const productSales = vendas.filter(v => v.produto === p.nome && v.status !== 'cancelado');
+                  const revenue = productSales.reduce((s, v) => s + (v.valor || 0), 0);
+                  const cost = (p.custo_unitario || 0) * productSales.reduce((s, v) => s + (v.quantidade || 1), 0);
+                  const profit = revenue - cost;
+                  const margin = revenue > 0 ? Math.round((profit / revenue) * 100) : 0;
+                  return (
+                    <div key={p.id}>
+                      <div className="flex justify-between text-xs mb-1"><span className="font-bold">{p.nome}</span><span className="font-mono text-emerald-500">{margin}%</span></div>
+                      <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
+                        <motion.div initial={{ width: 0 }} animate={{ width: `${margin}%` }} className="h-full bg-emerald-500" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        </motion.div>
+          <div className="bg-gradient-to-br from-primary/5 to-transparent p-8 rounded-3xl border border-primary/10 text-center">
+            <Target className="w-12 h-12 text-primary mx-auto mb-4" />
+            <h4 className="font-black text-xl mb-2">Foco no Lucro! 🚀</h4>
+            <p className="text-sm text-muted-foreground max-w-sm mx-auto">Estas métricas ajudam você a investir nos produtos certos.</p>
+          </div>
+        </div>
       )}
     </div>
   );

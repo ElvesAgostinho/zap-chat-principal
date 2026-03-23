@@ -5,11 +5,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import {
   Store, Users, ShoppingBag, CheckCircle, XCircle, Clock, LogOut,
-  CreditCard, Eye, FileText, Loader2, BarChart3, Package
+  CreditCard, Eye, FileText, Loader2, BarChart3, Package, UserCheck
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import AppHeader from '@/components/AppHeader';
+import SuperAdminNotifications from '@/components/SuperAdminNotifications';
+import PlatformBillingConfig from '@/components/PlatformBillingConfig';
+import { UsuarioLoja } from '@/types';
 
 interface LojaInfo {
   id: string;
@@ -19,6 +22,8 @@ interface LojaInfo {
   instance_status: string | null;
   criado_em: string;
   owner_user_id: string | null;
+  status_aprovacao: 'pendente_aprovacao' | 'ativo' | 'suspenso' | 'cancelado';
+  plano: string;
 }
 
 interface Assinatura {
@@ -48,22 +53,27 @@ export default function SuperAdminPanel() {
   const { toast } = useToast();
   const [lojas, setLojas] = useState<LojaInfo[]>([]);
   const [assinaturas, setAssinaturas] = useState<Assinatura[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<(UsuarioLoja & { lojas: { nome: string } | null })[]>([]);
   const [stats, setStats] = useState<Stats>({ totalLojas: 0, totalLeads: 0, totalVendas: 0, vendasValor: 0, pendingPayments: 0 });
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [viewingImage, setViewingImage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('stores_pending');
+  const [selectedPlans, setSelectedPlans] = useState<Record<string, string>>({});
 
   const fetchAll = async () => {
     setLoading(true);
-    const [{ data: lojasData }, { data: assData }, { count: leadsCount }, { data: vendasData }] = await Promise.all([
-      (supabase as any).from('lojas').select('id, nome, telefone, codigo_unico, instance_status, criado_em, owner_user_id').order('criado_em', { ascending: false }),
+    const [{ data: lojasData }, { data: assData }, { count: leadsCount }, { data: vendasData }, { data: usersData }] = await Promise.all([
+      (supabase as any).from('lojas').select('id, nome, telefone, codigo_unico, instance_status, criado_em, owner_user_id, status_aprovacao, plano').order('criado_em', { ascending: false }),
       (supabase as any).from('assinaturas').select('*, lojas(nome), planos(nome, preco)').order('criado_em', { ascending: false }),
       (supabase as any).from('leads').select('id', { count: 'exact', head: true }),
       (supabase as any).from('vendas').select('valor, status'),
+      (supabase as any).from('usuarios_loja').select('*, lojas(nome)').eq('role', 'admin').eq('status', 'pendente'),
     ]);
 
     setLojas(lojasData || []);
     setAssinaturas(assData || []);
+    setPendingUsers(usersData || []);
 
     const vendas = vendasData || [];
     const pending = (assData || []).filter((a: Assinatura) => a.status === 'aguardando_pagamento').length;
@@ -103,8 +113,50 @@ export default function SuperAdminPanel() {
     }
   };
 
+  const handleUserAction = async (id: string, action: 'aprovar' | 'rejeitar') => {
+    setProcessingId(id);
+    try {
+      await (supabase as any).from('usuarios_loja').update({
+        status: action === 'aprovar' ? 'aprovado' : 'rejeitado'
+      }).eq('id', id);
+      toast({ title: action === 'aprovar' ? '✅ Admin aprovado!' : '❌ Admin rejeitado' });
+      fetchAll();
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleStoreAction = async (id: string, action: 'aprovar' | 'suspend') => {
+    setProcessingId(id);
+    try {
+      // 1. Update the store status AND plan
+      const planoSelecionado = selectedPlans[id] || 'iniciante';
+      await (supabase as any).from('lojas').update({
+        status_aprovacao: action === 'aprovar' ? 'ativo' : 'suspenso',
+        aprovado_em: action === 'aprovar' ? new Date().toISOString() : null,
+        ...(action === 'aprovar' ? { plano: planoSelecionado } : {})
+      }).eq('id', id);
+
+      // 2. CRITICAL FIX: Also update usuarios_loja.status so get_my_membership
+      //    returns 'aprovado' and the user can actually log in after approval.
+      await (supabase as any).from('usuarios_loja').update({
+        status: action === 'aprovar' ? 'aprovado' : 'rejeitado'
+      }).eq('loja_id', id);
+
+      toast({ title: action === 'aprovar' ? `✅ Loja Ativada! Plano: ${planoSelecionado}` : '⚠️ Loja Suspensa' });
+      fetchAll();
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
   const pendingAssinaturas = assinaturas.filter(a => a.status === 'aguardando_pagamento');
   const activeAssinaturas = assinaturas.filter(a => a.status === 'ativo');
+  const pendingStores = lojas.filter(l => l.status_aprovacao === 'pendente_aprovacao');
 
   const formatKz = (v: number) => v.toLocaleString('pt-AO') + ' Kz';
 
@@ -120,9 +172,12 @@ export default function SuperAdminPanel() {
     <div className="min-h-screen bg-background pb-8">
       <AppHeader
         rightContent={
-          <motion.button whileTap={{ scale: 0.95 }} onClick={signOut} className="p-2 rounded-lg bg-white/15 text-white" title="Sair">
-            <LogOut className="w-4 h-4" />
-          </motion.button>
+          <div className="flex items-center gap-2">
+            <SuperAdminNotifications onNavigate={(tab) => setActiveTab(tab)} />
+            <motion.button whileTap={{ scale: 0.95 }} onClick={signOut} className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors" title="Sair">
+              <LogOut className="w-5 h-5" />
+            </motion.button>
+          </div>
         }
       />
 
@@ -149,19 +204,92 @@ export default function SuperAdminPanel() {
           ))}
         </div>
 
-        <Tabs defaultValue="payments" className="w-full">
-          <TabsList className="w-full grid grid-cols-3">
-            <TabsTrigger value="payments" className="relative">
-              Pagamentos
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="w-full flex overflow-x-auto no-scrollbar justify-start border-b border-border/50 bg-transparent rounded-none h-12">
+            <TabsTrigger value="stores_pending" className="relative shrink-0 font-medium">
+              Lojas
+              {pendingStores.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-orange-500 text-[10px] text-white flex items-center justify-center font-bold">
+                  {pendingStores.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="users" className="relative text-[10px] sm:text-xs">
+              Admins
+              {pendingUsers.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-[10px] text-primary-foreground flex items-center justify-center font-bold">
+                  {pendingUsers.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="payments" className="relative text-[10px] sm:text-xs">
+              Pagtos
               {pendingAssinaturas.length > 0 && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-[10px] text-white flex items-center justify-center font-bold">
                   {pendingAssinaturas.length}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="stores">Lojas</TabsTrigger>
-            <TabsTrigger value="subscriptions">Assinaturas</TabsTrigger>
+            <TabsTrigger value="stores" className="shrink-0 font-medium text-sm">Todas</TabsTrigger>
+            <TabsTrigger value="subscriptions" className="shrink-0 font-medium text-sm">Faturas</TabsTrigger>
+            <TabsTrigger value="billing_config" className="shrink-0 font-medium text-sm">Definições</TabsTrigger>
           </TabsList>
+
+          {/* New Stores Approval */}
+          <TabsContent value="stores_pending" className="space-y-3 mt-4">
+            {pendingStores.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground text-sm">
+                <CheckCircle className="w-8 h-8 mx-auto mb-2 text-primary/30" />
+                Nenhuma loja aguardando aprovação
+              </div>
+            ) : (
+              pendingStores.map(l => (
+                <motion.div key={l.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+                  className="bg-card p-4 rounded-2xl shadow-card ring-2 ring-orange-500/20 space-y-3"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-semibold text-foreground">{l.nome}</h3>
+                      <p className="text-xs text-muted-foreground">Plano solicitado: <strong>{l.plano}</strong></p>
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        Criada em: {new Date(l.criado_em).toLocaleDateString('pt-AO')}
+                      </p>
+                    </div>
+                    <Badge variant="outline" className="text-orange-600 border-orange-400/30">
+                      <Clock className="w-3 h-3 mr-1" /> Aguardando Ativação
+                    </Badge>
+                  </div>
+
+                  {/* Plan assignment dropdown */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Atribuir Plano</label>
+                    <select
+                      value={selectedPlans[l.id] || l.plano || 'iniciante'}
+                      onChange={(e) => setSelectedPlans(prev => ({ ...prev, [l.id]: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    >
+                      <option value="iniciante">Iniciante (Grátis)</option>
+                      <option value="starter">Starter — 25.000 Kz/mês</option>
+                      <option value="profissional">Profissional — 50.000 Kz/mês</option>
+                      <option value="enterprise">Enterprise — 100.000 Kz/mês</option>
+                    </select>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleStoreAction(l.id, 'aprovar')}
+                      disabled={processingId === l.id}
+                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-medium disabled:opacity-50"
+                    >
+                      {processingId === l.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Store className="w-4 h-4" />}
+                      Ativar Empresa
+                    </motion.button>
+                  </div>
+                </motion.div>
+              ))
+            )}
+          </TabsContent>
 
           {/* Pending Payments */}
           <TabsContent value="payments" className="space-y-3 mt-4">
@@ -233,7 +361,7 @@ export default function SuperAdminPanel() {
             {lojas.map(loja => {
               const sub = assinaturas.find(a => a.loja_id === loja.id && a.status === 'ativo');
               return (
-                <div key={loja.id} className="bg-card p-4 rounded-2xl shadow-card">
+                <div key={loja.id} className="bg-card p-4 rounded-2xl shadow-card space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-semibold text-foreground">{loja.nome}</h3>
@@ -241,18 +369,54 @@ export default function SuperAdminPanel() {
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${loja.instance_status === 'connected' ? 'bg-emerald-500' : 'bg-muted-foreground/30'}`} />
-                      {sub ? (
-                        <Badge variant="secondary" className="text-[10px]">{(sub as any).planos?.nome}</Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-[10px] text-muted-foreground">Sem plano</Badge>
-                      )}
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                        loja.status_aprovacao === 'ativo' ? 'bg-emerald-100 text-emerald-700' :
+                        loja.status_aprovacao === 'suspenso' ? 'bg-red-100 text-red-700' :
+                        'bg-orange-100 text-orange-700'
+                      }`}>{loja.status_aprovacao}</span>
                     </div>
                   </div>
-                  {loja.telefone && <p className="text-xs text-muted-foreground mt-1">{loja.telefone}</p>}
+                  {loja.telefone && <p className="text-xs text-muted-foreground">{loja.telefone}</p>}
+                  {/* Plan changer */}
+                  {loja.status_aprovacao === 'ativo' && (
+                    <div className="flex gap-2 items-center pt-1 border-t border-border/50">
+                      <select
+                        value={selectedPlans[loja.id] ?? loja.plano ?? 'iniciante'}
+                        onChange={(e) => setSelectedPlans(prev => ({ ...prev, [loja.id]: e.target.value }))}
+                        className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      >
+                        <option value="iniciante">Iniciante (Grátis)</option>
+                        <option value="starter">Starter — 25.000 Kz</option>
+                        <option value="profissional">Profissional — 50.000 Kz</option>
+                        <option value="enterprise">Enterprise — 100.000 Kz</option>
+                      </select>
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        disabled={processingId === loja.id}
+                        onClick={async () => {
+                          setProcessingId(loja.id);
+                          try {
+                            const novoPlano = selectedPlans[loja.id] ?? loja.plano ?? 'iniciante';
+                            await (supabase as any).from('lojas').update({ plano: novoPlano }).eq('id', loja.id);
+                            toast({ title: `✅ Plano atualizado para ${novoPlano}` });
+                            fetchAll();
+                          } catch (err: any) {
+                            toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+                          } finally {
+                            setProcessingId(null);
+                          }
+                        }}
+                        className="px-3 py-1.5 text-xs rounded-xl bg-primary text-white font-semibold disabled:opacity-50 whitespace-nowrap"
+                      >
+                        {processingId === loja.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Atualizar Plano'}
+                      </motion.button>
+                    </div>
+                  )}
                 </div>
               );
             })}
           </TabsContent>
+
 
           {/* Active Subscriptions */}
           <TabsContent value="subscriptions" className="space-y-3 mt-4">
@@ -280,6 +444,10 @@ export default function SuperAdminPanel() {
             {activeAssinaturas.length === 0 && (
               <div className="text-center py-8 text-muted-foreground text-sm">Nenhuma assinatura ativa</div>
             )}
+          </TabsContent>
+
+          <TabsContent value="billing_config" className="space-y-4 mt-6">
+            <PlatformBillingConfig />
           </TabsContent>
         </Tabs>
       </div>

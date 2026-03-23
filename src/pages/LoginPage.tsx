@@ -49,8 +49,8 @@ export default function LoginPage() {
       if (errorMessage.toLowerCase().includes('email not confirmed')) {
         setCanResendConfirmation(true);
         toast({
-          title: 'Confirmação pendente',
-          description: 'Confirme o seu email para entrar. Se precisar, reenvie o link abaixo.',
+          title: 'Email não confirmado',
+          description: 'Acesse seu email para confirmar a conta antes de entrar.',
           variant: 'destructive',
         });
       } else {
@@ -63,35 +63,14 @@ export default function LoginPage() {
 
   const handleResendConfirmation = async () => {
     const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail) {
-      toast({
-        title: 'Informe o email',
-        description: 'Digite o email da conta para reenviar a confirmação.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+    if (!normalizedEmail) return;
     setResendingConfirmation(true);
     try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: normalizedEmail,
-        options: {
-          emailRedirectTo: window.location.origin,
-        },
-      });
-
+      const { error } = await supabase.auth.resend({ type: 'signup', email: normalizedEmail, options: { emailRedirectTo: window.location.origin } });
       if (error) throw error;
-
-      setCanResendConfirmation(true);
-      toast({
-        title: 'Email reenviado',
-        description: 'Se a conta existir e estiver pendente, enviámos um novo link de confirmação.',
-      });
+      toast({ title: 'Email reenviado', description: 'Por favor, consulte também a sua pasta de SPAM.' });
     } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Erro inesperado ao reenviar confirmação';
-      toast({ title: 'Erro ao reenviar', description: errorMessage, variant: 'destructive' });
+      toast({ title: 'Erro ao reenviar', description: err instanceof Error ? err.message : 'Erro', variant: 'destructive' });
     } finally {
       setResendingConfirmation(false);
     }
@@ -181,8 +160,19 @@ export default function LoginPage() {
             </div>
 
             {canResendConfirmation && (
-              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-300">
-                A conta foi criada, mas ainda precisa de confirmação por email. Se não recebeu o link, pode reenviar abaixo.
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-3">
+                <p className="text-xs text-amber-700 dark:text-amber-300 leading-relaxed font-medium">
+                  A sua conta precisa de confirmação por email para garantir a segurança.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleResendConfirmation}
+                  disabled={resendingConfirmation}
+                  className="w-full flex justify-center items-center gap-2 py-2 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-300 font-bold text-xs uppercase tracking-widest hover:bg-amber-500/20 transition-all border border-amber-500/20"
+                >
+                  {resendingConfirmation ? <Loader2 className="w-3 h-3 animate-spin" /> : <Mail className="w-3 h-3" />}
+                  {resendingConfirmation ? 'Reenviando...' : 'Reenviar código por email'}
+                </button>
               </div>
             )}
 
@@ -196,17 +186,8 @@ export default function LoginPage() {
               {loading ? 'Entrando...' : 'Entrar'}
             </motion.button>
           </form>
-
-          <button
-            type="button"
-            onClick={handleResendConfirmation}
-            disabled={!email.trim() || resendingConfirmation}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-border px-4 h-11 text-sm font-medium text-foreground disabled:opacity-50 hover:bg-accent transition-colors"
-          >
-            {resendingConfirmation ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-            {resendingConfirmation ? 'Reenviando...' : 'Reenviar email de confirmação'}
-          </button>
         </motion.div>
+
 
         <motion.p
           initial={{ opacity: 0 }}

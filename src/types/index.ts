@@ -8,6 +8,7 @@ export interface Produto {
   descricao: string | null;
   categoria?: string | null;
   atributos?: Record<string, any> | null;
+  custo_unitario?: number;
   criado_em: string;
 }
 
@@ -26,6 +27,8 @@ export interface Lead {
   precisa_humano: boolean;
   bot_enabled: boolean;
   foto_url?: string | null;
+  atendente_id?: string | null;
+  segmento?: string | null;
   criado_em: string;
 }
 
@@ -81,3 +84,5 @@ export interface UsuarioLoja {
   status: string;
   criado_em: string;
 }
+
+export type Tab = 'dashboard' | 'orders' | 'chat' | 'clients' | 'products' | 'campaigns' | 'alerts' | 'settings' | 'admin' | 'schedule' | 'pipeline' | 'stock' | 'automation' | 'delivery';

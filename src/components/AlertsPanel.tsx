@@ -13,31 +13,15 @@ interface Alert {
   controle_conversa: string;
 }
 
-export default function AlertsPanel() {
+export default function AlertsPanel({ initialLeads }: { initialLeads: any[] }) {
   const navigate = useNavigate();
   const { storeId } = useAuth();
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchAlerts = async () => {
-    if (!storeId) return;
-    setLoading(true);
-    const { data } = await (supabase as any).from('leads')
-      .select('id, nome, telefone, criado_em, controle_conversa')
-      .eq('loja_id', storeId)
-      .eq('precisa_humano', true)
-      .order('criado_em', { ascending: false });
-    setAlerts(data || []);
-    setLoading(false);
-  };
+  const [alerts, setAlerts] = useState<Alert[]>(initialLeads);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    fetchAlerts();
-    const channel = supabase.channel('alerts-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => fetchAlerts())
-      .subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [storeId]);
+    setAlerts(initialLeads);
+  }, [initialLeads]);
 
   const handleAttend = (alert: Alert) => {
     navigate(`/chat?lead=${alert.id}`);

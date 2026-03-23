@@ -17,26 +17,55 @@ const IDIOMAS = [
   { value: 'pt-ST', label: '🇸🇹 Português (São Tomé)' },
 ];
 
-interface Config { nomeLoja: string; telefone: string; endereco: string; formasPagamento: string[]; zonasEntrega: string[]; mensagemBoasVindas: string; linguagemBot: string; idioma: string; }
+interface PaymentMethod { id?: string; tipo: string; detalhes: string; is_active: boolean; }
+interface DeliveryZone { id?: string; zona: string; taxa: number; is_active: boolean; }
+
+interface Config { 
+  nomeLoja: string; 
+  telefone: string; 
+  endereco: string; 
+  formasPagamento: PaymentMethod[]; 
+  zonasEntrega: DeliveryZone[]; 
+  mensagemBoasVindas: string; 
+  linguagemBot: string; 
+  idioma: string; 
+}
 
 export default function StoreConfigPanel() {
   const { storeId } = useAuth();
   const [config, setConfig] = useState<Config>({ nomeLoja: '', telefone: '', endereco: '', formasPagamento: [], zonasEntrega: [], mensagemBoasVindas: '', linguagemBot: '', idioma: 'pt-AO' });
-  const [newPayment, setNewPayment] = useState('');
-  const [newZone, setNewZone] = useState('');
+  const [newPayment, setNewPayment] = useState({ tipo: '', detalhes: '' });
+  const [newZone, setNewZone] = useState({ zona: '', taxa: '' });
   const [botActive, setBotActive] = useState(true);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchConfig = async () => {
     if (!storeId) { setLoading(false); return; }
-    (supabase as any).from('lojas').select('nome, telefone, endereco, mensagem_boas_vindas, linguagem_bot, zonas_entrega, formas_pagamento, bot_ativo, idioma').eq('id', storeId).maybeSingle()
-      .then(({ data }: any) => {
-        if (data) {
-          setBotActive(data.bot_ativo !== false);
-          setConfig({ nomeLoja: data.nome || '', telefone: data.telefone || '', endereco: data.endereco || '', mensagemBoasVindas: data.mensagem_boas_vindas || '', linguagemBot: data.linguagem_bot || '', zonasEntrega: data.zonas_entrega || [], formasPagamento: data.formas_pagamento || [], idioma: data.idioma || 'pt-AO' });
-        }
-        setLoading(false);
+    
+    const [{ data: loja }, { data: p }, { data: z }] = await Promise.all([
+      (supabase as any).from('lojas').select('*').eq('id', storeId).maybeSingle(),
+      (supabase as any).from('formas_pagamento').select('*').eq('loja_id', storeId).order('criado_em'),
+      (supabase as any).from('taxas_entrega').select('*').eq('loja_id', storeId).order('criado_em'),
+    ]);
+
+    if (loja) {
+      setBotActive(loja.bot_ativo !== false);
+      setConfig({ 
+        nomeLoja: loja.nome || '', 
+        telefone: loja.telefone || '', 
+        endereco: loja.endereco || '', 
+        mensagemBoasVindas: loja.mensagem_boas_vindas || '', 
+        linguagemBot: loja.linguagem_bot || '', 
+        zonasEntrega: z || [], 
+        formasPagamento: p || [], 
+        idioma: loja.idioma || 'pt-AO' 
       });
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchConfig();
   }, [storeId]);
 
   const toggleBot = async () => {
@@ -48,13 +77,38 @@ export default function StoreConfigPanel() {
 
   const save = async () => {
     if (!storeId) return;
-    await (supabase as any).from('lojas').update({
-      nome: config.nomeLoja, telefone: config.telefone, endereco: config.endereco,
-      mensagem_boas_vindas: config.mensagemBoasVindas, linguagem_bot: config.linguagemBot,
-      formas_pagamento: config.formasPagamento, zonas_entrega: config.zonasEntrega,
-      idioma: config.idioma,
-    }).eq('id', storeId);
-    toast.success('Configurações salvas!');
+    try {
+      // 1. Update basic store info
+      await (supabase as any).from('lojas').update({
+        nome: config.nomeLoja, 
+        telefone: config.telefone, 
+        endereco: config.endereco,
+        mensagem_boas_vindas: config.mensagemBoasVindas, 
+        linguagem_bot: config.linguagemBot,
+        idioma: config.idioma,
+      }).eq('id', storeId);
+
+      // 2. Sync payment methods (simple delete and insert for efficiency)
+      await (supabase as any).from('formas_pagamento').delete().eq('loja_id', storeId);
+      if (config.formasPagamento.length > 0) {
+        await (supabase as any).from('formas_pagamento').insert(
+          config.formasPagamento.map(p => ({ loja_id: storeId, tipo: p.tipo, detalhes: p.detalhes, is_active: p.is_active }))
+        );
+      }
+
+      // 3. Sync delivery zones
+      await (supabase as any).from('taxas_entrega').delete().eq('loja_id', storeId);
+      if (config.zonasEntrega.length > 0) {
+        await (supabase as any).from('taxas_entrega').insert(
+          config.zonasEntrega.map(z => ({ loja_id: storeId, zona: z.zona, taxa: z.taxa, is_active: z.is_active }))
+        );
+      }
+
+      toast.success('Configurações salvas!');
+      fetchConfig();
+    } catch (err: any) {
+      toast.error('Erro ao salvar: ' + err.message);
+    }
   };
 
   return (
@@ -80,16 +134,107 @@ export default function StoreConfigPanel() {
         </div>
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card p-5 rounded-2xl shadow-card space-y-3">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card p-5 rounded-2xl shadow-card space-y-3 border border-border/50">
         <div className="flex items-center gap-2"><CreditCard className="w-5 h-5 text-primary" /><h3 className="font-semibold text-foreground">Pagamentos</h3></div>
-        <div className="flex flex-wrap gap-2">{config.formasPagamento.map((p, i) => (<span key={i} className="flex items-center gap-1 bg-secondary px-3 py-1 rounded-full text-sm text-foreground">{p}<button onClick={() => setConfig(c => ({ ...c, formasPagamento: c.formasPagamento.filter((_, idx) => idx !== i) }))} className="text-muted-foreground hover:text-destructive"><X className="w-3 h-3" /></button></span>))}</div>
-        <div className="flex gap-2"><Input value={newPayment} onChange={e => setNewPayment(e.target.value)} placeholder="Nova forma" className="text-sm" onKeyDown={e => { if (e.key === 'Enter' && newPayment.trim()) { setConfig(c => ({ ...c, formasPagamento: [...c.formasPagamento, newPayment.trim()] })); setNewPayment(''); }}} /><button onClick={() => { if (newPayment.trim()) { setConfig(c => ({ ...c, formasPagamento: [...c.formasPagamento, newPayment.trim()] })); setNewPayment(''); }}} className="p-2 rounded-xl bg-primary text-primary-foreground"><Plus className="w-4 h-4" /></button></div>
+        
+        <div className="space-y-2">
+          {config.formasPagamento.map((p, i) => (
+            <div key={i} className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl border border-border/50">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-foreground">{p.tipo}</p>
+                <p className="text-[11px] text-muted-foreground truncate">{p.detalhes || 'Nenhum detalhe'}</p>
+              </div>
+              <button 
+                onClick={() => setConfig(c => ({ ...c, formasPagamento: c.formasPagamento.filter((_, idx) => idx !== i) }))} 
+                className="ml-2 p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                title="Remover"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="p-4 bg-secondary/30 rounded-2xl space-y-3 border border-dashed border-border">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Adicionar Nova Forma</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Input 
+              value={newPayment.tipo} 
+              onChange={e => setNewPayment(p => ({ ...p, tipo: e.target.value }))} 
+              placeholder="Ex: IBAN" 
+              className="text-xs h-9" 
+            />
+            <Input 
+              value={newPayment.detalhes} 
+              onChange={e => setNewPayment(p => ({ ...p, detalhes: e.target.value }))} 
+              placeholder="Ex: AO06 0055..." 
+              className="text-xs h-9" 
+            />
+          </div>
+          <button 
+            onClick={() => {
+              if (newPayment.tipo.trim()) {
+                setConfig(c => ({ ...c, formasPagamento: [...c.formasPagamento, { tipo: newPayment.tipo.trim(), detalhes: newPayment.detalhes.trim(), is_active: true }] }));
+                setNewPayment({ tipo: '', detalhes: '' });
+              }
+            }} 
+            className="w-full h-9 flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-glow"
+          >
+            <Plus className="w-3.5 h-3.5" /> Adicionar Pagamento
+          </button>
+        </div>
       </motion.div>
 
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card p-5 rounded-2xl shadow-card space-y-3">
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card p-5 rounded-2xl shadow-card space-y-3 border border-border/50">
         <div className="flex items-center gap-2"><MapPin className="w-5 h-5 text-primary" /><h3 className="font-semibold text-foreground">Zonas de Entrega</h3></div>
-        <div className="flex flex-wrap gap-2">{config.zonasEntrega.map((z, i) => (<span key={i} className="flex items-center gap-1 bg-secondary px-3 py-1 rounded-full text-sm text-foreground">{z}<button onClick={() => setConfig(c => ({ ...c, zonasEntrega: c.zonasEntrega.filter((_, idx) => idx !== i) }))} className="text-muted-foreground hover:text-destructive"><X className="w-3 h-3" /></button></span>))}</div>
-        <div className="flex gap-2"><Input value={newZone} onChange={e => setNewZone(e.target.value)} placeholder="Nova zona" className="text-sm" onKeyDown={e => { if (e.key === 'Enter' && newZone.trim()) { setConfig(c => ({ ...c, zonasEntrega: [...c.zonasEntrega, newZone.trim()] })); setNewZone(''); }}} /><button onClick={() => { if (newZone.trim()) { setConfig(c => ({ ...c, zonasEntrega: [...c.zonasEntrega, newZone.trim()] })); setNewZone(''); }}} className="p-2 rounded-xl bg-primary text-primary-foreground"><Plus className="w-4 h-4" /></button></div>
+        
+        <div className="space-y-2">
+          {config.zonasEntrega.map((z, i) => (
+            <div key={i} className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl border border-border/50">
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-foreground">{z.zona}</p>
+                <p className="text-[11px] text-primary">{z.taxa ? `${z.taxa.toLocaleString()} Kz` : 'Entrega Grátis'}</p>
+              </div>
+              <button 
+                onClick={() => setConfig(c => ({ ...c, zonasEntrega: c.zonasEntrega.filter((_, idx) => idx !== i) }))} 
+                className="ml-2 p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                title="Remover"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="p-4 bg-secondary/30 rounded-2xl space-y-3 border border-dashed border-border">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Adicionar Nova Zona</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Input 
+              value={newZone.zona} 
+              onChange={e => setNewZone(p => ({ ...p, zona: e.target.value }))} 
+              placeholder="Ex: Talatona" 
+              className="text-xs h-9" 
+            />
+            <Input 
+              type="number"
+              value={newZone.taxa} 
+              onChange={e => setNewZone(p => ({ ...p, taxa: e.target.value }))} 
+              placeholder="Taxa (Kz)" 
+              className="text-xs h-9" 
+            />
+          </div>
+          <button 
+            onClick={() => {
+              if (newZone.zona.trim()) {
+                setConfig(c => ({ ...c, zonasEntrega: [...c.zonasEntrega, { zona: newZone.zona.trim(), taxa: Number(newZone.taxa) || 0, is_active: true }] }));
+                setNewZone({ zona: '', taxa: '' });
+              }
+            }} 
+            className="w-full h-9 flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-glow"
+          >
+            <Plus className="w-3.5 h-3.5" /> Adicionar Zona
+          </button>
+        </div>
       </motion.div>
 
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card p-5 rounded-2xl shadow-card space-y-4">
@@ -101,8 +246,31 @@ export default function StoreConfigPanel() {
           </div>
           <Switch checked={botActive} onCheckedChange={toggleBot} />
         </div>
-        <div><label className="text-[11px] uppercase tracking-wide text-muted-foreground">Mensagem de boas-vindas</label><Textarea value={config.mensagemBoasVindas} onChange={e => setConfig(p => ({ ...p, mensagemBoasVindas: e.target.value }))} className="text-sm" /></div>
-        <div><label className="text-[11px] uppercase tracking-wide text-muted-foreground">Tom do Bot</label><Input value={config.linguagemBot} onChange={e => setConfig(p => ({ ...p, linguagemBot: e.target.value }))} className="text-sm" /></div>
+        <div>
+          <label className="text-[11px] uppercase tracking-wide text-muted-foreground">Mensagem de boas-vindas</label>
+          <Textarea 
+            value={config.mensagemBoasVindas} 
+            onChange={e => setConfig(p => ({ ...p, mensagemBoasVindas: e.target.value }))} 
+            className="text-sm" 
+            placeholder="Olá! Use {{link_loja}} para enviar seu catálogo automaticamente."
+          />
+        </div>
+        <div>
+          <label className="text-[11px] uppercase tracking-wide text-muted-foreground">O que o Bot deve dizer (Instruções)</label>
+          <Textarea 
+            value={config.linguagemBot} 
+            onChange={e => setConfig(p => ({ ...p, linguagemBot: e.target.value }))} 
+            className="text-sm h-24" 
+            placeholder="Ex: Seja amigável e sempre ofereça nosso catálogo {{link_loja}} se o cliente quiser ver produtos."
+          />
+        </div>
+        <div className="bg-primary/5 p-4 rounded-xl border border-primary/20">
+          <p className="text-[10px] font-bold text-primary uppercase mb-1">Dica de Automação</p>
+          <p className="text-xs text-muted-foreground italic">
+            O código <span className="font-mono font-bold text-foreground">{"{{link_loja}}"}</span> será substituído pelo seu link público: <br/>
+            <span className="text-primary underline text-[10px]">{window.location.origin}/loja/{storeId?.slice(0,6)}...</span>
+          </p>
+        </div>
       </motion.div>
 
       <motion.button whileTap={{ scale: 0.97 }} onClick={save} className="w-full px-4 py-3 rounded-xl bg-primary text-primary-foreground font-medium text-sm">Salvar Configurações</motion.button>

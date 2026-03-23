@@ -29,11 +29,11 @@ CONDIÇÃO DE ATENDIMENTO HUMANIZADO:
 REGRAS DE CONSERVAÇÃO E FLUXO:
 - PAGAMENTOS: Se o cliente perguntar como pagar, ou estiver pronto para fechar, use: [ENVIAR_PAGAMENTO]. Fale antes com naturalidade sobre as opções (IBAN, etc).
 - LOCALIZAÇÃO: Se o cliente perguntar onde fica a empresa, use: [ENVIAR_LOCALIZACAO].
-- AGENDAMENTO (MULTI-NEGÓCIO): 
-    * Clínicas/Advocacia: Use "Consulta".
-    * Salões: Use "Marcação/Sessão".
-    * Serviços: Use "Visita Técnica/Reunião".
-    * Marcador: [AGENDAR:servico|data_hora_sugerida]
+- AGENDAMENTO ENTERPRISE (AUTO-GESTÃO): 
+    * Marcar: [AGENDAR:servico|AAAA-MM-DDTHH:MM]
+    * Remarcar: [REMARCAR_AGENDAMENTO:AAAA-MM-DDTHH:MM]
+    * Cancelar: [CANCELAR_AGENDAMENTO]
+    * Instrução: Se o cliente quiser mudar o horário, peça o novo horário e use o marcador de remarcar.
 - PRODUTOS: [ENVIAR_PRODUTO:nome_exacto_do_produto] (Máximo 2 por vez).
 
 TRANSFERÊNCIA PARA HUMANO:
@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
     if (store_id) {
       const { data: config } = await supabase
         .from('lojas')
-        .select('nome, mensagem_boas_vindas, linguagem_bot, formas_pagamento, zonas_entrega, idioma')
+        .select('nome, mensagem_boas_vindas, linguagem_bot, formas_pagamento, zonas_entrega, idioma, tipo_negocio, iban, conta_nome, localizacao_url')
         .eq('id', store_id)
         .maybeSingle();
 
@@ -172,6 +172,8 @@ Deno.serve(async (req) => {
           scheduleContext = '\n\nHORÁRIOS DA LOJA:\n' +
             activeHorarios.map((h: any) => `- ${dias[h.dia_semana]}: ${h.hora_inicio} - ${h.hora_fim}`).join('\n');
           scheduleContext += '\n\nSe o cliente quiser agendar, pergunte o serviço e sugira horários disponíveis. Use [AGENDAR:servico|AAAA-MM-DDTHH:MM] quando confirmado.';
+          scheduleContext += '\nSe o cliente quiser mudar (remarcar), use [REMARCAR_AGENDAMENTO:AAAA-MM-DDTHH:MM].';
+          scheduleContext += '\nSe o cliente quiser cancelar, use [CANCELAR_AGENDAMENTO].';
         }
       }
     }
@@ -220,7 +222,7 @@ Deno.serve(async (req) => {
 
     // 5. Call AI
     const aiUrl = useGateway ? 'https://ai.gateway.lovable.dev/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions';
-    const model = useGateway ? 'google/gemini-2.5-flash' : 'gpt-4o-mini';
+    const model = useGateway ? 'google/gemini-2.0-flash-exp' : 'gpt-4o-mini';
 
     const response = await fetch(aiUrl, {
       method: 'POST',
@@ -257,6 +259,20 @@ Deno.serve(async (req) => {
       }
     }
 
+    const scheduleMatch = rawReply.match(/\[AGENDAR:([^\]]+)\]/i);
+    const rescheduleMatch = rawReply.match(/\[REMARCAR_AGENDAMENTO:([^\]]+)\]/i);
+    const cancelMatch = rawReply.includes('[CANCELAR_AGENDAMENTO]');
+    
+    let scheduleData: any = null;
+    if (scheduleMatch) {
+      const parts = scheduleMatch[1].split('|').map((s: string) => s.trim());
+      scheduleData = { action: 'create', servico: parts[0], data_hora: parts[1] };
+    } else if (rescheduleMatch) {
+      scheduleData = { action: 'reschedule', data_hora: rescheduleMatch[1].trim() };
+    } else if (cancelMatch) {
+      scheduleData = { action: 'cancel' };
+    }
+
     const transferMatch = rawReply.match(/\[TRANSFERIR_HUMANO:([^\]]+)\]/i);
     const escalateToHuman = transferMatch ? transferMatch[1].trim() : null;
 
@@ -268,6 +284,8 @@ Deno.serve(async (req) => {
       .replace(/\s*\[CRIAR_PEDIDO:[^\]]+\]\s*/gi, ' ')
       .replace(/\s*\[TRANSFERIR_HUMANO:[^\]]+\]\s*/gi, ' ')
       .replace(/\s*\[AGENDAR:[^\]]+\]\s*/gi, ' ')
+      .replace(/\s*\[REMARCAR_AGENDAMENTO:[^\]]+\]\s*/gi, ' ')
+      .replace(/\s*\[CANCELAR_AGENDAMENTO\]\s*/gi, ' ')
       .replace(/\s*\[ENVIAR_PAGAMENTO\]\s*/gi, ' ')
       .replace(/\s*\[ENVIAR_LOCALIZACAO\]\s*/gi, ' ')
       .replace(/\s{2,}/g, ' ')

@@ -42,6 +42,7 @@ export default function AddProductSheet({ open, onClose, storeId, onAdded, initi
   const [stock, setStock] = useState('1');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [cost, setCost] = useState('');
   const [category, setCategory] = useState('');
   const [attrs, setAttrs] = useState<{ key: string, value: string }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -53,6 +54,7 @@ export default function AddProductSheet({ open, onClose, storeId, onAdded, initi
       setImageUrl(initialData.imagem || '');
       setImagePreview(initialData.imagem || '');
       setStock(initialData.estoque?.toString() || '1');
+      setCost(initialData.custo_unitario?.toString() || '0');
       setCategory(initialData.categoria || '');
       if (initialData.atributos) {
         setAttrs(Object.entries(initialData.atributos).map(([key, value]) => ({ key, value: String(value) })));
@@ -60,7 +62,7 @@ export default function AddProductSheet({ open, onClose, storeId, onAdded, initi
         setAttrs([]);
       }
     } else if (open && !initialData) {
-      setName(''); setPrice(''); setImageUrl(''); setImagePreview(''); setStock('1'); setCategory(''); setAttrs([]); setSelectedFile(null);
+      setName(''); setPrice(''); setImageUrl(''); setImagePreview(''); setStock('1'); setCost('0'); setCategory(''); setAttrs([]); setSelectedFile(null);
     }
   }, [open, initialData]);
 
@@ -125,6 +127,7 @@ export default function AddProductSheet({ open, onClose, storeId, onAdded, initi
       preco: parseFloat(price), 
       imagem: finalImageUrl, 
       estoque: parseInt(stock) || 1, 
+      custo_unitario: parseFloat(cost) || 0,
       categoria: category.trim() || 'Geral',
       atributos: atributosObj,
     };
@@ -160,9 +163,10 @@ export default function AddProductSheet({ open, onClose, storeId, onAdded, initi
             <div className="flex-1 overflow-y-auto p-6 pt-4 space-y-4 pb-12 scrollbar-thin">
               <div><label className="text-metadata mb-1.5 block">Nome do Produto</label><input value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Bota de Couro ou Camisa Social" className={inputClass} /></div>
               
-              <div className="flex gap-3">
-                <div className="flex-1 text-[11px] font-bold text-muted-foreground uppercase tracking-widest"><label className="mb-1.5 block">Preço (Kz)</label><input value={price} onChange={e => setPrice(e.target.value)} type="number" step="1" placeholder="0" className={inputClass} /></div>
-                <div className="w-24 text-[11px] font-bold text-muted-foreground uppercase tracking-widest"><label className="mb-1.5 block">Estoque</label><input value={stock} onChange={e => setStock(e.target.value)} type="number" placeholder="1" className={inputClass} /></div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest"><label className="mb-1.5 block">Preço (Kz)</label><input value={price} onChange={e => setPrice(e.target.value)} type="number" step="1" placeholder="0" className={inputClass} /></div>
+                <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest"><label className="mb-1.5 block">Custo (Kz)</label><input value={cost} onChange={e => setCost(e.target.value)} type="number" step="1" placeholder="0" className={inputClass} /></div>
+                <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest"><label className="mb-1.5 block">Estoque</label><input value={stock} onChange={e => setStock(e.target.value)} type="number" placeholder="1" className={inputClass} /></div>
               </div>
 
               <div>

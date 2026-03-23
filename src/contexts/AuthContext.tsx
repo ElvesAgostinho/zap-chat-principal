@@ -14,6 +14,8 @@ interface AuthState {
   loading: boolean;
   membershipState: MembershipState;
   isSuperAdmin: boolean;
+  plano: 'iniciante' | 'starter' | 'profissional' | 'enterprise' | null;
+  statusLoja: 'pendente_aprovacao' | 'ativo' | 'suspenso' | 'cancelado' | null;
   signOut: () => Promise<void>;
 }
 
@@ -27,6 +29,8 @@ const AuthContext = createContext<AuthState>({
   loading: true,
   membershipState: 'loading',
   isSuperAdmin: false,
+  plano: null,
+  statusLoja: null,
   signOut: async () => {},
 });
 
@@ -60,6 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [membershipState, setMembershipState] = useState<MembershipState>('loading');
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [plano, setPlano] = useState<'iniciante' | 'starter' | 'profissional' | 'enterprise' | null>(null);
+  const [statusLoja, setStatusLoja] = useState<'pendente_aprovacao' | 'ativo' | 'suspenso' | 'cancelado' | null>(null);
   const versionRef = useRef(0);
 
   const clearMembership = () => {
@@ -68,6 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus(null);
     setUserName(null);
     setIsSuperAdmin(false);
+    setPlano(null);
+    setStatusLoja(null);
   };
 
   const checkSuperAdmin = async (userId: string): Promise<boolean> => {
@@ -138,6 +146,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUserName(nextSession.user.user_metadata?.full_name || 'Super Admin');
         setStoreId(null);
         setMembershipState('super_admin');
+        setPlano('enterprise'); // Super admin has max access
+        setStatusLoja('ativo');
         setLoading(false);
         return;
       }
@@ -157,7 +167,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUserName(membership.nome ?? null);
 
       if (membership.status === 'aprovado') {
-        setStoreId(membership.loja_id ?? null);
+        const sId = membership.loja_id ?? null;
+        setStoreId(sId);
+        
+        // Fetch plan and statusLoja from the store table
+        if (sId) {
+          const { data: storeData } = await (supabase as any)
+            .from('lojas')
+            .select('plano, status_aprovacao')
+            .eq('id', sId)
+            .maybeSingle();
+            
+          if (storeData) {
+            setPlano(storeData.plano);
+            setStatusLoja(storeData.status_aprovacao);
+          }
+        }
+        
         setMembershipState('linked');
       } else if (membership.status === 'pendente') {
         setStoreId(null);
@@ -200,6 +226,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       scheduleResolve(nextSession);
     });
 
+    // BUG-02 + BUG-06 fix: Listen for real-time changes on the user's membership row.
+    // When the Super Admin approves a store, usuarios_loja.status changes to 'aprovado'
+    // and we re-resolve the auth state automatically — no manual logout needed.
+    let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+
+    const setupRealtime = async () => {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const uid = sessionData?.session?.user?.id;
+      if (!uid || !mounted) return;
+
+      realtimeChannel = supabase
+        .channel('membership-watch-' + uid)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'usuarios_loja',
+            filter: `user_id=eq.${uid}`,
+          },
+          async () => {
+            if (!mounted) return;
+            const { data: latest } = await supabase.auth.getSession();
+            if (latest?.session && mounted) {
+              scheduleResolve(latest.session);
+            }
+          }
+        )
+        .subscribe();
+    };
+
     const initFallback = window.setTimeout(() => {
       if (!mounted) return;
       console.warn('Auth initialization timeout');
@@ -222,6 +279,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!mounted) return;
         window.clearTimeout(initFallback);
         scheduleResolve(data.session);
+        void setupRealtime();
       } catch (error) {
         if (!mounted) return;
         window.clearTimeout(initFallback);
@@ -239,6 +297,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       mounted = false;
       window.clearTimeout(initFallback);
       subscription.unsubscribe();
+      if (realtimeChannel) supabase.removeChannel(realtimeChannel);
     };
   }, []);
 
@@ -254,7 +313,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, session, role, storeId, status, userName, loading, membershipState, isSuperAdmin, signOut }}
+      value={{ 
+        user, session, role, storeId, status, userName, 
+        loading, membershipState, isSuperAdmin, 
+        plano, statusLoja, signOut 
+      }}
     >
       {children}
     </AuthContext.Provider>

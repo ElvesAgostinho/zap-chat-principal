@@ -17,3 +17,25 @@ verify_jwt = false
 
 [functions.follow-up-scheduler]
 verify_jwt = false
+
+[functions.proxypay-create]
+enabled = true
+verify_jwt = true
+import_map = "./functions/proxypay-create/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/proxypay-create/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/proxypay-create/*.html" ]
+
+[functions.proxypay-webhook]
+enabled = true
+verify_jwt = true
+import_map = "./functions/proxypay-webhook/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/proxypay-webhook/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/proxypay-webhook/*.html" ]

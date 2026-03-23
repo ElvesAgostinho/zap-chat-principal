@@ -12,9 +12,10 @@ interface AddLeadSheetProps {
 
 const sources = [
   { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'indicacao', label: 'Indicação' },
+  { value: 'direto', label: 'Direto (Loja)' },
   { value: 'instagram', label: 'Instagram' },
   { value: 'facebook', label: 'Facebook' },
-  { value: 'website', label: 'Website' },
   { value: 'other', label: 'Outro' },
 ];
 

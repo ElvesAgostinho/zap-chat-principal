@@ -64,13 +64,29 @@ export default function SignupPage() {
       });
       if (error) throw error;
 
+      // Trigger notification to super_admin if this is a new store creation
+      if (accountType === 'admin') {
+        try {
+          await supabase.functions.invoke('notify-admin', {
+            body: { 
+              storeName: storeName.trim(), 
+              adminName: fullName.trim(),
+              adminEmail: email.trim().toLowerCase() 
+            }
+          });
+        } catch (webhookError) {
+          console.error("Erro ao notificar o super_admin (continua o fluxo de signup): ", webhookError);
+          // We don't throw here because the user signup was already successful. We just log the error.
+        }
+      }
+
       toast({
-        title: '🎉 Conta criada!',
+        title: '🎉 Registo Concluído!',
         description: accountType === 'admin'
-          ? 'Verifique o seu email para confirmar a conta.'
-          : 'Verifique o seu email. Após confirmação, o admin da loja aprovará seu acesso.',
+          ? 'A sua conta foi criada. Aguarde a aprovação do Super Admin.'
+          : 'A sua conta foi criada. Aguarde a validação do administrador da loja.',
       });
-      navigate('/login', { state: { email: email.trim().toLowerCase(), confirmationPending: true } });
+      navigate('/login', { state: { email: email.trim().toLowerCase(), confirmationPending: false } });
     } catch (err: unknown) {
       toast({ title: 'Erro ao criar conta', description: err instanceof Error ? err.message : 'Erro inesperado', variant: 'destructive' });
     } finally {
