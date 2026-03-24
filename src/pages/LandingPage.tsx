@@ -78,11 +78,11 @@ export default function LandingPage() {
           <div className="flex flex-col items-center gap-16 text-center">
             {/* Left Column */}
             <motion.div 
-+              initial={{ opacity: 0, y: 30 }}
-+              animate={{ opacity: 1, y: 0 }}
-+              transition={{ duration: 0.6 }}
-+              className="max-w-4xl mx-auto"
-+            >
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="max-w-4xl mx-auto"
+            >
               <a 
                 href="https://www.topia.solutions/" 
                 target="_blank" 
@@ -99,7 +99,7 @@ export default function LandingPage() {
                 CRM desenvolvido pela <a href="https://www.topia.solutions/" target="_blank" rel="noopener noreferrer" className="text-foreground font-bold italic hover:text-primary transition-colors underline decoration-primary/30">Top IA</a> para empresas angolanas que querem crescer com automação e organização real.
               </p>
               
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button 
                   onClick={() => document.getElementById('pricing')?.scrollIntoView({ behavior: 'smooth' })}
                   className="flex items-center justify-center gap-2 px-8 py-4 rounded-2xl bg-primary text-white font-black text-sm uppercase tracking-widest shadow-glow hover:scale-[1.02] active:scale-[0.98] transition-all"
