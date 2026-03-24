@@ -105,10 +105,17 @@ export default function CatalogPage() {
   }, []);
 
   const openProductDetail = (product: Produto) => {
-    const attrs = getAtributos(product);
     setSelectedProduct(product);
-    setSelectedColor(attrs.cores?.[0] || '');
-    setSelectedSize(attrs.tamanhos?.[0] || '');
+    const variacoes = Array.isArray(product.variacoes) ? product.variacoes : [];
+    if (variacoes.length > 0) {
+      const firstInStock = variacoes.find(v => v.estoque > 0) || variacoes[0];
+      setSelectedColor(firstInStock.cor || '');
+      setSelectedSize(firstInStock.tamanho || '');
+    } else {
+      const attrs = getAtributos(product);
+      setSelectedColor(attrs.cores?.[0] || '');
+      setSelectedSize(attrs.tamanhos?.[0] || '');
+    }
   };
 
   /* ───── Cart Logic ───── */
@@ -340,17 +347,27 @@ export default function CatalogPage() {
                   </button>
 
                   {/* Attribute Badges */}
-                  {(hasColors || hasSizes) && (
+                  {(hasColors || hasSizes || (Array.isArray(product.variacoes) && product.variacoes.length > 0)) && (
                     <div className="absolute bottom-2 left-2 flex gap-1">
-                      {hasColors && (
-                        <span className="bg-white/90 backdrop-blur-sm text-gray-600 text-[9px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Palette className="w-2.5 h-2.5" /> {attrs.cores!.length} cores
-                        </span>
-                      )}
-                      {hasSizes && (
-                        <span className="bg-white/90 backdrop-blur-sm text-gray-600 text-[9px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Ruler className="w-2.5 h-2.5" /> {attrs.tamanhos!.length} tam.
-                        </span>
+                      {Array.isArray(product.variacoes) && product.variacoes.length > 0 ? (
+                        <>
+                          <span className="bg-white/90 backdrop-blur-sm text-gray-600 text-[9px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+                            {Array.from(new Set(product.variacoes.map((v: any) => v.cor).filter(Boolean))).length} cores
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          {hasColors && (
+                            <span className="bg-white/90 backdrop-blur-sm text-gray-600 text-[9px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <Palette className="w-2.5 h-2.5" /> {attrs.cores!.length} cores
+                            </span>
+                          )}
+                          {hasSizes && (
+                            <span className="bg-white/90 backdrop-blur-sm text-gray-600 text-[9px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <Ruler className="w-2.5 h-2.5" /> {attrs.tamanhos!.length} tam.
+                            </span>
+                          )}
+                        </>
                       )}
                     </div>
                   )}
@@ -385,11 +402,58 @@ export default function CatalogPage() {
       {/* ══════ PRODUCT DETAIL MODAL ══════ */}
       <AnimatePresence>
         {selectedProduct && (() => {
-          const attrs = getAtributos(selectedProduct);
-          const hasColors = attrs.cores && attrs.cores.length > 0;
-          const hasSizes = attrs.tamanhos && attrs.tamanhos.length > 0;
           const isLiked = liked.has(selectedProduct.id);
-          const isOutOfStock = selectedProduct.estoque <= 0;
+          
+          // Compatibilidade com sistema antigo + novo sistema (variacoes jsonb)
+          const variacoes = Array.isArray(selectedProduct.variacoes) ? selectedProduct.variacoes : [];
+          const hasV2Variations = variacoes.length > 0;
+          
+          let availableColors: string[] = [];
+          let availableSizes: string[] = [];
+          let currentVariation: any = null;
+          let displayImage = selectedProduct.imagem;
+          let displayPrice = selectedProduct.preco;
+          let stockRemaining = selectedProduct.estoque || 0;
+          
+          if (hasV2Variations) {
+            availableColors = Array.from(new Set(variacoes.map((v: any) => v.cor).filter(Boolean)));
+            // Tamanhos disponíveis dependem da cor selecionada no momento
+            availableSizes = Array.from(new Set(
+              variacoes
+                .filter((v: any) => (!selectedColor || v.cor === selectedColor) && v.tamanho)
+                .map((v: any) => v.tamanho)
+            ));
+            
+            // Qual a variação exata?
+            currentVariation = variacoes.find((v: any) => 
+              (v.cor === selectedColor || (!v.cor && !selectedColor)) &&
+              (v.tamanho === selectedSize || (!v.tamanho && !selectedSize))
+            ) || variacoes.find((v: any) => v.cor === selectedColor);
+            
+            if (currentVariation) {
+              displayImage = currentVariation.imagem || selectedProduct.imagem;
+              displayPrice = currentVariation.preco > 0 ? currentVariation.preco : selectedProduct.preco;
+              stockRemaining = currentVariation.estoque;
+            } else {
+              // Se tivermos cor mas não tivermos tamanho selecionado
+               const matchingColorVars = variacoes.filter((v: any) => v.cor === selectedColor);
+               if (matchingColorVars.length > 0) {
+                 displayImage = matchingColorVars[0].imagem || selectedProduct.imagem;
+               }
+            }
+          } else {
+            // Fallback sistema antigo (Atributos sem stock estrito)
+            const attrs = getAtributos(selectedProduct);
+            availableColors = attrs.cores || [];
+            availableSizes = attrs.tamanhos || [];
+          }
+
+          const isOutOfStock = stockRemaining <= 0;
+          const hasColors = availableColors.length > 0;
+          const hasSizes = availableSizes.length > 0;
+          
+          // Bloquear o carrinho se falta selecionar tamanho, quando for obrigatório
+          const isSelectionIncomplete = hasV2Variations && hasSizes && !selectedSize;
 
           return (
             <>
@@ -437,9 +501,13 @@ export default function CatalogPage() {
 
                 {/* LEFT: IMAGE COLUMN */}
                 <div className="w-full md:w-1/2 bg-white flex items-center justify-center relative border-b md:border-b-0 md:border-r border-gray-100 h-[45vh] md:h-auto min-h-[300px] overflow-hidden">
-                  {selectedProduct.imagem ? (
-                    <img 
-                      src={selectedProduct.imagem} 
+                  {displayImage ? (
+                    <motion.img 
+                      key={displayImage} // Animação suave ao trocar cor
+                      initial={{ opacity: 0.7, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.4 }}
+                      src={displayImage} 
                       alt={selectedProduct.nome} 
                       className="w-full h-full object-contain p-10 md:p-14 transition-transform duration-700 hover:scale-105"
                     />
@@ -450,9 +518,16 @@ export default function CatalogPage() {
                     </div>
                   )}
                   {/* Stock Badges */}
-                  {selectedProduct.estoque > 0 && selectedProduct.estoque <= 3 && (
-                    <div className="absolute bottom-6 left-6">
-                      <span className="bg-orange-500 text-white text-[10px] font-black px-4 py-2 rounded-full shadow-xl italic tracking-tight uppercase">Últimas Unidades</span>
+                  {stockRemaining > 0 && stockRemaining <= 3 && (
+                    <div className="absolute top-6 left-1/2 -translate-x-1/2 md:bottom-6 md:top-auto md:left-6 md:translate-x-0">
+                      <span className="bg-orange-500 text-white text-[10px] font-black px-4 py-2 rounded-full shadow-xl italic tracking-tight uppercase animate-pulse">
+                        Últimas {stockRemaining} Unidades!
+                      </span>
+                    </div>
+                  )}
+                  {isOutOfStock && (
+                    <div className="absolute inset-x-0 bottom-0 bg-red-500 text-white text-center py-3 text-xs font-black uppercase tracking-widest">
+                       Produto Esgotado
                     </div>
                   )}
                 </div>
@@ -473,8 +548,8 @@ export default function CatalogPage() {
                           {selectedProduct.nome}
                         </h2>
                         <div className="flex items-end gap-3 pt-2">
-                          <span className="text-3xl md:text-4xl font-black text-red-600 tracking-tighter">
-                            {formatCurrency(selectedProduct.preco)}
+                          <span className={`text-3xl md:text-4xl font-black tracking-tighter ${isOutOfStock ? 'text-gray-400' : 'text-red-600'}`}>
+                            {formatCurrency(displayPrice)}
                           </span>
                           {!isOutOfStock && (
                             <span className="text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">+ Portes</span>
@@ -494,9 +569,9 @@ export default function CatalogPage() {
                         </div>
                       )}
 
-                      {/* Attribute Selectors */}
+                      {/* Attribute Selectors (SHEIN STYLE) */}
                       <div className="space-y-8 pt-2">
-                        {!hasColors && !hasSizes && (
+                        {!hasColors && !hasSizes && !hasV2Variations && (
                            <div className="py-6 border-2 border-dashed border-gray-100 rounded-[2rem] flex flex-col items-center justify-center text-center">
                               <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Tamanho Único · Pronta Entrega</p>
                            </div>
@@ -504,38 +579,71 @@ export default function CatalogPage() {
 
                         {hasColors && (
                           <div className="space-y-4">
-                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Cor: <span className="text-black italic">{selectedColor || 'Selecione'}</span></h4>
-                            <div className="flex flex-wrap gap-2.5">
-                              {attrs.cores!.map(cor => (
-                                <button
-                                  key={cor}
-                                  onClick={() => setSelectedColor(cor)}
-                                  className={`px-5 py-3 rounded-2xl text-[11px] font-black transition-all border-2 ${
-                                    selectedColor === cor ? 'border-black bg-black text-white shadow-xl' : 'border-gray-100 text-gray-600 hover:border-gray-300'
-                                  }`}
-                                >
-                                  {cor}
-                                </button>
-                              ))}
+                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex justify-between">
+                              <span>Cor: <span className="text-black italic">{selectedColor || 'Selecione a cor'}</span></span>
+                            </h4>
+                            <div className="flex flex-wrap gap-3">
+                              {availableColors.map(cor => {
+                                // Verifica se TODAS as variações desta cor estão sem stock
+                                const hasStockInColor = hasV2Variations 
+                                  ? variacoes.some((v: any) => v.cor === cor && v.estoque > 0)
+                                  : true;
+
+                                return (
+                                  <button
+                                    key={cor}
+                                    onClick={() => {
+                                      setSelectedColor(cor);
+                                      // Logica para limpar tamanho se a nova cor não tiver o tamanho antigo disponível
+                                      if (hasV2Variations && selectedSize) {
+                                         const valid = variacoes.some((v:any) => v.cor === cor && v.tamanho === selectedSize && v.estoque > 0);
+                                         if (!valid) setSelectedSize('');
+                                      }
+                                    }}
+                                    className={`relative group h-12 rounded-2xl px-5 text-[11px] font-black transition-all border-2 overflow-hidden ${
+                                      selectedColor === cor 
+                                        ? 'border-black text-black shadow-xl' 
+                                        : 'border-gray-100 text-gray-400 hover:border-gray-300'
+                                    } ${!hasStockInColor ? 'opacity-40 line-through' : ''}`}
+                                  >
+                                    <span className="relative z-10">{cor}</span>
+                                    {selectedColor === cor && (
+                                       <motion.div layoutId="color-marker" className="absolute inset-0 bg-black/5 z-0" />
+                                    )}
+                                  </button>
+                                );
+                              })}
                             </div>
                           </div>
                         )}
 
                         {hasSizes && (
                           <div className="space-y-4">
-                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tamanho: <span className="text-black italic">{selectedSize || 'Selecione'}</span></h4>
+                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                              Tamanho: <span className={selectedSize ? "text-black italic" : "text-red-500"}>{selectedSize || 'Selecione Obrigatório'}</span>
+                            </h4>
                             <div className="flex flex-wrap gap-2.5">
-                              {attrs.tamanhos!.map(tam => (
-                                <button
-                                  key={tam}
-                                  onClick={() => setSelectedSize(tam)}
-                                  className={`min-w-[64px] h-12 rounded-2xl text-[11px] font-black transition-all border-2 ${
-                                    selectedSize === tam ? 'border-black bg-black text-white shadow-xl' : 'border-gray-100 text-gray-600 hover:border-gray-300'
-                                  }`}
-                                >
-                                  {tam}
-                                </button>
-                              ))}
+                              {availableSizes.map(tam => {
+                                // Verifica se o tamanho exato na cor atual tem stock
+                                const hasStockForSize = hasV2Variations
+                                  ? variacoes.some((v: any) => v.tamanho === tam && (!selectedColor || v.cor === selectedColor) && v.estoque > 0)
+                                  : true;
+
+                                return (
+                                  <button
+                                    key={tam}
+                                    disabled={!hasStockForSize}
+                                    onClick={() => setSelectedSize(tam)}
+                                    className={`min-w-[64px] h-12 rounded-2xl text-[11px] font-black transition-all border-2 ${
+                                      selectedSize === tam 
+                                        ? 'border-black bg-black text-white shadow-xl' 
+                                        : 'border-gray-100 text-gray-600 hover:border-gray-300 bg-white'
+                                    } ${!hasStockForSize ? 'opacity-30 bg-gray-50 cursor-not-allowed border-gray-100' : ''}`}
+                                  >
+                                    <span className={!hasStockForSize ? 'line-through' : ''}>{tam}</span>
+                                  </button>
+                                );
+                              })}
                             </div>
                           </div>
                         )}
@@ -546,14 +654,16 @@ export default function CatalogPage() {
                   {/* Buy Button */}
                   <div className="p-8 md:p-12 border-t border-gray-50 bg-white/90 backdrop-blur-md">
                     <button
-                      onClick={() => addToCart(selectedProduct, selectedColor || undefined, selectedSize || undefined)}
-                      disabled={isOutOfStock}
+                      onClick={() => addToCart({ ...selectedProduct, preco: displayPrice }, selectedColor || undefined, selectedSize || undefined)}
+                      disabled={isOutOfStock || isSelectionIncomplete}
                       className={`w-full h-16 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 active:scale-95 ${
-                        isOutOfStock ? 'bg-gray-100 text-gray-400' : 'bg-black text-white hover:bg-gray-900 shadow-2xl shadow-black/10'
+                        (isOutOfStock || isSelectionIncomplete) ? 'bg-gray-100 text-gray-400' : 'bg-black text-white hover:bg-gray-900 shadow-2xl shadow-black/10'
                       }`}
                     >
                       {isOutOfStock ? (
-                        <span>Esgotado</span>
+                        <span>Esgotado na Variedade</span>
+                      ) : isSelectionIncomplete ? (
+                        <span>Selecione o Tamanho</span>
                       ) : (
                         <>
                           <ShoppingBag className="w-5 h-5" />

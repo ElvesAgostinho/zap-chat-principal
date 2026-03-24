@@ -8,6 +8,7 @@ export interface Produto {
   descricao: string | null;
   categoria?: string | null;
   atributos?: Record<string, any> | null;
+  variacoes?: { cor?: string; tamanho?: string; estoque: number; preco?: number; imagem?: string }[] | null;
   custo_unitario?: number;
   criado_em: string;
 }
