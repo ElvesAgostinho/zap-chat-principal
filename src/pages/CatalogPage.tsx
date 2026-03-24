@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, MessageSquare, Plus, Minus, X, ChevronRight, Loader2, Store, ShoppingCart, Heart, Share2, ChevronLeft, Palette, Ruler } from 'lucide-react';
+import { ShoppingBag, MessageSquare, Plus, Minus, X, ChevronRight, Loader2, Store, ShoppingCart, Heart, Share2, ChevronLeft, Palette, Ruler, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Produto } from '@/types';
 import { formatCurrency } from '@/data/mock';
@@ -17,6 +17,7 @@ interface CartItem extends Produto {
 interface ProductAtributos {
   cores?: string[];
   tamanhos?: string[];
+  variacoes?: { cor: string; tamanho: string; estoque: number }[];
   [key: string]: any;
 }
 
@@ -28,6 +29,7 @@ export default function CatalogPage() {
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [orderDetails, setOrderDetails] = useState({ name: '', phone: '' });
   const [categorias, setCategorias] = useState<string[]>(['Tudo']);
@@ -36,6 +38,18 @@ export default function CatalogPage() {
   const [selectedColor, setSelectedColor] = useState<string>('');
   const [selectedSize, setSelectedSize] = useState<string>('');
   const [liked, setLiked] = useState<Set<string>>(new Set());
+
+  /* ───── Data Fetching & LocalStorage ───── */
+  useEffect(() => {
+    const savedWishlist = localStorage.getItem('catalog_wishlist');
+    if (savedWishlist) {
+      try { setLiked(new Set(JSON.parse(savedWishlist))); } catch (e) {}
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('catalog_wishlist', JSON.stringify(Array.from(liked)));
+  }, [liked]);
 
   /* ───── Data Fetching ───── */
   useEffect(() => {
@@ -221,17 +235,33 @@ export default function CatalogPage() {
               <p className="text-[9px] text-gray-400 uppercase font-semibold tracking-[0.15em]">Catálogo Online</p>
             </div>
           </div>
-          <button
-            onClick={() => setIsCartOpen(true)}
-            className="relative p-2.5 rounded-xl hover:bg-gray-50 transition-all"
-          >
-            <ShoppingBag className="w-5 h-5 text-gray-700" />
-            {cartCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">
-                {cartCount}
-              </span>
-            )}
-          </button>
+          <div className="flex items-center gap-1.5 md:gap-3">
+            {/* Wishlist Button */}
+            <button
+              onClick={() => setIsWishlistOpen(true)}
+              className="relative p-2.5 rounded-xl hover:bg-gray-50 transition-all"
+            >
+              <Heart className={`w-5 h-5 ${liked.size > 0 ? 'fill-red-500 text-red-500' : 'text-gray-700'}`} />
+              {liked.size > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[17px] h-[17px] bg-red-100 text-red-600 text-[8px] font-bold rounded-full flex items-center justify-center border-white border">
+                  {liked.size}
+                </span>
+              )}
+            </button>
+
+            {/* Cart Button */}
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="relative p-2.5 rounded-xl hover:bg-gray-50 transition-all"
+            >
+              <ShoppingBag className="w-5 h-5 text-gray-700" />
+              {cartCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] bg-black text-white text-[9px] font-bold rounded-full flex items-center justify-center border-white border">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -357,135 +387,195 @@ export default function CatalogPage() {
           const attrs = getAtributos(selectedProduct);
           const hasColors = attrs.cores && attrs.cores.length > 0;
           const hasSizes = attrs.tamanhos && attrs.tamanhos.length > 0;
+          const isLiked = liked.has(selectedProduct.id);
+          const isOutOfStock = selectedProduct.estoque <= 0;
 
           return (
             <>
               <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 onClick={() => setSelectedProduct(null)}
-                className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100]"
+                className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100]"
               />
               <motion.div
                 initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-                transition={{ type: 'spring', damping: 28, stiffness: 220 }}
-                className="fixed inset-x-0 bottom-0 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-lg md:max-h-[90vh] bg-white z-[101] rounded-t-3xl md:rounded-2xl shadow-2xl flex flex-col overflow-hidden"
-                style={{ maxHeight: '92vh' }}
+                transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
+                className="fixed inset-x-0 bottom-0 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-xl md:h-[85vh] bg-white z-[101] rounded-t-[2.5rem] md:rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+                style={{ maxHeight: '94vh' }}
               >
-                {/* Modal Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-                  <button onClick={() => setSelectedProduct(null)} className="p-1.5 rounded-lg hover:bg-gray-100">
-                    <ChevronLeft className="w-5 h-5 text-gray-600" />
+                {/* Modal Header — Integrated Style */}
+                <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10 pointer-events-none">
+                  <button onClick={() => setSelectedProduct(null)} className="p-2.5 rounded-full bg-white/90 shadow-lg backdrop-blur-sm pointer-events-auto hover:bg-white transition-all transform active:scale-95">
+                    <ChevronLeft className="w-5 h-5 text-gray-800" />
                   </button>
-                  <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Detalhes do Produto</h3>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(window.location.href);
-                      toast.success('Link copiado!');
-                    }}
-                    className="p-1.5 rounded-lg hover:bg-gray-100"
-                  >
-                    <Share2 className="w-4 h-4 text-gray-500" />
-                  </button>
+                  <div className="flex gap-2 pointer-events-auto">
+                    <button
+                      onClick={() => toggleLike(selectedProduct.id)}
+                      className={`p-2.5 rounded-full shadow-lg backdrop-blur-sm transition-all transform active:scale-95 ${
+                        isLiked ? 'bg-red-50 text-red-500' : 'bg-white/90 text-gray-800'
+                      }`}
+                    >
+                      <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(window.location.href);
+                        toast.success('Link copiado!');
+                      }}
+                      className="p-2.5 rounded-full bg-white/90 shadow-lg backdrop-blur-sm text-gray-800 hover:bg-white transition-all transform active:scale-95"
+                    >
+                      <Share2 className="w-5 h-5" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto">
-                  {/* Image */}
-                  <div className="bg-gray-50 flex items-center justify-center p-4">
+                <div className="flex-1 overflow-y-auto no-scrollbar pt-0">
+                  {/* HERO IMAGE — Fills the top nicely */}
+                  <div className="relative aspect-[3/4] md:aspect-[4/3] bg-gray-50 flex items-center justify-center overflow-hidden">
                     {selectedProduct.imagem ? (
                       <img
                         src={selectedProduct.imagem}
                         alt={selectedProduct.nome}
-                        className="max-w-full max-h-[300px] object-contain rounded-lg"
+                        className="w-full h-full object-contain md:object-cover"
                       />
                     ) : (
-                      <div className="w-full h-[250px] flex items-center justify-center text-gray-300">
-                        <ShoppingBag className="w-16 h-16" />
+                      <div className="w-full h-full flex flex-col items-center justify-center text-gray-200">
+                        <ShoppingBag className="w-20 h-20 mb-4" />
+                        <span className="text-xs font-bold uppercase tracking-widest">Sem Imagem</span>
                       </div>
                     )}
+                    {/* Shadow overlay for name visibility if it was on top (not using now but good for future) */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
                   </div>
 
-                  {/* Details */}
-                  <div className="p-5 space-y-5">
-                    {/* Name + Price */}
-                    <div>
-                      <h2 className="text-lg font-bold text-gray-900 leading-snug mb-2">{selectedProduct.nome}</h2>
-                      <div className="flex items-baseline gap-2">
-                        <span className="text-2xl font-black text-red-600">{formatCurrency(selectedProduct.preco)}</span>
-                        {selectedProduct.estoque > 0 && (
-                          <span className="text-[10px] text-emerald-600 font-semibold bg-emerald-50 px-2 py-0.5 rounded-full">
-                            Em stock ({selectedProduct.estoque})
-                          </span>
+                  {/* INFO PANEL */}
+                  <div className="px-6 py-8 space-y-8 bg-white -mt-8 rounded-t-[2.5rem] relative z-20">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                         <span className="text-[10px] font-black text-white bg-black px-2 py-0.5 rounded tracking-tighter uppercase">Original</span>
+                         {selectedProduct.estoque > 0 && selectedProduct.estoque <= 3 && (
+                            <span className="text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded tracking-tighter uppercase">Últimas Unidades ({selectedProduct.estoque})</span>
+                         )}
+                      </div>
+                      <h2 className="text-2xl font-black text-gray-900 leading-tight tracking-tight">{selectedProduct.nome}</h2>
+                      <div className="flex items-center gap-4">
+                        <span className="text-3xl font-black text-red-600 tracking-tight">{formatCurrency(selectedProduct.preco)}</span>
+                        {!isOutOfStock ? (
+                          <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider">Disponível em Stock</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-600 rounded-full">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider">Esgotado</span>
+                          </div>
                         )}
                       </div>
                     </div>
 
-                    {/* Description */}
+                    {/* Description Section */}
                     {selectedProduct.descricao && (
-                      <div>
-                        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Descrição</h4>
-                        <p className="text-sm text-gray-600 leading-relaxed">{selectedProduct.descricao}</p>
+                      <div className="p-4 bg-gray-50/50 rounded-2xl">
+                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Informações do Produto</h4>
+                        <p className="text-sm text-gray-600 leading-relaxed font-medium">{selectedProduct.descricao}</p>
                       </div>
                     )}
 
-                    {/* Colors */}
-                    {hasColors && (
-                      <div>
-                        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                          <Palette className="w-3 h-3" /> Cor: <span className="text-gray-700 normal-case">{selectedColor}</span>
-                        </h4>
-                        <div className="flex flex-wrap gap-2">
-                          {attrs.cores!.map(cor => (
-                            <button
-                              key={cor}
-                              onClick={() => setSelectedColor(cor)}
-                              className={`px-4 py-2 rounded-lg text-xs font-semibold border transition-all ${
-                                selectedColor === cor
-                                  ? 'border-black bg-black text-white'
-                                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
-                              }`}
-                            >
-                              {cor}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    {/* Variations Grid */}
+                    <div className="space-y-6">
+                      {/* COLORS Selector */}
+                      {hasColors && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                              <Palette className="w-3.5 h-3.5" /> Escolher Cor
+                            </h4>
+                            <span className="text-[10px] font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded italic">{selectedColor || 'Nenhuma'}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2.5">
+                            {attrs.cores!.map(cor => {
+                              // Stock logic per color if variacoes exists
+                              const varStock = attrs.variacoes?.find(v => v.cor === cor)?.estoque;
+                              const isColorOut = varStock !== undefined && varStock <= 0;
 
-                    {/* Sizes */}
-                    {hasSizes && (
-                      <div>
-                        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                          <Ruler className="w-3 h-3" /> Tamanho: <span className="text-gray-700 normal-case">{selectedSize}</span>
-                        </h4>
-                        <div className="flex flex-wrap gap-2">
-                          {attrs.tamanhos!.map(tam => (
-                            <button
-                              key={tam}
-                              onClick={() => setSelectedSize(tam)}
-                              className={`min-w-[44px] h-10 rounded-lg text-xs font-bold border transition-all ${
-                                selectedSize === tam
-                                  ? 'border-black bg-black text-white'
-                                  : 'border-gray-200 bg-white text-gray-600 hover:border-gray-400'
-                              }`}
-                            >
-                              {tam}
-                            </button>
-                          ))}
+                              return (
+                                <button
+                                  key={cor}
+                                  disabled={isColorOut}
+                                  onClick={() => setSelectedColor(cor)}
+                                  className={`px-5 py-3 rounded-xl text-xs font-black transition-all border-2 relative overflow-hidden ${
+                                    selectedColor === cor
+                                      ? 'border-black bg-black text-white shadow-lg scale-105'
+                                      : isColorOut
+                                        ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                                        : 'border-gray-100 bg-white text-gray-600 hover:border-black active:scale-95'
+                                  }`}
+                                >
+                                  {cor}
+                                  {isColorOut && <div className="absolute inset-0 flex items-center justify-center bg-white/60"><X className="w-4 h-4 text-red-500 opacity-50" /></div>}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+
+                      {/* SIZES Selector */}
+                      {hasSizes && (
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                              <Ruler className="w-3.5 h-3.5" /> Tamanho Disponível
+                            </h4>
+                            <span className="text-[10px] font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded italic">{selectedSize || 'Nenhuma'}</span>
+                          </div>
+                          <div className="flex flex-wrap gap-2.5">
+                            {attrs.tamanhos!.map(tam => {
+                              // Stock logic per size if variacoes exists (linking to selectedColor)
+                              const varStock = attrs.variacoes?.find(v => v.tamanho === tam && (!selectedColor || v.cor === selectedColor))?.estoque;
+                              const isSizeOut = varStock !== undefined && varStock <= 0;
+
+                              return (
+                                <button
+                                  key={tam}
+                                  disabled={isSizeOut}
+                                  onClick={() => setSelectedSize(tam)}
+                                  className={`min-w-[56px] h-14 rounded-xl text-xs font-black transition-all border-2 relative overflow-hidden ${
+                                    selectedSize === tam
+                                      ? 'border-black bg-black text-white shadow-lg scale-105'
+                                      : isSizeOut
+                                        ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                                        : 'border-gray-100 bg-white text-gray-600 hover:border-black active:scale-95'
+                                  }`}
+                                >
+                                  {tam}
+                                  {isSizeOut && <div className="absolute inset-0 flex items-center justify-center bg-white/60"><X className="w-4 h-4 text-red-500 opacity-50" /></div>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                {/* Add to Cart Button */}
-                <div className="p-4 border-t border-gray-100 bg-white">
+                {/* CALL TO ACTION — Sticky Bottom */}
+                <div className="p-6 border-t border-gray-100 bg-white/80 backdrop-blur-xl flex gap-3">
                   <button
+                    disabled={isOutOfStock}
                     onClick={() => addToCart(selectedProduct, selectedColor || undefined, selectedSize || undefined)}
-                    className="w-full py-3.5 rounded-xl bg-black text-white font-bold text-sm flex items-center justify-center gap-2 active:scale-[0.98] transition-all hover:bg-gray-800"
+                    className="flex-1 py-4.5 rounded-2xl bg-black text-white font-black text-sm flex items-center justify-center gap-3 active:scale-[0.98] transition-all hover:bg-gray-800 disabled:opacity-40 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-xl shadow-black/10 h-14"
                   >
-                    <ShoppingCart className="w-4 h-4" />
-                    Adicionar ao Carrinho — {formatCurrency(selectedProduct.preco)}
+                    {isOutOfStock ? (
+                      <span className="uppercase tracking-[0.1em]">Esgotado Temporariamente</span>
+                    ) : (
+                      <>
+                        <ShoppingCart className="w-5 h-5" />
+                        <span>ADICIONAR À SACOLA</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </motion.div>
@@ -638,6 +728,84 @@ export default function CatalogPage() {
                   </p>
                 </div>
               )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+      {/* ══════ WISHLIST DRAWER ══════ */}
+      <AnimatePresence>
+        {isWishlistOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setIsWishlistOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-md z-[110]"
+            />
+            <motion.div
+              initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white z-[111] shadow-2xl flex flex-col"
+            >
+              <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Heart className="w-6 h-6 text-red-500 fill-current" />
+                  <h2 className="text-lg font-black text-gray-900 tracking-tight">Lista de Desejos</h2>
+                </div>
+                <button onClick={() => setIsWishlistOpen(false)} className="p-2 rounded-full hover:bg-gray-100 text-gray-400 active:scale-90 transition-all">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-5 space-y-4 no-scrollbar">
+                {Array.from(liked).map(id => {
+                  const product = products.find(p => p.id === id);
+                  if (!product) return null;
+                  return (
+                    <div key={id} className="flex gap-4 p-4 rounded-2xl bg-gray-50/50 border border-gray-100 group">
+                      <div
+                        className="w-20 h-24 rounded-xl bg-white overflow-hidden flex-shrink-0 border border-gray-100 cursor-pointer"
+                        onClick={() => { openProductDetail(product); setIsWishlistOpen(false); }}
+                      >
+                        {product.imagem ? (
+                          <img src={product.imagem} className="w-full h-full object-contain" alt="" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-200">
+                            <ShoppingBag className="w-6 h-6" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 py-1">
+                        <h4 className="font-bold text-gray-900 text-sm line-clamp-1">{product.nome}</h4>
+                        <p className="text-lg font-black text-red-600 mt-1">{formatCurrency(product.preco)}</p>
+                        <div className="flex items-center gap-3 mt-3">
+                          <button
+                            onClick={() => { openProductDetail(product); setIsWishlistOpen(false); }}
+                            className="text-[10px] font-black uppercase tracking-widest text-gray-900 bg-white border border-gray-200 px-3 py-1.5 rounded-lg active:scale-95 transition-all shadow-sm"
+                          >
+                            Ver Detalhes
+                          </button>
+                          <button
+                             onClick={() => toggleLike(id)}
+                             className="p-1.5 text-gray-300 hover:text-red-500 transition-colors"
+                          >
+                             <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {liked.size === 0 && (
+                  <div className="h-full flex flex-col items-center justify-center text-gray-300 py-32 text-center">
+                    <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6">
+                       <Heart className="w-8 h-8 opacity-20" />
+                    </div>
+                    <p className="font-black text-gray-900 tracking-tight">Nada por aqui ainda!</p>
+                    <p className="text-xs text-gray-400 mt-2 max-w-[200px]">Guarde os seus produtos favoritos e compre-os mais tarde.</p>
+                  </div>
+                )}
+              </div>
             </motion.div>
           </>
         )}
