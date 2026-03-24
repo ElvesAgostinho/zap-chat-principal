@@ -175,15 +175,20 @@ export const HeroSimulator = () => {
       </div>
       
       <div className="mt-6 text-center lg:text-left min-h-[80px]">
-        <motion.h4 
-          key={`title-${currentStep}`}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-lg font-black text-white uppercase italic tracking-wider flex items-center gap-2 justify-center lg:justify-start"
-        >
-          <steps[currentStep].icon className={`w-5 h-5 ${steps[currentStep].color}`} />
-          {steps[currentStep].title}
-        </motion.h4>
+        {(() => {
+          const Icon = steps[currentStep].icon;
+          return (
+            <motion.h4 
+              key={`title-${currentStep}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-lg font-black text-white uppercase italic tracking-wider flex items-center gap-2 justify-center lg:justify-start"
+            >
+              <Icon className={`w-5 h-5 ${steps[currentStep].color}`} />
+              {steps[currentStep].title}
+            </motion.h4>
+          );
+        })()}
         <motion.p 
           key={`desc-${currentStep}`}
           initial={{ opacity: 0, y: 10 }}
