@@ -73,7 +73,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative pt-40 pb-20 lg:pt-56 lg:pb-32 overflow-hidden">
+      <section className="relative pt-28 pb-20 lg:pt-36 lg:pb-32 overflow-hidden">
         <div className="container mx-auto px-6 relative z-10">
           <div className="flex flex-col items-center gap-16 text-center">
             {/* Left Column */}
@@ -211,7 +211,7 @@ export default function LandingPage() {
           
           <div className="relative max-w-5xl mx-auto">
             <div className="rounded-[40px] overflow-hidden border-8 border-muted shadow-elevated bg-white">
-              <img src={dashboardImg} alt="System Screen" className="w-full opacity-90" />
+              <img src={leadsImg} alt="Lead Management Screen" className="w-full opacity-90" />
             </div>
             {/* Overlay features */}
             <div className="absolute top-1/4 -left-10 p-5 bg-white rounded-2xl shadow-elevated border border-border hidden xl:block max-w-[200px] animate-bounce-slow">
