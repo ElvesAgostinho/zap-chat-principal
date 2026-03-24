@@ -84,6 +84,7 @@ function AppRoutes() {
       <Route path="/admin" element={<ProtectedRoute adminOnly><AdminPanel /></ProtectedRoute>} />
       <Route path="/super-admin" element={<ProtectedRoute superAdminOnly><SuperAdminPanel /></ProtectedRoute>} />
       <Route path="/loja/:storeCode" element={<CatalogPage />} />
+      <Route path="/catalogo/:storeCode" element={<CatalogPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
