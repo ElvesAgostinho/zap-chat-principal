@@ -397,16 +397,15 @@ export default function CatalogPage() {
                 onClick={() => setSelectedProduct(null)}
                 className="fixed inset-0 bg-black/70 backdrop-blur-md z-[100]"
               />
-              <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 md:p-6 pointer-events-none">
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95, y: 30 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95, y: 30 }}
-                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                  className="w-full md:max-w-5xl bg-white rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row overflow-hidden pointer-events-auto relative"
-                  style={{ maxHeight: '90vh' }}
-                >
-                  {/* Global Close/Action Tools */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, x: "-50%", y: "-40%" }}
+                animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
+                exit={{ opacity: 0, scale: 0.95, x: "-50%", y: "-40%" }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="fixed left-1/2 top-1/2 w-[calc(100%-2rem)] md:w-full md:max-w-5xl bg-white rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row overflow-hidden z-[101]"
+                style={{ maxHeight: '90vh' }}
+              >
+                {/* Global Close/Action Tools */}
                 <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-[110] pointer-events-none">
                   <button 
                     onClick={() => setSelectedProduct(null)} 
@@ -564,7 +563,6 @@ export default function CatalogPage() {
                     </div>
                   </div>
                 </motion.div>
-              </div>
             </>
           );
         })()}
