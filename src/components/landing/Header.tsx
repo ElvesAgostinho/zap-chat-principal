@@ -66,7 +66,7 @@ export const Header = () => {
           ))}
           
           <Link 
-            to={user ? "/admin" : "/auth"} 
+            to={user ? "/admin" : "/login"} 
             className="px-6 py-2.5 rounded-full glass-card border-primary/20 text-[10px] font-black uppercase tracking-[0.2em] text-white hover:bg-primary hover:text-black transition-all flex items-center gap-2"
           >
             {user ? (
@@ -107,7 +107,7 @@ export const Header = () => {
                 </a>
               ))}
               <Link 
-                to={user ? "/admin" : "/auth"}
+                to={user ? "/admin" : "/login"}
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full py-4 rounded-xl bg-white/5 border border-white/10 text-center text-xs font-black uppercase tracking-widest text-white"
               >
