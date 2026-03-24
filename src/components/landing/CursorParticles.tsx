@@ -45,7 +45,7 @@ export const CursorParticles = () => {
         this.x = x;
         this.y = y;
         this.velocity = velocity;
-        this.size = Math.random() * 0.8 + 0.2 + (velocity * 0.05);
+        this.size = Math.random() * 0.5 + 0.1;
         this.speedX = (Math.random() - 0.5) * 0.3;
         this.speedY = (Math.random() - 0.5) * 0.3;
         this.color = '#24FF6B';
@@ -56,7 +56,7 @@ export const CursorParticles = () => {
         this.x += this.speedX;
         this.y += this.speedY;
         if (this.opacity > 0.005) this.opacity -= 0.005;
-        this.size *= 0.995;
+        this.size *= 0.98;
       }
 
       draw() {

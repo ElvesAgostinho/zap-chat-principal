@@ -81,7 +81,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
     >
       <div 
         className={`
-          relative h-full flex flex-col p-8 rounded-[40px] border transition-all duration-500 overflow-hidden
+          relative h-full flex flex-col p-8 rounded-[40px] border transition-all duration-500
           ${highlight 
             ? 'border-primary/50 shadow-glow bg-primary/5' 
             : 'border-white/10 bg-white/5 backdrop-blur-xl'}

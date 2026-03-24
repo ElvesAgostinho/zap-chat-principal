@@ -107,7 +107,7 @@ export default function LoginPage() {
             transition={{ delay: 0.15 }}
             className="text-3xl font-bold text-foreground tracking-tight"
           >
-            CRM TOP
+            Bem-vindo de volta
           </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}
@@ -115,7 +115,7 @@ export default function LoginPage() {
             transition={{ delay: 0.2 }}
             className="text-sm text-muted-foreground mt-1.5"
           >
-            CRM inteligente via WhatsApp
+            Acesse seu painel no CRM TOP
           </motion.p>
         </div>
 
@@ -189,17 +189,22 @@ export default function LoginPage() {
         </motion.div>
 
 
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="text-center text-sm text-muted-foreground mt-6"
-        >
-          Não tem conta?{' '}
-          <Link to="/signup" className="text-primary font-semibold hover:underline">
-            Criar conta
-          </Link>
-        </motion.p>
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="bg-secondary/30 border border-border/50 p-5 rounded-2xl mt-6 text-center space-y-3"
+          >
+            <p className="text-sm text-muted-foreground">
+              Ainda não faz parte do CRM TOP?
+            </p>
+            <Link 
+              to="/signup" 
+              className="inline-flex w-full items-center justify-center h-10 rounded-xl bg-background border border-primary/20 text-primary font-bold text-sm tracking-wide hover:bg-primary hover:text-white transition-all shadow-sm"
+            >
+              Criar Conta Agora
+            </Link>
+        </motion.div>
       </motion.div>
     </div>
   );

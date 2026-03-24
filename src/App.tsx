@@ -117,7 +117,6 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <AppRoutes />
-          <SupportBotWrapper />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
