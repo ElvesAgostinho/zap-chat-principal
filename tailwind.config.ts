@@ -65,6 +65,14 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        neon: {
+          DEFAULT: "#24FF6B",
+          glow: "rgba(36, 255, 107, 0.4)",
+        },
+        electric: {
+          DEFAULT: "#8B5CF6",
+          glow: "rgba(139, 92, 246, 0.4)",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -84,6 +92,14 @@ export default {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "pulse-neon": "pulse-neon 2s cubic-bezier(0.4, 0, 0.6, 1) infinite",
+        "float": "float 6s ease-in-out infinite",
+        "glow": "glow 2s ease-in-out infinite",
+      },
+      boxShadow: {
+        glow: "0 0 20px rgba(36, 255, 107, 0.3)",
+        "glow-purple": "0 0 20px rgba(139, 92, 246, 0.3)",
+        elevated: "0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.4)",
       },
     },
   },

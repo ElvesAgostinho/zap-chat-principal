@@ -66,56 +66,56 @@
   }
 
   .dark {
-    --background: 222 22% 8%;
-    --foreground: 220 14% 92%;
+    --background: 206 24% 6%;
+    --foreground: 0 0% 100%;
 
-    --card: 222 20% 12%;
-    --card-foreground: 220 14% 92%;
+    --card: 206 24% 8%;
+    --card-foreground: 0 0% 100%;
 
-    --popover: 222 20% 12%;
-    --popover-foreground: 220 14% 92%;
+    --popover: 206 24% 8%;
+    --popover-foreground: 0 0% 100%;
 
-    --primary: 153 55% 40%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 139 100% 57%;
+    --primary-foreground: 206 24% 6%;
 
-    --secondary: 222 18% 16%;
-    --secondary-foreground: 220 14% 92%;
+    --secondary: 258 91% 66%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 222 15% 20%;
-    --muted-foreground: 220 8% 56%;
+    --muted: 206 15% 15%;
+    --muted-foreground: 206 10% 60%;
 
-    --accent: 153 20% 18%;
-    --accent-foreground: 153 50% 65%;
+    --accent: 139 100% 57%;
+    --accent-foreground: 206 24% 6%;
 
     --destructive: 0 62% 48%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 222 15% 18%;
-    --input: 222 15% 18%;
-    --ring: 153 55% 40%;
+    --border: 206 15% 15%;
+    --input: 206 15% 15%;
+    --ring: 139 100% 57%;
 
-    --whatsapp-dark: 153 70% 12%;
-    --whatsapp-mid: 153 55% 40%;
-    --whatsapp-light: 153 45% 50%;
-    --whatsapp-bubble: 153 20% 16%;
-    --whatsapp-bg: 222 22% 10%;
+    --whatsapp-dark: 139 100% 10%;
+    --whatsapp-mid: 139 100% 57%;
+    --whatsapp-light: 139 100% 70%;
+    --whatsapp-bubble: 206 24% 10%;
+    --whatsapp-bg: 206 24% 4%;
     --badge-red: 0 72% 55%;
 
-    --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
-    --shadow-elevated: 0 8px 30px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.2);
-    --shadow-glow: 0 0 20px rgba(52, 178, 126, 0.15);
+    --shadow-card: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+    --shadow-elevated: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
+    --shadow-glow: 0 0 20px rgba(36, 255, 107, 0.3);
 
-    --sidebar-background: 222 20% 10%;
-    --sidebar-foreground: 220 10% 70%;
-    --sidebar-primary: 153 55% 40%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 18% 14%;
-    --sidebar-accent-foreground: 220 14% 92%;
-    --sidebar-border: 222 15% 15%;
-    --sidebar-ring: 153 55% 40%;
+    --sidebar-background: 206 24% 4%;
+    --sidebar-foreground: 0 0% 80%;
+    --sidebar-primary: 139 100% 57%;
+    --sidebar-primary-foreground: 206 24% 6%;
+    --sidebar-accent: 206 24% 10%;
+    --sidebar-accent-foreground: 139 100% 57%;
+    --sidebar-border: 206 15% 10%;
+    --sidebar-ring: 139 100% 57%;
 
-    --chart-1: 153 55% 45%;
-    --chart-2: 217 85% 65%;
+    --chart-1: 139 100% 57%;
+    --chart-2: 258 91% 66%;
     --chart-3: 43 90% 60%;
     --chart-4: 349 80% 62%;
     --chart-5: 262 75% 62%;
@@ -171,16 +171,22 @@
     display: none;
   }
   .glass-card {
-    @apply bg-card/70 backdrop-blur-xl border border-border/50;
+    @apply bg-white/5 backdrop-blur-xl border border-white/10;
+  }
+  .glass-card-neon {
+    @apply bg-white/5 backdrop-blur-xl border border-emerald-500/20 shadow-glow;
   }
   .gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--whatsapp-light)));
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+  }
+  .gradient-neon {
+    background: linear-gradient(135deg, #24FF6B, #8B5CF6);
   }
   .gradient-header {
-    background: linear-gradient(135deg, hsl(var(--whatsapp-dark)), hsl(153, 60%, 20%));
+    background: linear-gradient(135deg, hsl(var(--background)), transparent);
   }
   .gradient-sidebar {
-    background: linear-gradient(180deg, hsl(var(--sidebar-background)), hsl(var(--sidebar-accent)));
+    background: linear-gradient(180deg, hsl(var(--sidebar-background)), transparent);
   }
 
   /* Custom scrollbar */
