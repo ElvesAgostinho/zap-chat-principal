@@ -146,13 +146,32 @@ export const HeroSimulator = () => {
   }, []);
 
   return (
-    <div className="w-full max-w-lg lg:max-w-xl">
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ 
+        opacity: 1, 
+        y: [0, -15, 0],
+      }}
+      transition={{ 
+        opacity: { duration: 0.8 },
+        y: { duration: 4, repeat: Infinity, ease: "easeInOut" }
+      }}
+      className="w-full max-w-lg lg:max-w-xl relative"
+    >
+      {/* Decorative Neon Glow Backdrop */}
+      <div className="absolute -inset-10 bg-primary/10 blur-[80px] rounded-full opacity-50 animate-pulse pointer-events-none" />
+
       <div className="relative mb-12 h-80 flex items-center justify-center">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
             initial={{ opacity: 0, scale: 0.9, x: 20 }}
-            animate={{ opacity: 1, scale: 1, x: 0 }}
+            animate={{ 
+              opacity: 1, 
+              scale: 1, 
+              x: 0,
+              filter: "drop-shadow(0 0 20px rgba(36, 255, 107, 0.2))"
+            }}
             exit={{ opacity: 0, scale: 1.1, x: -20 }}
             transition={{ type: 'spring', damping: 20, stiffness: 100 }}
             className="w-full"
@@ -199,6 +218,6 @@ export const HeroSimulator = () => {
           {steps[currentStep].desc}
         </motion.p>
       </div>
-    </div>
+    </motion.div>
   );
 };
