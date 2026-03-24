@@ -143,7 +143,7 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
               exit={{ opacity: 0, width: 0 }}
               className="overflow-hidden whitespace-nowrap flex-1"
             >
-              <h1 className="text-[15px] font-bold text-foreground leading-tight">ZapVendas</h1>
+              <h1 className="text-[15px] font-bold text-foreground leading-tight">CRM TOP</h1>
               <p className="text-[10px] text-muted-foreground leading-tight">CRM WhatsApp</p>
             </motion.div>
           )}

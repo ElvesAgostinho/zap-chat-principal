@@ -14,7 +14,7 @@ export default function AppHeader({ rightContent, storeName, storeCode }: AppHea
           <Zap className="w-5 h-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="text-[15px] font-bold text-white leading-tight truncate">{storeName || 'ZapVendas'}</h1>
+          <h1 className="text-[15px] font-bold text-white leading-tight truncate">{storeName || 'CRM TOP'}</h1>
           <p className="text-[10px] text-white/60 leading-tight">
             {storeCode ? `Código: ${storeCode}` : 'CRM via WhatsApp'}
           </p>

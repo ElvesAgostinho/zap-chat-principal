@@ -107,7 +107,7 @@ export default function LoginPage() {
             transition={{ delay: 0.15 }}
             className="text-3xl font-bold text-foreground tracking-tight"
           >
-            ZapVendas
+            CRM TOP
           </motion.h1>
           <motion.p
             initial={{ opacity: 0 }}

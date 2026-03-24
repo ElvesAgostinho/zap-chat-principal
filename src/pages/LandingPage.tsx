@@ -55,7 +55,7 @@ export default function LandingPage() {
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 group-hover:rotate-12 transition-transform">
               <Zap className="w-6 h-6 text-white" />
             </div>
-            <span className="font-black text-2xl tracking-tighter italic uppercase text-foreground">ZapVendas</span>
+            <span className="font-black text-2xl tracking-tighter italic uppercase text-foreground">CRM TOP</span>
           </Link>
           
           <nav className="hidden md:flex items-center gap-8">
@@ -75,14 +75,14 @@ export default function LandingPage() {
       {/* Hero Section */}
       <section className="relative pt-40 pb-20 lg:pt-56 lg:pb-32 overflow-hidden">
         <div className="container mx-auto px-6 relative z-10">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+          <div className="flex flex-col items-center gap-16 text-center">
             {/* Left Column */}
             <motion.div 
-              initial={{ opacity: 0, x: -30 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6 }}
-              className="max-w-2xl text-center lg:text-left"
-            >
++              initial={{ opacity: 0, y: 30 }}
++              animate={{ opacity: 1, y: 0 }}
++              transition={{ duration: 0.6 }}
++              className="max-w-4xl mx-auto"
++            >
               <a 
                 href="https://www.topia.solutions/" 
                 target="_blank" 
@@ -121,12 +121,12 @@ export default function LandingPage() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
-              className="relative"
+              className="relative w-full max-w-5xl mx-auto"
             >
-              <div className="relative z-10 rounded-[32px] overflow-hidden shadow-elevated border border-border group bg-white">
+              <div className="relative z-10 rounded-[24px] lg:rounded-[40px] overflow-hidden shadow-2xl border border-border group bg-white">
                 <img 
                   src={dashboardImg} 
-                  alt="ZapVendas Dashboard" 
+                  alt="CRM TOP Dashboard" 
                   className="w-full h-auto transform group-hover:scale-105 transition-transform duration-1000 opacity-90"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
@@ -320,7 +320,7 @@ export default function LandingPage() {
             </div>
             <h2 className="text-3xl lg:text-4xl font-black tracking-tighter uppercase italic mb-8 relative z-10">Sobre o CRM</h2>
             <p className="text-xl text-muted-foreground leading-relaxed font-medium relative z-10">
-              O <span className="text-primary font-black uppercase">ZapVendas</span> foi desenvolvido pela <a href="https://www.topia.solutions/" target="_blank" rel="noopener noreferrer" className="text-foreground font-bold italic hover:text-primary transition-colors underline decoration-primary/30">Top IA</a>, uma empresa sediada em <span className="text-foreground font-bold italic">Portugal</span>, com foco em automação, produtividade e simplicidade, ajudando empresas angolanas a organizar processos e escalar operações com o poder da tecnologia de ponta e inteligência comercial.
+              O <span className="text-primary font-black uppercase">CRM TOP</span> foi desenvolvido pela <a href="https://www.topia.solutions/" target="_blank" rel="noopener noreferrer" className="text-foreground font-bold italic hover:text-primary transition-colors underline decoration-primary/30">Top IA</a>, uma empresa sediada em <span className="text-foreground font-bold italic">Portugal</span>, com foco em automação, produtividade e simplicidade, ajudando empresas angolanas a organizar processos e escalar operações com o poder da tecnologia de ponta e inteligência comercial.
             </p>
           </div>
         </div>
@@ -350,11 +350,11 @@ export default function LandingPage() {
         <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-10">
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-md"><Zap className="w-6 h-6 text-white" /></div>
-            <span className="font-black text-xl tracking-tighter italic uppercase text-foreground">ZapVendas</span>
+            <span className="font-black text-xl tracking-tighter italic uppercase text-foreground">CRM TOP</span>
           </div>
           <div className="text-center md:text-right">
               <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] mb-2 opacity-50">
-                &copy; 2026 ZapVendas &bull; Todos os direitos reservados
+                &copy; 2026 CRM TOP &bull; Todos os direitos reservados
               </p>
               <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Desenvolvido com excelência pela <a href="https://www.topia.solutions/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline transition-all">Top IA</a> &bull; Portugal
