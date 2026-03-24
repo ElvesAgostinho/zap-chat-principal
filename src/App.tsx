@@ -88,6 +88,12 @@ function AppRoutes() {
   );
 }
 
+const SupportBotWrapper = () => {
+  const { user } = useAuth();
+  if (user) return null;
+  return <FloatingSupportBot />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -97,7 +103,7 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <AppRoutes />
-          <FloatingSupportBot />
+          <SupportBotWrapper />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
