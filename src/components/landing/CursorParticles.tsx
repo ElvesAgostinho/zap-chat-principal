@@ -45,11 +45,11 @@ export const CursorParticles = () => {
         this.x = x;
         this.y = y;
         this.velocity = velocity;
-        this.size = Math.random() * 0.5 + 0.1;
-        this.speedX = (Math.random() - 0.5) * 0.3;
-        this.speedY = (Math.random() - 0.5) * 0.3;
+        this.size = Math.random() * 0.8 + 0.3;
+        this.speedX = (Math.random() - 0.5) * 0.4;
+        this.speedY = (Math.random() - 0.5) * 0.4;
         this.color = '#24FF6B';
-        this.opacity = Math.min(0.5 + (velocity * 0.03), 0.9);
+        this.opacity = Math.min(0.7 + (velocity * 0.05), 1.0);
       }
 
       update() {
@@ -64,7 +64,7 @@ export const CursorParticles = () => {
         ctx.beginPath();
         ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
         ctx.fillStyle = `rgba(36, 255, 107, ${this.opacity})`;
-        ctx.shadowBlur = 15;
+        ctx.shadowBlur = 20;
         ctx.shadowColor = '#24FF6B';
         ctx.fill();
         
@@ -87,7 +87,7 @@ export const CursorParticles = () => {
 
       // Add particles based on velocity
       if (velocity > 0.5) {
-        const amount = Math.min(Math.floor(velocity / 2), 5);
+        const amount = Math.min(Math.floor(velocity / 1.5), 8);
         for (let i = 0; i < amount; i++) {
           particles.current.push(new Particle(
             lastMouse.current.x + (Math.random() - 0.5) * 10, 
