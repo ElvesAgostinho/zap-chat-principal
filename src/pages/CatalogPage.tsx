@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, MessageSquare, Plus, Minus, X, ChevronRight, Loader2, Store, ShoppingCart, Heart, Share2, ChevronLeft, Palette, Ruler, Trash2 } from 'lucide-react';
+import { ShoppingBag, MessageSquare, Plus, Minus, X, ChevronRight, Loader2, Store, ShoppingCart, Heart, Share2, ChevronLeft, Palette, Ruler, Trash2, Star, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Produto } from '@/types';
 import { formatCurrency } from '@/data/mock';
