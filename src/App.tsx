@@ -83,8 +83,8 @@ function AppRoutes() {
       <Route path="/chat" element={<ProtectedRoute><ChatPanel /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute adminOnly><AdminPanel /></ProtectedRoute>} />
       <Route path="/super-admin" element={<ProtectedRoute superAdminOnly><SuperAdminPanel /></ProtectedRoute>} />
-      <Route path="/loja/:storeCode" element={<CatalogPage />} />
-      <Route path="/catalogo/:storeCode" element={<CatalogPage />} />
+      <Route path="/loja/:storeSlug" element={<CatalogPage />} />
+      <Route path="/catalogo/:storeSlug" element={<CatalogPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

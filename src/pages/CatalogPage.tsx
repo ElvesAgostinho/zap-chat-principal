@@ -23,7 +23,7 @@ interface ProductAtributos {
 
 /* ───── Component ───── */
 export default function CatalogPage() {
-  const { storeCode } = useParams<{ storeCode: string }>();
+  const { storeSlug } = useParams<{ storeSlug: string }>();
   const [store, setStore] = useState<any>(null);
   const [products, setProducts] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,13 +54,14 @@ export default function CatalogPage() {
   /* ───── Data Fetching ───── */
   useEffect(() => {
     async function fetchStoreContent() {
-      if (!storeCode) return;
+      if (!storeSlug) return;
       setLoading(true);
 
       const { data: storeData, error: storeError } = await (supabase as any)
         .from('lojas')
         .select('*')
-        .eq('codigo_unico', storeCode)
+        .or(`slug.eq.${storeSlug},codigo_unico.eq.${storeSlug}`)
+        .limit(1)
         .maybeSingle();
 
       if (storeError || !storeData) {
@@ -84,7 +85,7 @@ export default function CatalogPage() {
       setLoading(false);
     }
     fetchStoreContent();
-  }, [storeCode]);
+  }, [storeSlug]);
 
   /* ───── Helpers ───── */
   const getAtributos = (product: Produto): ProductAtributos => {

@@ -22,14 +22,14 @@ const PIPELINE_COLORS = ['hsl(210, 14%, 60%)', 'hsl(217, 91%, 60%)', 'hsl(43, 96
 
 export default function DashboardPanel({ vendas, leads, products, alertCount, onAddLead, onAddProduct }: DashboardPanelProps) {
   const { role, storeId } = useAuth();
-  const [storeCode, setStoreCode] = useState<string | null>(null);
+  const [storeSlug, setStoreSlug] = useState<string | null>(null);
   const [period, setPeriod] = useState<'7d' | '30d' | 'all'>('7d');
   const [activeTab, setActiveTab] = useState<'geral' | 'insights'>('geral');
 
   useEffect(() => {
     if (!storeId || role !== 'admin') return;
-    (supabase as any).from('lojas').select('codigo_unico').eq('id', storeId).maybeSingle()
-      .then(({ data }: any) => { if (data) setStoreCode(data.codigo_unico); });
+    (supabase as any).from('lojas').select('slug').eq('id', storeId).maybeSingle()
+      .then(({ data }: any) => { if (data) setStoreSlug(data.slug); });
   }, [storeId, role]);
 
   const totalSales = vendas.filter(v => v.status !== 'cancelado').reduce((s, v) => s + (v.valor || 0), 0);
@@ -175,12 +175,12 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
               <div className="flex-1 md:flex-none flex items-center gap-2 bg-card px-4 py-2.5 rounded-2xl border border-border/60 shadow-sm group min-w-[200px]">
                 <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[150px]">
-                  {window.location.origin}/loja/{storeCode || '...'}
+                  {window.location.origin}/catalogo/{storeSlug || '...'}
                 </span>
                 <button
                   onClick={() => { 
-                    if (storeCode) {
-                      navigator.clipboard.writeText(`${window.location.origin}/loja/${storeCode}`); 
+                    if (storeSlug) {
+                      navigator.clipboard.writeText(`${window.location.origin}/catalogo/${storeSlug}`); 
                       toast.success('Link copiado!'); 
                     }
                   }}
@@ -192,7 +192,7 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
               
               <button
                 onClick={() => {
-                  const msg = encodeURIComponent(`Confira nosso catálogo online: ${window.location.origin}/loja/${storeCode}`);
+                  const msg = encodeURIComponent(`Confira nosso catálogo online: ${window.location.origin}/catalogo/${storeSlug}`);
                   window.open(`https://wa.me/?text=${msg}`, '_blank');
                 }}
                 className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-2xl font-bold text-xs shadow-glow-emerald transition-all"

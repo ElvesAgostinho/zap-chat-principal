@@ -29,11 +29,12 @@ interface Config {
   mensagemBoasVindas: string; 
   linguagemBot: string; 
   idioma: string; 
+  slug?: string;
 }
 
 export default function StoreConfigPanel() {
   const { storeId } = useAuth();
-  const [config, setConfig] = useState<Config>({ nomeLoja: '', telefone: '', endereco: '', formasPagamento: [], zonasEntrega: [], mensagemBoasVindas: '', linguagemBot: '', idioma: 'pt-AO' });
+  const [config, setConfig] = useState<Config>({ nomeLoja: '', telefone: '', endereco: '', formasPagamento: [], zonasEntrega: [], mensagemBoasVindas: '', linguagemBot: '', idioma: 'pt-AO', slug: '' });
   const [newPayment, setNewPayment] = useState({ tipo: '', detalhes: '' });
   const [newZone, setNewZone] = useState({ zona: '', taxa: '' });
   const [botActive, setBotActive] = useState(true);
@@ -58,7 +59,8 @@ export default function StoreConfigPanel() {
         linguagemBot: loja.linguagem_bot || '', 
         zonasEntrega: z || [], 
         formasPagamento: p || [], 
-        idioma: loja.idioma || 'pt-AO' 
+        idioma: loja.idioma || 'pt-AO',
+        slug: loja.slug || ''
       });
     }
     setLoading(false);
@@ -268,7 +270,7 @@ export default function StoreConfigPanel() {
           <p className="text-[10px] font-bold text-primary uppercase mb-1">Dica de Automação</p>
           <p className="text-xs text-muted-foreground italic">
             O código <span className="font-mono font-bold text-foreground">{"{{link_loja}}"}</span> será substituído pelo seu link público: <br/>
-            <span className="text-primary underline text-[10px]">{window.location.origin}/loja/{storeId?.slice(0,6)}...</span>
+            <span className="text-primary underline text-[10px]">{window.location.origin}/catalogo/{config.slug || 'sua-loja'}</span>
           </p>
         </div>
       </motion.div>
