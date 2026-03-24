@@ -398,10 +398,12 @@ export default function CatalogPage() {
                 className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100]"
               />
               <motion.div
-                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-                transition={{ type: 'spring', damping: 30, stiffness: 300, mass: 0.8 }}
-                className="fixed inset-x-0 bottom-0 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-xl md:h-[85vh] bg-white z-[101] rounded-t-[2.5rem] md:rounded-3xl shadow-2xl flex flex-col overflow-hidden"
-                style={{ maxHeight: '94vh' }}
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                className="fixed inset-5 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-xl bg-white z-[101] rounded-[2rem] md:rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+                style={{ height: 'fit-content', maxHeight: 'max(400px, 90vh)' }}
               >
                 {/* Modal Header — Integrated Style */}
                 <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10 pointer-events-none">
@@ -430,23 +432,21 @@ export default function CatalogPage() {
                 </div>
 
                 {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto no-scrollbar pt-0">
-                  {/* HERO IMAGE — Fills the top nicely */}
-                  <div className="relative aspect-[3/4] md:aspect-[4/3] bg-gray-50 flex items-center justify-center overflow-hidden">
+                <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
+                  {/* HERO IMAGE — Responsive & Centered */}
+                  <div className="relative w-full aspect-square bg-white flex items-center justify-center overflow-hidden border-b border-gray-50">
                     {selectedProduct.imagem ? (
                       <img
                         src={selectedProduct.imagem}
                         alt={selectedProduct.nome}
-                        className="w-full h-full object-contain md:object-cover"
+                        className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-700"
                       />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-gray-200">
                         <ShoppingBag className="w-20 h-20 mb-4" />
-                        <span className="text-xs font-bold uppercase tracking-widest">Sem Imagem</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Sem Foto</span>
                       </div>
                     )}
-                    {/* Shadow overlay for name visibility if it was on top (not using now but good for future) */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent pointer-events-none" />
                   </div>
 
                   {/* INFO PANEL */}
@@ -484,18 +484,24 @@ export default function CatalogPage() {
 
                     {/* Variations Grid */}
                     <div className="space-y-6">
+                      {/* Default Message if no attributes */}
+                      {!hasColors && !hasSizes && (
+                        <div className="flex flex-col items-center justify-center py-4 text-center border-2 border-dashed border-gray-100 rounded-2xl">
+                          <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tamanho Único · Pronta Entrega</p>
+                        </div>
+                      )}
+
                       {/* COLORS Selector */}
                       {hasColors && (
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                           <div className="flex items-center justify-between">
-                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
                               <Palette className="w-3.5 h-3.5" /> Escolher Cor
                             </h4>
-                            <span className="text-[10px] font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded italic">{selectedColor || 'Nenhuma'}</span>
+                            <span className="text-[10px] font-black text-white bg-black px-2 py-0.5 rounded italic">{selectedColor || 'Selecione'}</span>
                           </div>
                           <div className="flex flex-wrap gap-2.5">
                             {attrs.cores!.map(cor => {
-                              // Stock logic per color if variacoes exists
                               const varStock = attrs.variacoes?.find(v => v.cor === cor)?.estoque;
                               const isColorOut = varStock !== undefined && varStock <= 0;
 
@@ -504,16 +510,16 @@ export default function CatalogPage() {
                                   key={cor}
                                   disabled={isColorOut}
                                   onClick={() => setSelectedColor(cor)}
-                                  className={`px-5 py-3 rounded-xl text-xs font-black transition-all border-2 relative overflow-hidden ${
+                                  className={`px-6 py-3 rounded-2xl text-xs font-black transition-all border-2 relative overflow-hidden ${
                                     selectedColor === cor
-                                      ? 'border-black bg-black text-white shadow-lg scale-105'
+                                      ? 'border-black bg-black text-white shadow-xl scale-105'
                                       : isColorOut
-                                        ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                                        ? 'border-gray-50 bg-gray-50 text-gray-200 cursor-not-allowed opacity-50'
                                         : 'border-gray-100 bg-white text-gray-600 hover:border-black active:scale-95'
                                   }`}
                                 >
                                   {cor}
-                                  {isColorOut && <div className="absolute inset-0 flex items-center justify-center bg-white/60"><X className="w-4 h-4 text-red-500 opacity-50" /></div>}
+                                  {isColorOut && <div className="absolute inset-0 flex items-center justify-center bg-white/40"><X className="w-4 h-4 text-red-500 opacity-60" /></div>}
                                 </button>
                               );
                             })}
@@ -523,16 +529,15 @@ export default function CatalogPage() {
 
                       {/* SIZES Selector */}
                       {hasSizes && (
-                        <div className="space-y-3">
+                        <div className="space-y-4">
                           <div className="flex items-center justify-between">
-                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                              <Ruler className="w-3.5 h-3.5" /> Tamanho Disponível
+                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                              <Ruler className="w-3.5 h-3.5" /> Tamanho
                             </h4>
-                            <span className="text-[10px] font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded italic">{selectedSize || 'Nenhuma'}</span>
+                            <span className="text-[10px] font-black text-white bg-black px-2 py-1 rounded italic">{selectedSize || 'Selecione'}</span>
                           </div>
                           <div className="flex flex-wrap gap-2.5">
                             {attrs.tamanhos!.map(tam => {
-                              // Stock logic per size if variacoes exists (linking to selectedColor)
                               const varStock = attrs.variacoes?.find(v => v.tamanho === tam && (!selectedColor || v.cor === selectedColor))?.estoque;
                               const isSizeOut = varStock !== undefined && varStock <= 0;
 
@@ -541,16 +546,16 @@ export default function CatalogPage() {
                                   key={tam}
                                   disabled={isSizeOut}
                                   onClick={() => setSelectedSize(tam)}
-                                  className={`min-w-[56px] h-14 rounded-xl text-xs font-black transition-all border-2 relative overflow-hidden ${
+                                  className={`min-w-[64px] h-14 rounded-2xl text-xs font-black transition-all border-2 relative overflow-hidden ${
                                     selectedSize === tam
-                                      ? 'border-black bg-black text-white shadow-lg scale-105'
+                                      ? 'border-black bg-black text-white shadow-xl scale-105'
                                       : isSizeOut
-                                        ? 'border-gray-100 bg-gray-50 text-gray-300 cursor-not-allowed'
+                                        ? 'border-gray-50 bg-gray-50 text-gray-200 cursor-not-allowed opacity-50'
                                         : 'border-gray-100 bg-white text-gray-600 hover:border-black active:scale-95'
                                   }`}
                                 >
                                   {tam}
-                                  {isSizeOut && <div className="absolute inset-0 flex items-center justify-center bg-white/60"><X className="w-4 h-4 text-red-500 opacity-50" /></div>}
+                                  {isSizeOut && <div className="absolute inset-0 flex items-center justify-center bg-white/40"><X className="w-4 h-4 text-red-500 opacity-60" /></div>}
                                 </button>
                               );
                             })}
