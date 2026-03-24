@@ -397,15 +397,16 @@ export default function CatalogPage() {
                 onClick={() => setSelectedProduct(null)}
                 className="fixed inset-0 bg-black/70 backdrop-blur-md z-[100]"
               />
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 30 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 30 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-4xl bg-white z-[101] rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row overflow-hidden"
-                style={{ height: 'fit-content', maxHeight: 'max(500px, 90vh)' }}
-              >
-                {/* Global Close/Action Tools */}
+              <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 md:p-6 pointer-events-none">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 30 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 30 }}
+                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                  className="w-full md:max-w-5xl bg-white rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row overflow-hidden pointer-events-auto relative"
+                  style={{ maxHeight: '90vh' }}
+                >
+                  {/* Global Close/Action Tools */}
                 <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-[110] pointer-events-none">
                   <button 
                     onClick={() => setSelectedProduct(null)} 
@@ -559,10 +560,11 @@ export default function CatalogPage() {
                           <span>Adicionar à Sacola</span>
                         </>
                       )}
-                    </button>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
+                </motion.div>
+              </div>
             </>
           );
         })()}
