@@ -20,8 +20,8 @@ export default function CatalogPage() {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [orderDetails, setOrderDetails] = useState({ name: '', phone: '' });
-  const [paymentReference, setPaymentReference] = useState<string | null>(null);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [categorias, setCategorias] = useState<string[]>(['Tudo']);
+  const [categoriaAtiva, setCategoriaAtiva] = useState<string>('Tudo');
 
   useEffect(() => {
     async function fetchStoreContent() {
@@ -48,6 +48,10 @@ export default function CatalogPage() {
 
       setStore(storeData);
       setProducts(productsData || []);
+      
+      const uniqueCats = Array.from(new Set((productsData || []).map((p: any) => p.categoria).filter(Boolean))) as string[];
+      setCategorias(['Tudo', ...uniqueCats]);
+      
       setLoading(false);
     }
     fetchStoreContent();
@@ -80,13 +84,13 @@ export default function CatalogPage() {
   const checkoutWhatsApp = async () => {
     if (cart.length === 0) return;
     if (!orderDetails.name || !orderDetails.phone) {
-      toast.error('Por favor, preencha seu nome e telefone.');
+      toast.error('Por favor, preencha o seu nome e telefone.');
       return;
     }
     
     setCheckoutLoading(true);
     try {
-      // 1. Create Order (Venda) in Database
+      // 1. Create Order (Venda) in Database to register the intent tracking
       const { data: venda, error: vError } = await (supabase as any)
         .from('vendas')
         .insert({
@@ -103,35 +107,22 @@ export default function CatalogPage() {
 
       if (vError) throw vError;
 
-      // 2. Generate WhatsApp message
-      let message = `*Olá! Meu nome é ${orderDetails.name}. Acabei de fazer um pedido:* \n\n`;
+      // 2. Generate WhatsApp message for the AI Bot
+      let message = `Olá! O meu nome é ${orderDetails.name}. Acabei de montar o meu carrinho no Catálogo e quero finalizar o pedido:\n\n`;
       cart.forEach(item => {
-        message += `• ${item.quantity}x ${item.nome} - ${formatCurrency(item.preco * item.quantity)}\n`;
+        message += `🛒 ${item.quantity}x ${item.nome} - ${formatCurrency(item.preco * item.quantity)}\n`;
       });
-      message += `\n*Total: ${formatCurrency(cartTotal)}*`;
-      message += `\n\n*ID do Pedido:* ${venda.id.slice(0, 8)}`;
-      message += `\n\n_Pedido gerado via Venda Zap_`;
+      message += `\n💰 *Total: ${formatCurrency(cartTotal)}*\n`;
+      
+      // We pass the order ID so the bot can easily link it
+      message += `\nReferência do Pedido: #${venda.id.slice(0, 8)}\n`;
+      message += `\nComo faço para pagar? Aguardo as coordenadas bancárias.`;
 
-      const cleanPhone = store.whatsapp_pagamento?.replace(/\D/g, '') || '244923000000';
+      const cleanPhone = store.whatsapp_pagamento?.replace(/\D/g, '') || store.telefone?.replace(/\D/g, '') || '244923000000';
       const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
 
-      // 3. Option for Multicaixa
-      const { data: pData, error: pError } = await supabase.functions.invoke('proxypay-create', {
-        body: { 
-          venda_id: venda.id, 
-          amount: cartTotal,
-          customer_name: orderDetails.name 
-        }
-      });
-
-      if (pData?.success) {
-        setPaymentReference(pData.reference);
-        setShowPaymentModal(true);
-      } else {
-        // Just Fallback to WhatsApp if Proxypay fails or not configured
-        window.open(url, '_blank');
-      }
-      
+      // 3. Delegate to WhatsApp (Bot handles everything from here)
+      window.open(url, '_blank');
       setCart([]);
       setIsCartOpen(false);
     } catch (error: any) {
@@ -141,6 +132,11 @@ export default function CatalogPage() {
       setCheckoutLoading(false);
     }
   };
+
+  const filteredProducts = useMemo(() => {
+    if (categoriaAtiva === 'Tudo') return products;
+    return products.filter(p => p.categoria === categoriaAtiva);
+  }, [products, categoriaAtiva]);
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-background">
@@ -182,15 +178,34 @@ export default function CatalogPage() {
       </header>
 
       {/* Hero / Banner */}
-      <div className="max-w-5xl mx-auto px-6 py-8">
-        <div className="bg-gradient-to-br from-primary/20 to-violet-500/10 p-8 rounded-[40px] mb-10 border border-white/10 shadow-card">
-          <h2 className="text-3xl font-black text-foreground mb-2">Seja bem-vindo! ✨</h2>
-          <p className="text-muted-foreground max-w-sm">Confira nossos produtos exclusivos e faça seu pedido direto pelo WhatsApp.</p>
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-8">
+        <div className="bg-gradient-to-br from-primary/20 to-violet-500/10 p-8 rounded-[32px] md:rounded-[40px] mb-8 border border-white/10 shadow-card">
+          <h2 className="text-2xl md:text-3xl font-black text-foreground mb-2">Desperte o Seu Estilo ✨</h2>
+          <p className="text-muted-foreground max-w-sm text-sm md:text-base">Explore as nossas coleções. Monte o seu look e finalize a compra diretamente pelo WhatsApp sem burocracias.</p>
         </div>
 
-        {/* Product Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {products.map((product, idx) => (
+        {/* Categories (Horizontal Scroll) */}
+        {categorias.length > 1 && (
+          <div className="flex overflow-x-auto hide-scrollbar gap-3 pb-6 mb-2 snap-x">
+            {categorias.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setCategoriaAtiva(cat)}
+                className={`snap-start whitespace-nowrap px-6 py-2.5 rounded-full text-sm font-bold transition-all ${
+                  categoriaAtiva === cat 
+                    ? 'bg-primary text-primary-foreground shadow-glow scale-105' 
+                    : 'bg-card text-muted-foreground border border-border/40 hover:bg-secondary'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Product Grid - Masonry Style */}
+        <div className="columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4">
+          {filteredProducts.map((product, idx) => (
             <motion.div 
               key={product.id}
               initial={{ opacity: 0, y: 20 }}
@@ -198,35 +213,35 @@ export default function CatalogPage() {
               transition={{ delay: idx * 0.05 }}
               className="bg-card rounded-[32px] overflow-hidden shadow-card hover:shadow-elevated transition-all border border-border/40 group flex flex-col h-full"
             >
-              <div className="aspect-square relative overflow-hidden bg-secondary">
+              <div className="aspect-[3/4] relative overflow-hidden bg-secondary">
                 {product.imagem ? (
-                  <img src={product.imagem} alt={product.nome} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                  <img src={product.imagem} alt={product.nome} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" loading="lazy" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-muted-foreground">
-                    <ShoppingBag className="w-12 h-12 opacity-10" />
+                    <ShoppingBag className="w-10 h-10 opacity-10" />
                   </div>
                 )}
-                <div className="absolute top-4 right-4">
-                  <span className="bg-white/90 backdrop-blur px-3 py-1.5 rounded-xl text-xs font-black text-primary shadow-sm">
+                <div className="absolute top-3 right-3">
+                  <span className="bg-background/80 backdrop-blur-md px-3 py-1.5 rounded-xl text-[11px] font-black text-primary shadow-sm">
                     {formatCurrency(product.preco)}
                   </span>
                 </div>
               </div>
-              <div className="p-6 flex flex-col flex-1">
-                <h3 className="text-lg font-bold text-foreground mb-2 line-clamp-1">{product.nome}</h3>
-                <p className="text-xs text-muted-foreground mb-6 line-clamp-2 flex-1 italic">{product.descricao || 'Sem descrição disponível'}</p>
+              <div className="p-4 flex flex-col flex-1">
+                <h3 className="text-sm md:text-base font-bold text-foreground mb-1 line-clamp-2 leading-tight">{product.nome}</h3>
+                <p className="text-[10px] md:text-xs text-muted-foreground mb-4 line-clamp-2 flex-1">{product.descricao}</p>
                 <button 
                   onClick={() => addToCart(product)}
-                  className="w-full py-4 rounded-2xl bg-primary text-white font-black text-xs uppercase tracking-widest shadow-glow flex items-center justify-center gap-2 active:scale-95 transition-all"
+                  className="w-full py-3 rounded-2xl bg-primary/10 text-primary hover:bg-primary hover:text-white font-black text-xs uppercase tracking-widest transition-all focus:scale-95 flex justify-center items-center gap-2"
                 >
-                  <Plus className="w-4 h-4" /> Adicionar
+                  <Plus className="w-4 h-4" /> Comprar
                 </button>
               </div>
             </motion.div>
           ))}
         </div>
 
-        {products.length === 0 && (
+        {filteredProducts.length === 0 && (
           <div className="text-center py-20 bg-card rounded-[40px] border border-dashed border-border/60">
             <ShoppingBag className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-20" />
             <p className="text-muted-foreground font-medium">Nenhum produto disponível no momento.</p>
@@ -366,44 +381,6 @@ export default function CatalogPage() {
                   </p>
                 </div>
               )}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Payment Reference Modal */}
-      <AnimatePresence>
-        {showPaymentModal && (
-          <>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/80 backdrop-blur-md z-[200]" />
-            <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="fixed inset-6 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-md bg-card rounded-[40px] z-[201] p-10 text-center shadow-2xl border border-white/10 flex flex-col justify-center">
-              <div className="w-20 h-20 rounded-3xl bg-primary/20 flex items-center justify-center mx-auto mb-6">
-                <ShoppingCart className="w-10 h-10 text-primary" />
-              </div>
-              <h2 className="text-2xl font-black mb-2">Pedido Recebido! 🛍️</h2>
-              <p className="text-muted-foreground text-sm mb-8">Agora você pode pagar via Multicaixa Express ou no Caixa.</p>
-              
-              <div className="bg-secondary/50 rounded-3xl p-6 border border-border/40 mb-8">
-                <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mb-2">Referência de Pagamento</p>
-                <p className="text-4xl font-black text-primary tracking-widest font-mono">{paymentReference || '000 000 000'}</p>
-                <p className="text-xs text-muted-foreground mt-4 font-medium">Entidade: <span className="text-foreground font-bold">00000</span> (Proxypay)</p>
-              </div>
-
-              <div className="space-y-3">
-                <button 
-                  onClick={() => {
-                    const cleanPhone = store.whatsapp_pagamento?.replace(/\D/g, '') || '244923000000';
-                    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent('Oi! Já anotei a referência Multicaixa ' + paymentReference + '. Podem confirmar meu pedido?')}`, '_blank');
-                    setShowPaymentModal(false);
-                  }}
-                  className="w-full py-4 rounded-2xl bg-emerald-600 text-white font-black text-xs uppercase tracking-widest shadow-glow-emerald flex items-center justify-center gap-2"
-                >
-                  <MessageSquare className="w-4 h-4 fill-current" /> Notificar no WhatsApp
-                </button>
-                <button onClick={() => setShowPaymentModal(false)} className="w-full py-4 rounded-2xl bg-secondary text-foreground font-bold text-xs">
-                  Fechar
-                </button>
-              </div>
             </motion.div>
           </>
         )}
