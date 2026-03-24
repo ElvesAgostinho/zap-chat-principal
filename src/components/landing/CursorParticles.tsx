@@ -49,7 +49,7 @@ export const CursorParticles = () => {
         this.speedX = (Math.random() - 0.5) * 0.3;
         this.speedY = (Math.random() - 0.5) * 0.3;
         this.color = '#24FF6B';
-        this.opacity = Math.min(0.3 + (velocity * 0.03), 0.7);
+        this.opacity = Math.min(0.5 + (velocity * 0.03), 0.9);
       }
 
       update() {
