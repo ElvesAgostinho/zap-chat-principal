@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Menu, X, User } from 'lucide-react';
+import { Zap, Menu, X, User, LogOut } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 export const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -65,16 +66,33 @@ export const Header = () => {
             </a>
           ))}
           
-          <Link 
-            to={user ? "/admin" : "/login"} 
-            className="px-6 py-2.5 rounded-full glass-card border-primary/20 text-[10px] font-black uppercase tracking-[0.2em] text-white hover:bg-primary hover:text-black transition-all flex items-center gap-2"
-          >
-            {user ? (
-               <>Dashboard <User className="w-3 h-3" /></>
-            ) : (
-               'Área Restrita'
-            )}
-          </Link>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger className="px-6 py-2.5 rounded-full glass-card border-primary/20 text-[10px] font-black uppercase tracking-[0.2em] text-white hover:bg-primary hover:text-black transition-all flex items-center gap-2 outline-none">
+                Dashboard <User className="w-3 h-3" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-[#0B0F12] border-white/10 text-white rounded-2xl w-56 p-2 z-[200]">
+                <DropdownMenuItem asChild className="hover:bg-primary/20 hover:text-primary transition-colors cursor-pointer rounded-xl font-bold p-0 mb-1">
+                  <Link to="/admin" className="w-full h-full px-3 py-3 flex items-center gap-3 text-[11px] uppercase tracking-wider">
+                    <User className="w-4 h-4" /> Ir para Dashboard
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="hover:bg-red-500/20 hover:text-red-500 text-white/70 transition-colors cursor-pointer rounded-xl font-bold px-3 py-3 flex items-center gap-3 text-[11px] uppercase tracking-wider"
+                  onClick={() => supabase.auth.signOut().then(() => navigate('/'))}
+                >
+                  <LogOut className="w-4 h-4" /> Terminar Sessão
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link 
+              to="/login" 
+              className="px-6 py-2.5 rounded-full glass-card border-primary/20 text-[10px] font-black uppercase tracking-[0.2em] text-white hover:bg-primary hover:text-black transition-all flex items-center gap-2"
+            >
+              Área Restrita
+            </Link>
+          )}
         </nav>
 
         {/* MOBILE TOGGLE */}
@@ -106,13 +124,34 @@ export const Header = () => {
                   {link.name}
                 </a>
               ))}
-              <Link 
-                to={user ? "/admin" : "/login"}
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full py-4 rounded-xl bg-white/5 border border-white/10 text-center text-xs font-black uppercase tracking-widest text-white"
-              >
-                {user ? 'Aceder Dashboard' : 'Área Restrita'}
-              </Link>
+              {user ? (
+                <>
+                  <Link 
+                    to="/admin"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full py-4 rounded-xl bg-white/5 border border-white/10 text-center text-xs font-black uppercase tracking-widest text-white flex items-center justify-center gap-2"
+                  >
+                    <User className="w-4 h-4" /> Aceder Dashboard
+                  </Link>
+                  <button 
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      supabase.auth.signOut().then(() => navigate('/'));
+                    }}
+                    className="w-full py-4 rounded-xl bg-red-500/10 border border-red-500/20 text-center text-xs font-black uppercase tracking-widest text-red-500 flex items-center justify-center gap-2"
+                  >
+                    <LogOut className="w-4 h-4" /> Terminar Sessão
+                  </button>
+                </>
+              ) : (
+                <Link 
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="w-full py-4 rounded-xl bg-white/5 border border-white/10 text-center text-xs font-black uppercase tracking-widest text-white"
+                >
+                  Área Restrita
+                </Link>
+              )}
             </div>
           </motion.div>
         )}

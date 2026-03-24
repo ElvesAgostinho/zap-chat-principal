@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Zap, MessageCircle, Copy, Check } from 'lucide-react';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 
 interface PricingCardProps {
   name: string;
@@ -87,13 +88,7 @@ export const PricingCard: React.FC<PricingCardProps> = ({
           group-hover:border-primary/50
         `}
       >
-        <AnimatePresence>
-          {!showBankDetails ? (
-            <motion.div 
-              key="content"
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="flex flex-col h-full"
-            >
+        <div className="flex flex-col h-full">
               {popular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-5 py-1.5 rounded-full bg-gradient-to-r from-primary to-secondary text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-glow z-10">
                   Recomendado
@@ -117,71 +112,68 @@ export const PricingCard: React.FC<PricingCardProps> = ({
                 ))}
               </ul>
 
-              <button 
-                onClick={handleAction}
-                className={`
-                  w-full py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] transition-all
-                  ${highlight 
-                    ? 'bg-primary text-black shadow-glow hover:bg-white' 
-                    : 'bg-white/10 text-white hover:bg-white hover:text-black'}
-                  flex items-center justify-center gap-2 group/btn
-                `}
-              >
-                <span className="flex items-center gap-2">
-                  {cta}
-                  {isWhatsApp ? (
-                    <MessageCircle className="w-4 h-4" />
-                  ) : (
-                    <Zap className={`w-4 h-4 transition-transform group-hover/btn:rotate-12 ${highlight ? 'fill-current' : ''}`} />
-                  )}
-                </span>
-              </button>
-            </motion.div>
-          ) : (
-            <motion.div 
-              key="bank"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex flex-col items-center justify-center h-full text-center py-6"
-            >
-              <BuildingBankIcon className="w-12 h-12 text-primary mb-6" />
-              <h4 className="text-lg font-black uppercase italic text-white mb-2">Dados para Pagamento</h4>
-              <p className="text-xs text-white/50 mb-8 max-w-[200px]">Realize a transferência e envie o comprovativo.</p>
-              
-              <div className="w-full space-y-3 mb-8">
-                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-left">
-                  <p className="text-[10px] text-white/30 uppercase font-black mb-1">IBAN (BAI)</p>
-                  <div className="flex items-center justify-between gap-2">
-                    <code className="text-[10px] font-mono text-white/90 break-all leading-tight">AO06 0000 0000 0000 0000 0</code>
-                    <button onClick={copyIBAN} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
-                      {copied ? <Check className="w-4 h-4 text-primary" /> : <Copy className="w-4 h-4 text-white/40" />}
+              <Dialog open={showBankDetails} onOpenChange={setShowBankDetails}>
+                <DialogTrigger asChild>
+                  <button 
+                    onClick={handleAction}
+                    className={`
+                      w-full py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] transition-all
+                      ${highlight 
+                        ? 'bg-primary text-black shadow-glow hover:bg-white' 
+                        : 'bg-white/10 text-white hover:bg-white hover:text-black'}
+                      flex items-center justify-center gap-2 group/btn
+                    `}
+                  >
+                    <span className="flex items-center gap-2">
+                      {cta}
+                      {isWhatsApp ? (
+                        <MessageCircle className="w-4 h-4" />
+                      ) : (
+                        <Zap className={`w-4 h-4 transition-transform group-hover/btn:rotate-12 ${highlight ? 'fill-current' : ''}`} />
+                      )}
+                    </span>
+                  </button>
+                </DialogTrigger>
+                
+                <DialogContent className="max-w-md bg-[#0B0F12] border-white/10 p-8 pt-12 overflow-hidden rounded-[30px] z-[200]">
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col items-center justify-center text-center relative z-10"
+                  >
+                    <BuildingBankIcon className="w-12 h-12 text-primary mb-6" />
+                    <h4 className="text-lg font-black uppercase italic text-white mb-2">Dados para Pagamento</h4>
+                    <p className="text-xs text-white/50 mb-8 max-w-[250px]">Realize a transferência e envie o comprovativo.</p>
+                    
+                    <div className="w-full space-y-3 mb-8">
+                      <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-left">
+                        <p className="text-[10px] text-white/30 uppercase font-black mb-1">IBAN (BAI)</p>
+                        <div className="flex items-center justify-between gap-2">
+                          <code className="text-[10px] font-mono text-white/90 break-all leading-tight">AO06 0000 0000 0000 0000 0</code>
+                          <button onClick={copyIBAN} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                            {copied ? <Check className="w-4 h-4 text-primary" /> : <Copy className="w-4 h-4 text-white/40" />}
+                          </button>
+                        </div>
+                      </div>
+                      <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-left">
+                        <p className="text-[10px] text-white/30 uppercase font-black mb-1">Titular</p>
+                        <p className="text-[10px] font-bold text-white/90">TOP IA SOLUTIONS</p>
+                      </div>
+                    </div>
+
+                    <button 
+                      onClick={() => {
+                        setShowBankDetails(false);
+                        window.open(`https://wa.me/351936179188?text=Olá, acabei de realizar o pagamento para o plano ${name}. Segue o comprovativo.`, '_blank');
+                      }}
+                      className="w-full py-4 rounded-full bg-[#25D366] text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-105 transition-all shadow-glow"
+                    >
+                      Confirmar no WhatsApp <MessageCircle className="w-4 h-4" />
                     </button>
-                  </div>
-                </div>
-                <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-left">
-                  <p className="text-[10px] text-white/30 uppercase font-black mb-1">Titular</p>
-                  <p className="text-[10px] font-bold text-white/90">TOP IA SOLUTIONS</p>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-3 w-full">
-                <button 
-                  onClick={() => window.open(`https://wa.me/351936179188?text=Olá, acabei de realizar o pagamento para o plano ${name}. Segue o comprovativo.`, '_blank')}
-                  className="w-full py-4 rounded-full bg-[#25D366] text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-105 transition-all shadow-glow"
-                >
-                  Confirmar no WhatsApp <MessageCircle className="w-4 h-4" />
-                </button>
-
-                <button 
-                  onClick={() => setShowBankDetails(false)}
-                  className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors py-2"
-                >
-                  Voltar aos Detalhes
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                  </motion.div>
+                </DialogContent>
+              </Dialog>
+        </div>
       </div>
     </motion.div>
   );
