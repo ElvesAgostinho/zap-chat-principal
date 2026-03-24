@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 import Index from "./pages/Index";
@@ -89,9 +90,22 @@ function AppRoutes() {
 }
 
 const SupportBotWrapper = () => {
-  const { user } = useAuth();
-  if (user) return null;
-  return <FloatingSupportBot />;
+  const { user, loading } = useAuth();
+  const location = useLocation();
+
+  // Don't show while determining auth state to avoid "flash"
+  if (loading) return null;
+
+  // Only show the bot if the user is NOT logged in AND is on a public page
+  // This targets "clientes novos" as requested.
+  const publicPaths = ["/", "/login", "/signup"];
+  const isPublicPage = publicPaths.includes(location.pathname);
+
+  if (!user && isPublicPage) {
+    return <FloatingSupportBot />;
+  }
+
+  return null;
 };
 
 const App = () => (
