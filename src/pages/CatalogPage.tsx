@@ -395,26 +395,29 @@ export default function CatalogPage() {
               <motion.div
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 onClick={() => setSelectedProduct(null)}
-                className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100]"
+                className="fixed inset-0 bg-black/70 backdrop-blur-md z-[100]"
               />
               <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                initial={{ opacity: 0, scale: 0.95, y: 30 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                exit={{ opacity: 0, scale: 0.95, y: 30 }}
                 transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="fixed inset-5 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-xl bg-white z-[101] rounded-[2rem] md:rounded-3xl shadow-2xl flex flex-col overflow-hidden"
-                style={{ height: 'fit-content', maxHeight: 'max(400px, 90vh)' }}
+                className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-full md:max-w-4xl bg-white z-[101] rounded-[2.5rem] shadow-2xl flex flex-col md:flex-row overflow-hidden"
+                style={{ height: 'fit-content', maxHeight: 'max(500px, 90vh)' }}
               >
-                {/* Modal Header — Integrated Style */}
-                <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10 pointer-events-none">
-                  <button onClick={() => setSelectedProduct(null)} className="p-2.5 rounded-full bg-white/90 shadow-lg backdrop-blur-sm pointer-events-auto hover:bg-white transition-all transform active:scale-95">
-                    <ChevronLeft className="w-5 h-5 text-gray-800" />
+                {/* Global Close/Action Tools */}
+                <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-[110] pointer-events-none">
+                  <button 
+                    onClick={() => setSelectedProduct(null)} 
+                    className="p-3 rounded-full bg-white/90 shadow-xl backdrop-blur-sm pointer-events-auto hover:bg-white active:scale-90 transition-all"
+                  >
+                    <ChevronLeft className="w-6 h-6 text-gray-900" />
                   </button>
-                  <div className="flex gap-2 pointer-events-auto">
+                  <div className="flex gap-3 pointer-events-auto">
                     <button
                       onClick={() => toggleLike(selectedProduct.id)}
-                      className={`p-2.5 rounded-full shadow-lg backdrop-blur-sm transition-all transform active:scale-95 ${
-                        isLiked ? 'bg-red-50 text-red-500' : 'bg-white/90 text-gray-800'
+                      className={`p-3 rounded-full shadow-xl backdrop-blur-sm active:scale-90 transition-all ${
+                        isLiked ? 'bg-red-50 text-red-500' : 'bg-white/90 text-gray-500'
                       }`}
                     >
                       <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
@@ -424,164 +427,140 @@ export default function CatalogPage() {
                         navigator.clipboard.writeText(window.location.href);
                         toast.success('Link copiado!');
                       }}
-                      className="p-2.5 rounded-full bg-white/90 shadow-lg backdrop-blur-sm text-gray-800 hover:bg-white transition-all transform active:scale-95"
+                      className="p-3 rounded-full bg-white/90 shadow-xl backdrop-blur-sm text-gray-500 hover:bg-white active:scale-90 transition-all"
                     >
                       <Share2 className="w-5 h-5" />
                     </button>
                   </div>
                 </div>
 
-                {/* Scrollable Content */}
-                <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth">
-                  {/* HERO IMAGE — Responsive & Centered */}
-                  <div className="relative w-full aspect-square bg-white flex items-center justify-center overflow-hidden border-b border-gray-50">
-                    {selectedProduct.imagem ? (
-                      <img
-                        src={selectedProduct.imagem}
-                        alt={selectedProduct.nome}
-                        className="w-full h-full object-contain p-4 group-hover:scale-105 transition-transform duration-700"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-gray-200">
-                        <ShoppingBag className="w-20 h-20 mb-4" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Sem Foto</span>
-                      </div>
-                    )}
-                  </div>
+                {/* LEFT: IMAGE COLUMN */}
+                <div className="w-full md:w-1/2 bg-white flex items-center justify-center relative border-b md:border-b-0 md:border-r border-gray-100 h-[45vh] md:h-auto min-h-[300px] overflow-hidden">
+                  {selectedProduct.imagem ? (
+                    <img 
+                      src={selectedProduct.imagem} 
+                      alt={selectedProduct.nome} 
+                      className="w-full h-full object-contain p-10 md:p-14 transition-transform duration-700 hover:scale-105"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center gap-3 text-gray-200">
+                      <ShoppingBag className="w-16 h-16" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Sem Foto</span>
+                    </div>
+                  )}
+                  {/* Stock Badges */}
+                  {selectedProduct.estoque > 0 && selectedProduct.estoque <= 3 && (
+                    <div className="absolute bottom-6 left-6">
+                      <span className="bg-orange-500 text-white text-[10px] font-black px-4 py-2 rounded-full shadow-xl italic tracking-tight uppercase">Últimas Unidades</span>
+                    </div>
+                  )}
+                </div>
 
-                  {/* INFO PANEL */}
-                  <div className="px-6 py-8 space-y-8 bg-white -mt-8 rounded-t-[2.5rem] relative z-20">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2">
-                         <span className="text-[10px] font-black text-white bg-black px-2 py-0.5 rounded tracking-tighter uppercase">Original</span>
-                         {selectedProduct.estoque > 0 && selectedProduct.estoque <= 3 && (
-                            <span className="text-[10px] font-black text-orange-600 bg-orange-50 px-2 py-0.5 rounded tracking-tighter uppercase">Últimas Unidades ({selectedProduct.estoque})</span>
-                         )}
-                      </div>
-                      <h2 className="text-2xl font-black text-gray-900 leading-tight tracking-tight">{selectedProduct.nome}</h2>
-                      <div className="flex items-center gap-4">
-                        <span className="text-3xl font-black text-red-600 tracking-tight">{formatCurrency(selectedProduct.preco)}</span>
-                        {!isOutOfStock ? (
-                          <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full">
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider">Disponível em Stock</span>
+                {/* RIGHT: INFO COLUMN */}
+                <div className="flex-1 flex flex-col bg-white min-w-0">
+                  <div className="flex-1 overflow-y-auto no-scrollbar scroll-smooth p-8 md:p-12">
+                    <div className="space-y-8">
+                      {/* Product Header */}
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[9px] font-black text-white bg-black px-2 py-0.5 rounded tracking-tighter uppercase">Original · Enterprise</span>
+                          <div className="flex text-yellow-400">
+                            {[1,2,3,4,5].map(i => <Star key={i} className="w-3 h-3 fill-current" />)}
                           </div>
-                        ) : (
-                          <div className="flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-600 rounded-full">
-                            <span className="text-[10px] font-extrabold uppercase tracking-wider">Esgotado</span>
+                        </div>
+                        <h2 className="text-2xl md:text-3xl font-black text-gray-950 leading-[1.1] tracking-tight uppercase">
+                          {selectedProduct.nome}
+                        </h2>
+                        <div className="flex items-end gap-3 pt-2">
+                          <span className="text-3xl md:text-4xl font-black text-red-600 tracking-tighter">
+                            {formatCurrency(selectedProduct.preco)}
+                          </span>
+                          {!isOutOfStock && (
+                            <span className="text-[10px] font-bold text-gray-400 mb-1.5 uppercase tracking-widest">+ Portes</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      {selectedProduct.descricao && (
+                        <div className="p-5 bg-gray-50/50 rounded-3xl space-y-3">
+                           <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                              <Info className="w-4 h-4" /> Detalhes do Produto
+                           </h4>
+                           <p className="text-sm text-gray-600 leading-relaxed font-medium">
+                              {selectedProduct.descricao}
+                           </p>
+                        </div>
+                      )}
+
+                      {/* Attribute Selectors */}
+                      <div className="space-y-8 pt-2">
+                        {!hasColors && !hasSizes && (
+                           <div className="py-6 border-2 border-dashed border-gray-100 rounded-[2rem] flex flex-col items-center justify-center text-center">
+                              <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Tamanho Único · Pronta Entrega</p>
+                           </div>
+                        )}
+
+                        {hasColors && (
+                          <div className="space-y-4">
+                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Cor: <span className="text-black italic">{selectedColor || 'Selecione'}</span></h4>
+                            <div className="flex flex-wrap gap-2.5">
+                              {attrs.cores!.map(cor => (
+                                <button
+                                  key={cor}
+                                  onClick={() => setSelectedColor(cor)}
+                                  className={`px-5 py-3 rounded-2xl text-[11px] font-black transition-all border-2 ${
+                                    selectedColor === cor ? 'border-black bg-black text-white shadow-xl' : 'border-gray-100 text-gray-600 hover:border-gray-300'
+                                  }`}
+                                >
+                                  {cor}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {hasSizes && (
+                          <div className="space-y-4">
+                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tamanho: <span className="text-black italic">{selectedSize || 'Selecione'}</span></h4>
+                            <div className="flex flex-wrap gap-2.5">
+                              {attrs.tamanhos!.map(tam => (
+                                <button
+                                  key={tam}
+                                  onClick={() => setSelectedSize(tam)}
+                                  className={`min-w-[64px] h-12 rounded-2xl text-[11px] font-black transition-all border-2 ${
+                                    selectedSize === tam ? 'border-black bg-black text-white shadow-xl' : 'border-gray-100 text-gray-600 hover:border-gray-300'
+                                  }`}
+                                >
+                                  {tam}
+                                </button>
+                              ))}
+                            </div>
                           </div>
                         )}
                       </div>
                     </div>
-
-                    {/* Description Section */}
-                    {selectedProduct.descricao && (
-                      <div className="p-4 bg-gray-50/50 rounded-2xl">
-                        <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Informações do Produto</h4>
-                        <p className="text-sm text-gray-600 leading-relaxed font-medium">{selectedProduct.descricao}</p>
-                      </div>
-                    )}
-
-                    {/* Variations Grid */}
-                    <div className="space-y-6">
-                      {/* Default Message if no attributes */}
-                      {!hasColors && !hasSizes && (
-                        <div className="flex flex-col items-center justify-center py-4 text-center border-2 border-dashed border-gray-100 rounded-2xl">
-                          <p className="text-[10px] font-bold text-gray-300 uppercase tracking-widest">Tamanho Único · Pronta Entrega</p>
-                        </div>
-                      )}
-
-                      {/* COLORS Selector */}
-                      {hasColors && (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                              <Palette className="w-3.5 h-3.5" /> Escolher Cor
-                            </h4>
-                            <span className="text-[10px] font-black text-white bg-black px-2 py-0.5 rounded italic">{selectedColor || 'Selecione'}</span>
-                          </div>
-                          <div className="flex flex-wrap gap-2.5">
-                            {attrs.cores!.map(cor => {
-                              const varStock = attrs.variacoes?.find(v => v.cor === cor)?.estoque;
-                              const isColorOut = varStock !== undefined && varStock <= 0;
-
-                              return (
-                                <button
-                                  key={cor}
-                                  disabled={isColorOut}
-                                  onClick={() => setSelectedColor(cor)}
-                                  className={`px-6 py-3 rounded-2xl text-xs font-black transition-all border-2 relative overflow-hidden ${
-                                    selectedColor === cor
-                                      ? 'border-black bg-black text-white shadow-xl scale-105'
-                                      : isColorOut
-                                        ? 'border-gray-50 bg-gray-50 text-gray-200 cursor-not-allowed opacity-50'
-                                        : 'border-gray-100 bg-white text-gray-600 hover:border-black active:scale-95'
-                                  }`}
-                                >
-                                  {cor}
-                                  {isColorOut && <div className="absolute inset-0 flex items-center justify-center bg-white/40"><X className="w-4 h-4 text-red-500 opacity-60" /></div>}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* SIZES Selector */}
-                      {hasSizes && (
-                        <div className="space-y-4">
-                          <div className="flex items-center justify-between">
-                            <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                              <Ruler className="w-3.5 h-3.5" /> Tamanho
-                            </h4>
-                            <span className="text-[10px] font-black text-white bg-black px-2 py-1 rounded italic">{selectedSize || 'Selecione'}</span>
-                          </div>
-                          <div className="flex flex-wrap gap-2.5">
-                            {attrs.tamanhos!.map(tam => {
-                              const varStock = attrs.variacoes?.find(v => v.tamanho === tam && (!selectedColor || v.cor === selectedColor))?.estoque;
-                              const isSizeOut = varStock !== undefined && varStock <= 0;
-
-                              return (
-                                <button
-                                  key={tam}
-                                  disabled={isSizeOut}
-                                  onClick={() => setSelectedSize(tam)}
-                                  className={`min-w-[64px] h-14 rounded-2xl text-xs font-black transition-all border-2 relative overflow-hidden ${
-                                    selectedSize === tam
-                                      ? 'border-black bg-black text-white shadow-xl scale-105'
-                                      : isSizeOut
-                                        ? 'border-gray-50 bg-gray-50 text-gray-200 cursor-not-allowed opacity-50'
-                                        : 'border-gray-100 bg-white text-gray-600 hover:border-black active:scale-95'
-                                  }`}
-                                >
-                                  {tam}
-                                  {isSizeOut && <div className="absolute inset-0 flex items-center justify-center bg-white/40"><X className="w-4 h-4 text-red-500 opacity-60" /></div>}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </div>
                   </div>
-                </div>
 
-                {/* CALL TO ACTION — Sticky Bottom */}
-                <div className="p-6 border-t border-gray-100 bg-white/80 backdrop-blur-xl flex gap-3">
-                  <button
-                    disabled={isOutOfStock}
-                    onClick={() => addToCart(selectedProduct, selectedColor || undefined, selectedSize || undefined)}
-                    className="flex-1 py-4.5 rounded-2xl bg-black text-white font-black text-sm flex items-center justify-center gap-3 active:scale-[0.98] transition-all hover:bg-gray-800 disabled:opacity-40 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-xl shadow-black/10 h-14"
-                  >
-                    {isOutOfStock ? (
-                      <span className="uppercase tracking-[0.1em]">Esgotado Temporariamente</span>
-                    ) : (
-                      <>
-                        <ShoppingCart className="w-5 h-5" />
-                        <span>ADICIONAR À SACOLA</span>
-                      </>
-                    )}
-                  </button>
+                  {/* Buy Button */}
+                  <div className="p-8 md:p-12 border-t border-gray-50 bg-white/90 backdrop-blur-md">
+                    <button
+                      onClick={() => addToCart(selectedProduct, selectedColor || undefined, selectedSize || undefined)}
+                      disabled={isOutOfStock}
+                      className={`w-full h-16 rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 active:scale-95 ${
+                        isOutOfStock ? 'bg-gray-100 text-gray-400' : 'bg-black text-white hover:bg-gray-900 shadow-2xl shadow-black/10'
+                      }`}
+                    >
+                      {isOutOfStock ? (
+                        <span>Esgotado</span>
+                      ) : (
+                        <>
+                          <ShoppingBag className="w-5 h-5" />
+                          <span>Adicionar à Sacola</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             </>
