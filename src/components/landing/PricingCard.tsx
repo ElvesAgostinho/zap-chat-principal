@@ -164,12 +164,21 @@ export const PricingCard: React.FC<PricingCardProps> = ({
                 </div>
               </div>
 
-              <button 
-                onClick={() => setShowBankDetails(false)}
-                className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-white transition-colors"
-              >
-                Voltar aos Detalhes
-              </button>
+              <div className="flex flex-col gap-3 w-full">
+                <button 
+                  onClick={() => window.open(`https://wa.me/351936179188?text=Olá, acabei de realizar o pagamento para o plano ${name}. Segue o comprovativo.`, '_blank')}
+                  className="w-full py-4 rounded-full bg-[#25D366] text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:scale-105 transition-all shadow-glow"
+                >
+                  Confirmar no WhatsApp <MessageCircle className="w-4 h-4" />
+                </button>
+
+                <button 
+                  onClick={() => setShowBankDetails(false)}
+                  className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-colors py-2"
+                >
+                  Voltar aos Detalhes
+                </button>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>

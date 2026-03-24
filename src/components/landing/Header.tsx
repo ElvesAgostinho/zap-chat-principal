@@ -1,18 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Menu, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Zap, Menu, X, User } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 
 export const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
+    
+    // Check initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    // Listen for changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const navLinks = [
@@ -47,11 +64,16 @@ export const Header = () => {
               {link.name}
             </a>
           ))}
+          
           <Link 
-            to="/auth" 
-            className="px-6 py-2.5 rounded-full glass-card border-primary/20 text-[10px] font-black uppercase tracking-[0.2em] text-white hover:bg-primary hover:text-black transition-all"
+            to={user ? "/admin" : "/auth"} 
+            className="px-6 py-2.5 rounded-full glass-card border-primary/20 text-[10px] font-black uppercase tracking-[0.2em] text-white hover:bg-primary hover:text-black transition-all flex items-center gap-2"
           >
-            Área Restrita
+            {user ? (
+               <>Dashboard <User className="w-3 h-3" /></>
+            ) : (
+               'Área Restrita'
+            )}
           </Link>
         </nav>
 
@@ -85,11 +107,11 @@ export const Header = () => {
                 </a>
               ))}
               <Link 
-                to="/auth"
+                to={user ? "/admin" : "/auth"}
                 onClick={() => setMobileMenuOpen(false)}
                 className="w-full py-4 rounded-xl bg-white/5 border border-white/10 text-center text-xs font-black uppercase tracking-widest text-white"
               >
-                Área Restrita
+                {user ? 'Aceder Dashboard' : 'Área Restrita'}
               </Link>
             </div>
           </motion.div>
