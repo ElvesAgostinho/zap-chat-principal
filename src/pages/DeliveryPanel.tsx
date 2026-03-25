@@ -37,6 +37,8 @@ export default function DeliveryPanel() {
   return (
     <div className="min-h-screen bg-background pb-8">
       <AppHeader
+        storeName={useAuth().storeName || 'Sua Loja'}
+        subtitle="Logística e Entregas"
         rightContent={
           <button onClick={() => navigate('/')} className="p-2 rounded-lg bg-white/15 text-white"><ArrowLeft className="w-4 h-4" /></button>
         }

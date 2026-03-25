@@ -21,16 +21,12 @@ interface DashboardPanelProps {
 const PIPELINE_COLORS = ['hsl(210, 14%, 60%)', 'hsl(217, 91%, 60%)', 'hsl(43, 96%, 56%)', 'hsl(153, 60%, 40%)'];
 
 export default function DashboardPanel({ vendas, leads, products, alertCount, onAddLead, onAddProduct }: DashboardPanelProps) {
-  const { role, storeId } = useAuth();
-  const [storeSlug, setStoreSlug] = useState<string | null>(null);
+  const { role, storeId, storeCode, storeSlug } = useAuth();
+  const isAdmin = role === 'admin';
   const [period, setPeriod] = useState<'7d' | '30d' | 'all'>('7d');
   const [activeTab, setActiveTab] = useState<'geral' | 'insights'>('geral');
 
-  useEffect(() => {
-    if (!storeId || role !== 'admin') return;
-    (supabase as any).from('lojas').select('slug').eq('id', storeId).maybeSingle()
-      .then(({ data }: any) => { if (data) setStoreSlug(data.slug); });
-  }, [storeId, role]);
+
 
   const totalSales = vendas.filter(v => v.status !== 'cancelado').reduce((s, v) => s + (v.valor || 0), 0);
   
@@ -60,7 +56,12 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
   const clientCount = leads.filter(l => l.status === 'cliente' || l.status === 'comprado').length;
   const conversionRate = leads.length > 0 ? Math.round((clientCount / leads.length) * 100) : 0;
 
-  const lowStockProducts = products.filter(p => p.estoque <= 3);
+  const lowStockProducts = products.filter(p => {
+    if (p.variacoes && p.variacoes.length > 0) {
+      return p.variacoes.some(v => v.estoque <= 3);
+    }
+    return p.estoque <= 3;
+  });
 
   // Sales chart data
   const chartData = useMemo(() => {
@@ -175,13 +176,16 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
               <div className="flex-1 md:flex-none flex items-center gap-2 bg-card px-4 py-2.5 rounded-2xl border border-border/60 shadow-sm group min-w-[200px]">
                 <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[150px]">
-                  {window.location.origin}/catalogo/{storeSlug || '...'}
+                  {window.location.origin}/loja/{storeSlug || (isAdmin ? storeCode : '...')}
                 </span>
                 <button
                   onClick={() => { 
                     if (storeSlug) {
-                      navigator.clipboard.writeText(`${window.location.origin}/catalogo/${storeSlug}`); 
+                      navigator.clipboard.writeText(`${window.location.origin}/loja/${storeSlug}`); 
                       toast.success('Link copiado!'); 
+                    } else if (isAdmin && storeCode) {
+                      navigator.clipboard.writeText(`${window.location.origin}/loja/${storeCode}`); 
+                      toast.success('Link (código) copiado!'); 
                     }
                   }}
                   className="p-1.5 hover:bg-secondary rounded-lg transition-colors"
@@ -189,10 +193,14 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
                   <Copy className="w-3.5 h-3.5 text-primary" />
                 </button>
               </div>
-              
               <button
                 onClick={() => {
-                  const msg = encodeURIComponent(`Confira nosso catálogo online: ${window.location.origin}/catalogo/${storeSlug}`);
+                  const finalSlug = storeSlug || (isAdmin ? storeCode : null);
+                  if (!finalSlug) {
+                    toast.error('Configure o link da loja primeiro!');
+                    return;
+                  }
+                  const msg = encodeURIComponent(`Confira nosso catálogo online: ${window.location.origin}/loja/${finalSlug}`);
                   window.open(`https://wa.me/?text=${msg}`, '_blank');
                 }}
                 className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-2xl font-bold text-xs shadow-glow-emerald transition-all"

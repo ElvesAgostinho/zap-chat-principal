@@ -3,10 +3,10 @@ import { Zap } from 'lucide-react';
 interface AppHeaderProps {
   rightContent?: React.ReactNode;
   storeName?: string;
-  storeCode?: string;
+  subtitle?: string;
 }
 
-export default function AppHeader({ rightContent, storeName, storeCode }: AppHeaderProps) {
+export default function AppHeader({ rightContent, storeName, subtitle }: AppHeaderProps) {
   return (
     <header className="sticky top-0 z-50 w-full gradient-header shadow-md">
       <div className="max-w-6xl mx-auto px-4 lg:px-8 h-14 flex items-center gap-3">
@@ -15,8 +15,8 @@ export default function AppHeader({ rightContent, storeName, storeCode }: AppHea
         </div>
         <div className="flex-1 min-w-0">
           <h1 className="text-[15px] font-bold text-white leading-tight truncate">{storeName || 'CRM TOP'}</h1>
-          <p className="text-[10px] text-white/60 leading-tight">
-            {storeCode ? `Código: ${storeCode}` : 'CRM via WhatsApp'}
+          <p className="text-[10px] text-white/60 leading-tight font-medium uppercase tracking-wider">
+            {subtitle || 'Gestão Inteligente'}
           </p>
         </div>
         {rightContent && <div className="flex-shrink-0">{rightContent}</div>}

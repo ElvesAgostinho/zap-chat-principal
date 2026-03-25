@@ -20,6 +20,7 @@ interface SidebarProps {
   chatCount?: number;
   showAdmin?: boolean;
   onSearch?: () => void;
+  storeName?: string;
 }
 
 interface NavGroup {
@@ -85,7 +86,7 @@ const getNavGroups = (
   return groups;
 };
 
-export default function Sidebar({ active, onChange, alertCount = 0, orderCount = 0, chatCount = 0, showAdmin = false, onSearch }: SidebarProps) {
+export default function Sidebar({ active, onChange, alertCount = 0, orderCount = 0, chatCount = 0, showAdmin = false, onSearch, storeName }: SidebarProps) {
   const { signOut, userName, plano } = useAuth();
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 1024) return true;
@@ -143,8 +144,8 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
               exit={{ opacity: 0, width: 0 }}
               className="overflow-hidden whitespace-nowrap flex-1"
             >
-              <h1 className="text-[15px] font-bold text-foreground leading-tight">CRM TOP</h1>
-              <p className="text-[10px] text-muted-foreground leading-tight">CRM WhatsApp</p>
+              <h1 className="text-[14px] font-black text-foreground leading-tight truncate max-w-[150px]">{storeName || 'CRM TOP'}</h1>
+              <p className="text-[9px] text-primary font-bold uppercase tracking-widest leading-none mt-0.5">Painel Gestão</p>
             </motion.div>
           )}
         </AnimatePresence>

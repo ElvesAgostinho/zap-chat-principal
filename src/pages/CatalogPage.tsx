@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, MessageSquare, Plus, Minus, X, ChevronRight, Loader2, Store, ShoppingCart, Heart, Share2, ChevronLeft, Palette, Ruler, Trash2, Star, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -24,6 +24,7 @@ interface ProductAtributos {
 /* ───── Component ───── */
 export default function CatalogPage() {
   const { storeSlug } = useParams<{ storeSlug: string }>();
+  const navigate = useNavigate();
   const [store, setStore] = useState<any>(null);
   const [products, setProducts] = useState<Produto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,6 +79,13 @@ export default function CatalogPage() {
 
       setStore(storeData);
       setProducts(productsData || []);
+
+      // Redirecionar para o slug se o endereço atual não for o link amigável (Slug)
+      // Se encontramos a loja mas o que está na URL não bate com o slug oficial, 
+      // significa que o utilizador entrou via código interno. Redirecionamos para o slug.
+      if (storeData.slug && storeSlug !== storeData.slug) {
+        navigate(`/loja/${storeData.slug}`, { replace: true });
+      }
 
       const uniqueCats = Array.from(new Set((productsData || []).map((p: any) => p.categoria).filter(Boolean))) as string[];
       setCategorias(['Tudo', ...uniqueCats]);

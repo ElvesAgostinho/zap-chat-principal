@@ -57,6 +57,13 @@ export default function AddProductSheet({ open, onClose, storeId, onAdded, initi
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (variacoes.length > 0) {
+      const total = variacoes.reduce((sum, v) => sum + (Number(v.estoque) || 0), 0);
+      setStock(total.toString());
+    }
+  }, [variacoes]);
+
+  useEffect(() => {
     if (open && initialData) {
       setName(initialData.nome || '');
       setPrice(initialData.preco?.toString() || '');
@@ -196,7 +203,17 @@ export default function AddProductSheet({ open, onClose, storeId, onAdded, initi
                 
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest"><label className="mb-1.5 block">Preço Base (Kz) *</label><input value={price} onChange={e => setPrice(e.target.value)} type="number" step="1" placeholder="0" className={inputClass} /></div>
-                  <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest"><label className="mb-1.5 block">Estoque Geral</label><input value={stock} onChange={e => setStock(e.target.value)} type="number" placeholder="1" className={inputClass} /></div>
+                  <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                    <label className="mb-1.5 block">Estoque Geral</label>
+                    <input 
+                      value={stock} 
+                      onChange={e => setStock(e.target.value)} 
+                      type="number" 
+                      placeholder="1" 
+                      className={`${inputClass} ${variacoes.length > 0 ? 'opacity-50 cursor-not-allowed bg-secondary/30' : ''}`} 
+                      readOnly={variacoes.length > 0} 
+                    />
+                  </div>
                   <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest"><label className="mb-1.5 block">Categoria</label><input value={category} onChange={e => setCategory(e.target.value)} placeholder="Ex: Vestidos" className={inputClass} /></div>
                   <div className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest"><label className="mb-1.5 block">Custo (Kz)</label><input value={cost} onChange={e => setCost(e.target.value)} type="number" step="1" placeholder="0" className={inputClass} /></div>
                 </div>

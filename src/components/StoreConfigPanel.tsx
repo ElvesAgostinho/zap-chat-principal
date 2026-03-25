@@ -33,7 +33,8 @@ interface Config {
 }
 
 export default function StoreConfigPanel() {
-  const { storeId } = useAuth();
+  const { storeId, role } = useAuth();
+  const isAdmin = role === 'admin';
   const [config, setConfig] = useState<Config>({ nomeLoja: '', telefone: '', endereco: '', formasPagamento: [], zonasEntrega: [], mensagemBoasVindas: '', linguagemBot: '', idioma: 'pt-AO', slug: '' });
   const [newPayment, setNewPayment] = useState({ tipo: '', detalhes: '' });
   const [newZone, setNewZone] = useState({ zona: '', taxa: '' });
@@ -88,6 +89,7 @@ export default function StoreConfigPanel() {
         mensagem_boas_vindas: config.mensagemBoasVindas, 
         linguagem_bot: config.linguagemBot,
         idioma: config.idioma,
+        slug: config.slug,
       }).eq('id', storeId);
 
       // 2. Sync payment methods (simple delete and insert for efficiency)
@@ -115,13 +117,32 @@ export default function StoreConfigPanel() {
 
   return (
     <div className="space-y-4">
-      <WhatsAppConnectionPanel />
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card p-5 rounded-2xl shadow-card space-y-3">
-        <div className="flex items-center gap-2"><Store className="w-5 h-5 text-primary" /><h3 className="font-semibold text-foreground">Dados da Loja</h3></div>
-        <div><label className="text-[11px] uppercase tracking-wide text-muted-foreground">Nome</label><Input value={config.nomeLoja} onChange={e => setConfig(p => ({ ...p, nomeLoja: e.target.value }))} /></div>
-        <div><label className="text-[11px] uppercase tracking-wide text-muted-foreground">Telefone</label><Input value={config.telefone} onChange={e => setConfig(p => ({ ...p, telefone: e.target.value }))} /></div>
-        <div><label className="text-[11px] uppercase tracking-wide text-muted-foreground">Endereço</label><Input value={config.endereco} onChange={e => setConfig(p => ({ ...p, endereco: e.target.value }))} /></div>
-      </motion.div>
+      {isAdmin && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card p-5 rounded-2xl shadow-card space-y-3 border-2 border-primary/10">
+          <div className="flex items-center gap-2">
+            <Store className="w-5 h-5 text-primary" />
+            <h3 className="font-semibold text-foreground">Identidade da Loja</h3>
+          </div>
+          <div><label className="text-[11px] uppercase tracking-wide text-muted-foreground">Nome da Loja</label><Input value={config.nomeLoja} onChange={e => setConfig(p => ({ ...p, nomeLoja: e.target.value }))} /></div>
+          <div>
+            <label className="text-[11px] uppercase tracking-wide text-muted-foreground">Link da Loja (Slug Personalizado)</label>
+            <div className="flex items-center gap-2">
+              <div className="bg-secondary px-3 py-2 rounded-lg text-xs font-mono text-muted-foreground shrink-0 border border-border/50">/loja/</div>
+              <Input 
+                value={config.slug} 
+                onChange={e => setConfig(p => ({ ...p, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') }))} 
+                placeholder="ex: minha-marca"
+              />
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">Use este link para divulgar seu catálogo. Ex: crm.topconsultores.pt/loja/{config.slug || '...'}</p>
+          </div>
+          <div><label className="text-[11px] uppercase tracking-wide text-muted-foreground">Telefone de Contato</label><Input value={config.telefone} onChange={e => setConfig(p => ({ ...p, telefone: e.target.value }))} /></div>
+          <div><label className="text-[11px] uppercase tracking-wide text-muted-foreground">Endereço Físico</label><Input value={config.endereco} onChange={e => setConfig(p => ({ ...p, endereco: e.target.value }))} /></div>
+        </motion.div>
+      )}
+
+      {/* WhatsApp Connection - Only for Admins */}
+      {isAdmin && <WhatsAppConnectionPanel />}
 
       {/* Idioma */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card p-5 rounded-2xl shadow-card space-y-3">

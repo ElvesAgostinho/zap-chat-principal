@@ -64,7 +64,7 @@ export default function SuperAdminPanel() {
   const fetchAll = async () => {
     setLoading(true);
     const [{ data: lojasData }, { data: assData }, { count: leadsCount }, { data: vendasData }, { data: usersData }] = await Promise.all([
-      (supabase as any).from('lojas').select('id, nome, telefone, codigo_unico, instance_status, criado_em, owner_user_id, status_aprovacao, plano').order('criado_em', { ascending: false }),
+      (supabase as any).from('lojas').select('id, nome, telefone, codigo_unico, slug, instance_status, criado_em, owner_user_id, status_aprovacao, plano').order('criado_em', { ascending: false }),
       (supabase as any).from('assinaturas').select('*, lojas(nome), planos(nome, preco)').order('criado_em', { ascending: false }),
       (supabase as any).from('leads').select('id', { count: 'exact', head: true }),
       (supabase as any).from('vendas').select('valor, status'),
@@ -171,6 +171,8 @@ export default function SuperAdminPanel() {
   return (
     <div className="min-h-screen bg-background pb-8">
       <AppHeader
+        storeName="CRM TOP"
+        subtitle="Super Administrador"
         rightContent={
           <div className="flex items-center gap-2">
             <SuperAdminNotifications onNavigate={(tab) => setActiveTab(tab)} />
@@ -365,7 +367,7 @@ export default function SuperAdminPanel() {
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="font-semibold text-foreground">{loja.nome}</h3>
-                      <p className="text-[10px] text-muted-foreground font-mono">{loja.codigo_unico}</p>
+                      <p className="text-[10px] text-primary font-medium">/loja/{(loja as any).slug || loja.codigo_unico}</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className={`w-2 h-2 rounded-full ${loja.instance_status === 'connected' ? 'bg-emerald-500' : 'bg-muted-foreground/30'}`} />

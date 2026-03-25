@@ -64,25 +64,22 @@ export default function Index() {
   const [editingProduct, setEditingProduct] = useState<Produto | null>(null);
   const [showAddLead, setShowAddLead] = useState(false);
   const [alertCount, setAlertCount] = useState(0);
-  const [storeName, setStoreName] = useState('');
-  const [storeCode, setStoreCode] = useState('');
+  const { storeName: authStoreName, storeCode: authStoreCode, storeSlug: authStoreSlug } = useAuth();
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('sidebar_collapsed') === 'true');
 
   const fetchAll = useCallback(async () => {
     if (!storeId) return;
-    const [{ data: p }, { data: l }, { data: v }, { data: a }, { data: loja }] = await Promise.all([
+    const [{ data: p }, { data: l }, { data: v }, { data: a }] = await Promise.all([
       (supabase as any).from('produtos').select('*').eq('loja_id', storeId).order('criado_em', { ascending: false }),
       (supabase as any).from('leads').select('*').eq('loja_id', storeId).order('criado_em', { ascending: false }),
       (supabase as any).from('vendas').select('*').eq('loja_id', storeId).order('criado_em', { ascending: false }),
       (supabase as any).from('usuarios_loja').select('user_id, nome').eq('loja_id', storeId).eq('status', 'aprovado'),
-      (supabase as any).from('lojas').select('nome, codigo_unico').eq('id', storeId).maybeSingle(),
     ]);
     setProducts(p || []);
     setLeads(l || []);
     setVendas(v || []);
     setAgents(a?.map((agent: any) => ({ id: agent.user_id, nome: agent.nome || 'Agente' })) || []);
-    if (loja) { setStoreName(loja.nome || ''); setStoreCode(loja.codigo_unico || ''); }
   }, [storeId]);
 
   useEffect(() => {
@@ -257,6 +254,7 @@ export default function Index() {
         orderCount={pendingCount} 
         showAdmin={role === 'admin'} 
         onSearch={() => setSearchOpen(true)} 
+        storeName={authStoreName || ''}
       />
 
       <CommandPalette
@@ -282,9 +280,9 @@ export default function Index() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">{TAB_TITLES[activeTab]}</h1>
-              <p className="text-sm text-metadata mt-1.5 flex items-center gap-2">
-                {storeName} <span className="w-1 h-1 rounded-full bg-border" /> {storeCode}
+              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">{authStoreName || 'CRM TOP'}</h1>
+              <p className="text-sm font-bold text-primary uppercase tracking-[0.2em] mt-1.5 flex items-center gap-2">
+                {TAB_TITLES[activeTab]}
               </p>
             </motion.div>
           </header>

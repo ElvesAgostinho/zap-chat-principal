@@ -9,6 +9,9 @@ interface AuthState {
   session: Session | null;
   role: string | null;
   storeId: string | null;
+  storeSlug: string | null;
+  storeCode: string | null;
+  storeName: string | null;
   status: string | null;
   userName: string | null;
   loading: boolean;
@@ -24,6 +27,9 @@ const AuthContext = createContext<AuthState>({
   session: null,
   role: null,
   storeId: null,
+  storeSlug: null,
+  storeCode: null,
+  storeName: null,
   status: null,
   userName: null,
   loading: true,
@@ -59,6 +65,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [storeId, setStoreId] = useState<string | null>(null);
+  const [storeSlug, setStoreSlug] = useState<string | null>(null);
+  const [storeCode, setStoreCode] = useState<string | null>(null);
+  const [storeName, setStoreName] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -71,6 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const clearMembership = () => {
     setRole(null);
     setStoreId(null);
+    setStoreSlug(null);
+    setStoreCode(null);
+    setStoreName(null);
     setStatus(null);
     setUserName(null);
     setIsSuperAdmin(false);
@@ -145,6 +157,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setStatus('aprovado');
         setUserName(nextSession.user.user_metadata?.full_name || 'Super Admin');
         setStoreId(null);
+        setStoreSlug(null);
+        setStoreCode(null);
+        setStoreName(null);
         setMembershipState('super_admin');
         setPlano('enterprise'); // Super admin has max access
         setStatusLoja('ativo');
@@ -174,25 +189,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (sId) {
           const { data: storeData } = await (supabase as any)
             .from('lojas')
-            .select('plano, status_aprovacao')
+            .select(`plano, status_aprovacao, slug, nome${membership.role === 'admin' ? ', codigo_unico' : ''}`)
             .eq('id', sId)
             .maybeSingle();
             
           if (storeData) {
             setPlano(storeData.plano);
             setStatusLoja(storeData.status_aprovacao);
+            setStoreSlug(storeData.slug);
+            setStoreCode(membership.role === 'admin' ? storeData.codigo_unico : null);
+            setStoreName(storeData.nome);
           }
         }
         
         setMembershipState('linked');
       } else if (membership.status === 'pendente') {
         setStoreId(null);
+        setStoreSlug(null);
+        setStoreCode(null);
+        setStoreName(null);
         setMembershipState('pending');
       } else if (membership.status === 'rejeitado') {
         setStoreId(null);
+        setStoreSlug(null);
+        setStoreCode(null);
+        setStoreName(null);
         setMembershipState('rejected');
       } else {
         setStoreId(null);
+        setStoreSlug(null);
+        setStoreCode(null);
+        setStoreName(null);
         setMembershipState('unlinked');
       }
     } catch (error) {
@@ -314,7 +341,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <AuthContext.Provider
       value={{ 
-        user, session, role, storeId, status, userName, 
+        user, session, role, storeId, storeSlug, storeCode, storeName, status, userName, 
         loading, membershipState, isSuperAdmin, 
         plano, statusLoja, signOut 
       }}
