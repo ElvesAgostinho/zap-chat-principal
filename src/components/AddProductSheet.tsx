@@ -166,8 +166,8 @@ export default function AddProductSheet({ open, onClose, storeId, onAdded, initi
 
     setSaving(false);
     if (error) { 
-      console.error(error);
-      toast.error('Erro de gravação. Verifique a ligação.'); 
+      console.error('Erro detalhado do banco:', error);
+      toast.error(`Erro de gravação: ${error.message || 'Verifique a ligação.'}`); 
       return; 
     }
     

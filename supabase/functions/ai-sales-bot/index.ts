@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
 
            const { data: ragProducts, error: rpcError } = await supabase.rpc('match_produtos', {
              query_embedding,
-             match_threshold: 0.05,
+             match_threshold: 0.3,
              match_count: 5,
              p_loja_id: store_id
            });
@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
         productContext = '\n\nPRODUTOS DISPONÍVEIS NA LOJA:\n' +
           allProducts.map(p => {
             const hasStock = p.estoque > 0;
-            return `- ${p.nome} | Preço: MZN ${p.preco} | Estoque: ${hasStock ? 'Sim' : 'Não'} | Detalhes: ${p.descricao || 'Sem descrição'}`;
+            return `- ${p.nome} | Preço: Kz ${p.formatted_preco || p.preco} | Estoque: ${hasStock ? 'Sim' : 'Não'} | Detalhes: ${p.descricao || 'Sem descrição'}`;
           }).join('\n');
         productContext += '\n\nPara enviar foto USE SOMENTE SE O CLIENTE PEDIR: [ENVIAR_PRODUTO:nome_exacto_do_produto]';
         productContext += '\nApenas use marcadores para produtos com [TEM FOTO]. Se o cliente perguntar por tamanhos, cores ou especificações, use os "Detalhes" fornecidos acima.';

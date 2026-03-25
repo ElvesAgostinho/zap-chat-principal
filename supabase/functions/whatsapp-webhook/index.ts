@@ -326,12 +326,7 @@ Deno.serve(async (req) => {
         storeId = storeRow.id;
       } else {
         console.warn(`⚠️ Instance '${instanceName}' not found in lojas. Falling back to first store.`);
-        const { data: firstStore } = await supabase
-          .from('lojas')
-          .select('id')
-          .limit(1)
-          .maybeSingle();
-        storeId = firstStore?.id || null;
+        storeId = null;
       }
 
       if (!storeId) {
