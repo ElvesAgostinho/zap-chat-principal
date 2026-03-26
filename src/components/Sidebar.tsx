@@ -160,7 +160,7 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="text-[10px] uppercase font-bold tracking-[0.15em] text-slate-500 px-3 mb-3"
+                  className="text-[10px] uppercase font-bold tracking-[0.15em] px-3 mb-3 sidebar-group-label"
                 >
                   {group.label}
                 </motion.p>
@@ -195,7 +195,7 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
                         <motion.span
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          className={`text-[13px] font-bold overflow-hidden whitespace-nowrap flex-1 text-left ${isActive ? 'text-primary' : ''}`}
+                          className={`text-[13px] font-bold overflow-hidden whitespace-nowrap flex-1 text-left sidebar-item-text ${isActive ? 'active' : ''}`}
                         >
                           {item.label}
                         </motion.span>

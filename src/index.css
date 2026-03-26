@@ -87,7 +87,7 @@
     --sidebar-primary: 142 76% 45%;
     --sidebar-primary-foreground: 142 76% 5%;
     --sidebar-accent: 210 33% 8%;
-    --sidebar-accent-foreground: 142 76% 50%; /* Brighter emerald */
+    --sidebar-accent-foreground: 210 20% 98%;
     --sidebar-border: 210 33% 8%;
     --sidebar-ring: 142 76% 45%;
 
@@ -97,6 +97,19 @@
     --chart-4: 349 80% 62%;
     --chart-5: 262 75% 62%;
   }
+}
+
+/* Force light mode contrast for sidebar */
+:root:not(.dark) .sidebar-item-text {
+  color: hsl(var(--sidebar-foreground)) !important;
+}
+
+:root:not(.dark) .sidebar-item-text.active {
+  color: hsl(var(--primary)) !important;
+}
+
+:root:not(.dark) .sidebar-group-label {
+  color: hsl(215, 25%, 27%) !important;
 }
 
 @layer base {

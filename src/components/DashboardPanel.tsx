@@ -127,9 +127,9 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
     return (
-      <div className="bg-card border border-white/10 rounded-xl px-4 py-3 shadow-2xl text-[11px] backdrop-blur-md">
-        <p className="text-slate-500 mb-1 font-bold uppercase tracking-wider">{label}</p>
-        <p className="font-bold text-white text-base">{formatCurrency(payload[0].value)}</p>
+      <div className="bg-card border border-border rounded-xl px-4 py-3 shadow-2xl text-[11px] backdrop-blur-md">
+        <p className="text-muted-foreground mb-1 font-bold uppercase tracking-wider">{label}</p>
+        <p className="font-bold text-foreground text-base">{formatCurrency(payload[0].value)}</p>
         <p className="text-primary font-medium">{payload[0].payload.vendas} pedido(s)</p>
       </div>
     );
@@ -141,14 +141,14 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
       <div className="flex border-b border-white/5 mb-4">
         <button 
           onClick={() => setActiveTab('geral')}
-          className={`px-6 py-3 text-[11px] font-bold uppercase tracking-widest transition-all relative ${activeTab === 'geral' ? 'text-primary' : 'text-slate-500 hover:text-white'}`}
+          className={`px-6 py-3 text-[11px] font-bold uppercase tracking-widest transition-all relative ${activeTab === 'geral' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
         >
           Visão Estratégica
           {activeTab === 'geral' && <motion.div layoutId="tab-active" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full shadow-[0_0_10px_rgba(34,197,94,0.5)]" />}
         </button>
         <button 
           onClick={() => setActiveTab('insights')}
-          className={`px-6 py-3 text-[11px] font-bold uppercase tracking-widest transition-all relative ${activeTab === 'insights' ? 'text-primary' : 'text-slate-500 hover:text-white'}`}
+          className={`px-6 py-3 text-[11px] font-bold uppercase tracking-widest transition-all relative ${activeTab === 'insights' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
         >
           Performance de ROI
           {activeTab === 'insights' && <motion.div layoutId="tab-active" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full shadow-[0_0_10px_rgba(34,197,94,0.5)]" />}
@@ -171,7 +171,7 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
               </div>
               <div>
                 <h3 className="font-bold text-foreground text-base">Hub Comercial Ativo 🚀</h3>
-                <p className="text-xs text-slate-500 font-medium">Capture leads e pedidos automaticamente através do seu catálogo digital.</p>
+                <p className="text-xs text-muted-foreground font-medium">Capture leads e pedidos automaticamente através do seu catálogo digital.</p>
               </div>
             </div>
             
@@ -197,7 +197,7 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
                   if (!finalSlug) return;
                   window.open(`https://wa.me/?text=${encodeURIComponent(`Confira nosso catálogo: ${window.location.origin}/loja/${finalSlug}`)}`, '_blank');
                 }}
-                className="flex items-center gap-2 bg-primary text-black px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg hover:scale-105 transition-all"
+                className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg hover:scale-105 transition-all"
               >
                 <MessageSquare className="w-4 h-4 fill-current" /> Partilhar Link
               </button>
@@ -303,7 +303,7 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
             <h3 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2"><Calendar className="w-4 h-4 text-primary" />Status dos Pedidos</h3>
             <div className="flex gap-2">
               {[{ label: 'Pendentes', count: pendingOrders, color: 'bg-amber-500' }, { label: 'Pagos', count: paidOrders, color: 'bg-blue-500' }, { label: 'Entregues', count: deliveredOrders, color: 'bg-emerald-500' }].map(s => (
-                <div key={s.label} className="flex-1 text-center"><div className={`${s.color} text-white text-xl font-bold rounded-xl py-3 mb-1.5`}>{s.count}</div><p className="text-[10px] text-muted-foreground font-medium">{s.label}</p></div>
+                <div key={s.label} className="flex-1 text-center"><div className={`${s.color} text-white font-bold rounded-xl py-3 mb-1.5 text-xl`}>{s.count}</div><p className="text-[10px] text-muted-foreground font-medium">{s.label}</p></div>
               ))}
             </div>
           </motion.div>

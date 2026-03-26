@@ -266,14 +266,17 @@ Deno.serve(async (req) => {
 
   /** Fetch individual profile as fallback */
   const fetchProfile = async (instanceName: string, number: string) => {
+    const cleanNumber = number.replace(/\D/g, '');
     try {
+      console.log(`[fetchProfile] Attempting for ${cleanNumber} on instance ${instanceName}`);
       const res = await evo(`/chat/fetchProfile/${instanceName}`, { 
         method: 'POST', 
-        body: JSON.stringify({ number }) 
+        body: JSON.stringify({ number: cleanNumber }) 
       });
-      if (res.ok) return res.data?.pushName || res.data?.name || res.data?.verifiedName || null;
+      console.log(`[fetchProfile] Response [${res.status}]:`, JSON.stringify(res.data).slice(0, 200));
+      if (res.ok) return res.data?.pushName || res.data?.name || res.data?.verifiedName || res.data?.profile?.pushName || null;
     } catch (e) {
-      console.error(`[fetchProfile] Error:`, e);
+      console.error(`[fetchProfile] Exception for ${cleanNumber}:`, e);
     }
     return null;
   };
@@ -650,9 +653,11 @@ Deno.serve(async (req) => {
       const sampleMapping: any[] = [];
 
       if (leads) {
+        console.log(`[sync_names] Iterating over ${leads.length} leads in DB...`);
         const leadMap = new Map((leads || []).map(l => [l.telefone.replace(/\D/g, ''), l]));
         
         // 1. Update from Evolution Contacts List
+        console.log(`[sync_names] Phase 1: Contact List Sync (${contactNames.size} contacts found in API)`);
         for (const [phone, name] of contactNames.entries()) {
           const lead = leadMap.get(phone);
           if (lead && name && name !== lead.nome) {
@@ -660,6 +665,7 @@ Deno.serve(async (req) => {
             const isOldNameHuman = /[a-zA-Z]/.test(lead.nome || '');
             if (isNewNameNumeric && isOldNameHuman) continue;
 
+            console.log(`[sync_names] Updating name for lead ${lead.id}: ${lead.nome} -> ${name}`);
             const { error } = await sb.from('leads').update({ nome: name }).eq('id', lead.id);
             if (!error) {
               updatedCount++;
@@ -669,16 +675,18 @@ Deno.serve(async (req) => {
         }
 
         // 2. RECOVERY: Try to find names in messages history or Deep Fetch for leads still without names
-        console.log(`[sync_names] Starting deep recovery for leads...`);
         const leadsToFix = leads.filter(l => !/[a-zA-Z]/.test(l.nome || ''));
+        console.log(`[sync_names] Phase 2: Deep Recovery for ${leadsToFix.length} leads without human names...`);
         
         if (leadsToFix.length > 0) {
           for (const lead of leadsToFix) {
             const phone = lead.telefone.replace(/\D/g, '');
+            console.log(`[sync_names] Deep recovery for ${phone} (ID: ${lead.id})`);
             
             // 2a. Try Deep Fetch Profile
             const pn = await fetchProfile(instanceName, phone);
             if (pn && /[a-zA-Z]/.test(pn)) {
+              console.log(`[sync_names] Profile found for ${phone}: ${pn}`);
               const { error } = await sb.from('leads').update({ nome: pn }).eq('id', lead.id);
               if (!error) {
                 updatedCount++;
@@ -694,14 +702,15 @@ Deno.serve(async (req) => {
               .order('created_at', { ascending: false })
               .limit(5);
             
-            if (msgs) {
+            if (msgs && msgs.length > 0) {
               for (const m of msgs) {
                 const meta = m.metadata as any;
                 // Check multiple locations in metadata for pushName
                 const foundName = meta?.pushName || meta?.notify || meta?.verifiedName || meta?.instance?.pushName || 
-                                 meta?.message?.pushName || meta?.record?.pushName;
+                                 meta?.message?.pushName || meta?.record?.pushName || meta?.data?.pushName;
                 
                 if (foundName && /[a-zA-Z]/.test(foundName)) {
+                  console.log(`[sync_names] Name found in history for ${phone}: ${foundName}`);
                   const { error } = await sb.from('leads').update({ nome: foundName }).eq('id', lead.id);
                   if (!error) {
                     updatedCount++;
@@ -709,6 +718,8 @@ Deno.serve(async (req) => {
                   }
                 }
               }
+            } else {
+              console.log(`[sync_names] No message history metadata for ${phone}`);
             }
           }
         }
