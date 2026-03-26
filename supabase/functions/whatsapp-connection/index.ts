@@ -300,14 +300,22 @@ Deno.serve(async (req) => {
             const jid = String(c?.id || c?.remoteJid || c?.jid || '');
             if (!jid.endsWith('@s.whatsapp.net')) continue;
             const phone = jid.replace(/@s\.whatsapp\.net$/, '');
-            const name = c?.pushName || c?.name || c?.notify || c?.verifiedName || '';
-            if (name && name !== phone) {
+            
+            // Try different name fields from Evolution
+            let name = c?.pushName || c?.name || c?.notify || c?.verifiedName || '';
+            
+            // If name is numeric and same as phone, try to find a better one
+            if (name === phone || name.replace(/\D/g, '') === phone) {
+              name = c?.verifiedName || c?.name || '';
+            }
+
+            if (name && name !== phone && name.length > 1) {
               contactMap.set(phone, name);
             }
           }
           if (contactMap.size > 0) {
             console.log(`[fetchContacts] Success with ${ep.path} [${ep.method}]: ${contactMap.size} names`);
-            break; // Stop if we found names
+            break; 
           }
         }
       } catch (e) {
@@ -519,7 +527,8 @@ Deno.serve(async (req) => {
   try {
     const body = await req.json();
     const { action, instance, store_id } = body;
-    const instanceName = instance || 'default';
+    const instanceName = instance || 'Whats';
+    console.log(`[whatsapp-connection] Action: ${action}, Instance: ${instanceName}, Store: ${store_id}`);
 
     // ============================================================
     // ACTION: generate_qrcode
