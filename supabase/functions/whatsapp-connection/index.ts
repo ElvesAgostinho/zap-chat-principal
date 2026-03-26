@@ -634,24 +634,38 @@ Deno.serve(async (req) => {
       const contactsResult = await fetchContacts(instanceName);
       const contactNames = contactsResult.map;
       
-      const { data: leads } = await sb.from('leads').select('id, telefone, nome').eq('loja_id', store_id);
+      const { data: leads, error: leadFetchError } = await sb.from('leads').select('id, telefone, nome').eq('loja_id', store_id);
+      
+      if (leadFetchError) {
+        console.error(`[sync_names] DB Error: ${leadFetchError.message}`);
+        return json({ success: false, error: leadFetchError.message, debug: 'Failed to fetch leads from DB. Likely missing column.' }, 400);
+      }
+
       let updatedCount = 0;
       const sampleMapping: any[] = [];
 
-      for (const lead of (leads || [])) {
-        const phone = lead.telefone.replace(/\D/g, '');
-        const apiName = contactNames.get(phone);
-        
-        if (sampleMapping.length < 5) {
-          sampleMapping.push({ phone, apiName, currentName: lead.nome });
-        }
+      if (leads) {
+        const leadMap = new Map((leads || []).map(l => [l.telefone.replace(/\D/g, ''), l]));
+        for (const [phone, name] of contactNames.entries()) {
+          const lead = leadMap.get(phone);
+          if (lead && name && name !== lead.nome) {
+            // Check if new name is just a number. If it is, and we ALREADY have a human name, don't overwrite.
+            const isNewNameNumeric = !/[a-zA-Z]/.test(name);
+            const isOldNameHuman = /[a-zA-Z]/.test(lead.nome || '');
+            
+            if (isNewNameNumeric && isOldNameHuman) continue;
 
-        // Only update if we have a name and the current name is a phone/placeholder
-        if (apiName && (lead.nome === lead.telefone || !lead.nome || /^\+?\d+$/.test(lead.nome))) {
-           await sb.from('leads').update({ nome: apiName }).eq('id', lead.id);
-           updatedCount++;
+            const { error } = await sb.from('leads').update({ nome: name }).eq('id', lead.id);
+            if (!error) {
+              updatedCount++;
+              if (sampleMapping.length < 5) {
+                sampleMapping.push({ phone, old: lead.nome, new: name });
+              }
+            }
+          }
         }
       }
+
       return json({ 
         success: true, 
         updated: updatedCount, 
@@ -661,6 +675,7 @@ Deno.serve(async (req) => {
         message: contactNames.size === 0 ? 'Nenhum contato com nome encontrado na API' : `${updatedCount} nomes sincronizados`
       });
     }
+
 
     if (action === 'debug_db') {
       const { data: store } = await sb.from('lojas').select('*').eq('id', store_id).maybeSingle();
