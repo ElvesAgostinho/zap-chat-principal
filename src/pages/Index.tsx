@@ -78,8 +78,13 @@ export default function Index() {
   const fetchLeads = useCallback(async () => {
     if (!storeId) return;
     const { data } = await (supabase as any).from('leads').select('*').eq('loja_id', storeId).order('criado_em', { ascending: false });
-    setLeads(data || []);
-  }, [storeId]);
+    
+    let filtered = data || [];
+    if (role !== 'admin' && user?.id) {
+      filtered = filtered.filter((l: any) => l.atendente_id === user.id);
+    }
+    setLeads(filtered);
+  }, [storeId, role, user?.id]);
 
   const fetchVendas = useCallback(async () => {
     if (!storeId) return;
@@ -96,8 +101,17 @@ export default function Index() {
   const fetchMessages = useCallback(async () => {
     if (!storeId) return;
     const { data } = await (supabase as any).from('mensagens').select('lead_id, lead_nome, conteudo, tipo, created_at, is_bot, respondido_por_nome').eq('loja_id', storeId).order('created_at', { ascending: false });
-    setMessages(data || []);
-  }, [storeId]);
+    
+    let filteredMsgs = data || [];
+    if (role !== 'admin' && user?.id) {
+      // Funcionário só vê mensagens dos leads que são dele
+      const { data: myLeads } = await (supabase as any).from('leads').select('id').eq('loja_id', storeId).eq('atendente_id', user.id);
+      const myLeadIds = new Set((myLeads || []).map((l: any) => l.id));
+      filteredMsgs = filteredMsgs.filter((m: any) => myLeadIds.has(m.lead_id));
+    }
+    
+    setMessages(filteredMsgs);
+  }, [storeId, role, user?.id]);
 
   const fetchAll = useCallback(async () => {
     if (!storeId) return;
@@ -113,8 +127,13 @@ export default function Index() {
     const ch3 = supabase.channel('vendas-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'vendas' }, () => fetchVendas()).subscribe();
     const ch4 = supabase.channel('mensagens-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'mensagens' }, (payload: any) => {
       const newMsg = payload.new;
-      if (newMsg && newMsg.loja_id === storeId) setMessages(prev => [newMsg, ...prev]);
-      else fetchMessages();
+      if (newMsg && newMsg.loja_id === storeId) {
+        if (role !== 'admin') {
+          fetchMessages(); // Force auth check
+        } else {
+          setMessages(prev => [newMsg, ...prev]);
+        }
+      } else fetchMessages();
     }).subscribe();
     
     return () => {
