@@ -646,20 +646,45 @@ Deno.serve(async (req) => {
 
       if (leads) {
         const leadMap = new Map((leads || []).map(l => [l.telefone.replace(/\D/g, ''), l]));
+        
+        // 1. Update from Evolution Contacts
         for (const [phone, name] of contactNames.entries()) {
           const lead = leadMap.get(phone);
           if (lead && name && name !== lead.nome) {
-            // Check if new name is just a number. If it is, and we ALREADY have a human name, don't overwrite.
             const isNewNameNumeric = !/[a-zA-Z]/.test(name);
             const isOldNameHuman = /[a-zA-Z]/.test(lead.nome || '');
-            
             if (isNewNameNumeric && isOldNameHuman) continue;
 
             const { error } = await sb.from('leads').update({ nome: name }).eq('id', lead.id);
-            if (!error) {
-              updatedCount++;
-              if (sampleMapping.length < 5) {
-                sampleMapping.push({ phone, old: lead.nome, new: name });
+            if (!error) updatedCount++;
+          }
+        }
+
+        // 2. RECOVERY: Try to find names in messages history for leads still without names
+        console.log(`[sync_names] Starting history recovery for leads...`);
+        const leadsWithoutNames = leads.filter(l => !/[a-zA-Z]/.test(l.nome || ''));
+        
+        if (leadsWithoutNames.length > 0) {
+          for (const lead of leadsWithoutNames) {
+            // Check the last 10 messages for this lead to find a pushName
+            const { data: msgs } = await sb.from('mensagens')
+              .select('metadata')
+              .eq('lead_id', lead.id)
+              .not('metadata', 'is', null)
+              .order('created_at', { ascending: false })
+              .limit(10);
+            
+            if (msgs) {
+              for (const m of msgs) {
+                const meta = m.metadata as any;
+                const foundName = meta?.pushName || meta?.notify || meta?.verifiedName || meta?.instance?.pushName;
+                if (foundName && /[a-zA-Z]/.test(foundName)) {
+                  const { error } = await sb.from('leads').update({ nome: foundName }).eq('id', lead.id);
+                  if (!error) {
+                    updatedCount++;
+                    break; // Found one name, move to next lead
+                  }
+                }
               }
             }
           }
