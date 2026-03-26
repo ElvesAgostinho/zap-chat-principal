@@ -240,8 +240,11 @@ Deno.serve(async (req) => {
       logs.push("[webhook] Starting bulk sync of profiles...");
       const storeId = body.store_id;
       
-      // Query ONLY leads that don't have a photo yet to save resources
-      let query = supabase.from('leads').select('id, telefone, loja_id, foto_url').is('foto_url', null);
+      // Query leads that either have NULL or EMPTY STRING as foto_url
+      let query = supabase.from('leads')
+        .select('id, telefone, loja_id, foto_url')
+        .or('foto_url.is.null,foto_url.eq.""');
+        
       if (storeId) query = query.eq('loja_id', storeId);
       
       const { data: leads, error: leadsErr } = await query;

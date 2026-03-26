@@ -101,9 +101,9 @@ export default function Index() {
     if (!storeId) return;
     fetchAll();
 
-    const ch1 = supabase.channel('produtos-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'produtos', filter: `loja_id=eq.${storeId}` }, () => fetchProducts()).subscribe();
-    const ch2 = supabase.channel('leads-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'leads', filter: `loja_id=eq.${storeId}` }, () => fetchLeads()).subscribe();
-    const ch3 = supabase.channel('vendas-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'vendas', filter: `loja_id=eq.${storeId}` }, () => fetchVendas()).subscribe();
+    const ch1 = supabase.channel('produtos-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'produtos' }, () => fetchProducts()).subscribe();
+    const ch2 = supabase.channel('leads-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => fetchLeads()).subscribe();
+    const ch3 = supabase.channel('vendas-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'vendas' }, () => fetchVendas()).subscribe();
     
     return () => {
       supabase.removeChannel(ch1);
@@ -212,15 +212,22 @@ export default function Index() {
               </div>
               <div className="bg-card p-5 rounded-3xl shadow-card border border-border/50 stat-card">
                 <ShoppingBag className="w-6 h-6 text-primary mb-3" />
-                <p className="text-2xl font-bold text-foreground tabular-nums">{vendas.length}</p>
+                <p className="text-2xl font-bold text-foreground tabular-nums">{vendas?.length || 0}</p>
                 <p className="text-metadata text-[10px] mt-1">Total Pedidos</p>
               </div>
             </div>
             <div className="space-y-3">
               <div className="flex items-center justify-between px-1">
-                <h3 className="text-metadata">{vendas.length} Pedidos localizados</h3>
+                <h3 className="text-metadata">{vendas?.length || 0} Pedidos localizados</h3>
               </div>
-              {vendas.map(v => <OrderCardEnhanced key={v.id} venda={v} onOpenChat={(lid) => navigate(`/chat?lead=${lid}`)} />)}
+              {vendas && vendas.length > 0 ? (
+                vendas.map(v => <OrderCardEnhanced key={v.id} venda={v} onOpenChat={(lid) => navigate(`/chat?lead=${lid}`)} />)
+              ) : (
+                <div className="bg-card p-10 rounded-3xl border border-dashed border-border flex flex-col items-center justify-center text-center">
+                  <ShoppingBag className="w-12 h-12 text-muted-foreground/30 mb-4" />
+                  <p className="text-muted-foreground font-medium">Nenhum pedido encontrado</p>
+                </div>
+              )}
             </div>
           </div>
         );
