@@ -142,8 +142,14 @@ export default function ConversationsPanel({ initialLeads, initialAgents }: { in
       
       if (error) throw error;
       
+      console.log('[sync_names] Response details:', data);
       const count = data?.updated ?? 0;
-      toast.success(`${count} nomes sincronizados com sucesso!`);
+      const total = data?.total_contacts ?? 0;
+      toast.success(`${count} nomes sincronizados (Total na API: ${total})`);
+      
+      if (data?.debug_sample) {
+        console.table(data.debug_sample);
+      }
       
       // Reload lead data to show new names
       const { data: nextLeads } = await (supabase as any).from('leads').select('id, nome, telefone, controle_conversa, precisa_humano, foto_url, atendente_id').eq('loja_id', storeId);

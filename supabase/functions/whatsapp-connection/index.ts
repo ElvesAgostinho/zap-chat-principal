@@ -272,6 +272,7 @@ Deno.serve(async (req) => {
       console.log(`[fetchContacts] findContacts [${result.status}]`);
       if (result.ok) {
         const contacts = extractList(result.data, ['data', 'contacts', 'records']);
+        console.log(`[fetchContacts] Extracted ${contacts.length} items from API`);
         for (const c of contacts) {
           const jid = String(c?.id || c?.remoteJid || c?.jid || '');
           if (!jid.endsWith('@s.whatsapp.net')) continue;
@@ -282,6 +283,8 @@ Deno.serve(async (req) => {
           }
         }
         console.log(`[fetchContacts] Got ${contactMap.size} contacts with names`);
+      } else {
+        console.error(`[fetchContacts] API Error: ${result.status}`, result.data);
       }
     } catch (e) {
       console.error('[fetchContacts] failed:', e);
@@ -590,22 +593,32 @@ Deno.serve(async (req) => {
     if (action === 'sync_names') {
       console.log(`[sync_names] Fetching names from Evolution for store=${store_id}`);
       const contactNames = await fetchContacts(instanceName);
-      if (contactNames.size === 0) {
-        return json({ success: true, updated: 0, message: 'Nenhum contato com nome encontrado na API' });
-      }
-
+      
       const { data: leads } = await sb.from('leads').select('id, telefone, nome').eq('loja_id', store_id);
       let updatedCount = 0;
+      const sampleMapping: any[] = [];
+
       for (const lead of (leads || [])) {
         const phone = lead.telefone.replace(/\D/g, '');
         const apiName = contactNames.get(phone);
+        
+        if (sampleMapping.length < 5) {
+          sampleMapping.push({ phone, apiName, currentName: lead.nome });
+        }
+
         // Only update if we have a name and the current name is a phone/placeholder
         if (apiName && (lead.nome === lead.telefone || !lead.nome || /^\+?\d+$/.test(lead.nome))) {
            await sb.from('leads').update({ nome: apiName }).eq('id', lead.id);
            updatedCount++;
         }
       }
-      return json({ success: true, updated: updatedCount, total_contacts: contactNames.size });
+      return json({ 
+        success: true, 
+        updated: updatedCount, 
+        total_contacts: contactNames.size,
+        debug_sample: sampleMapping,
+        message: contactNames.size === 0 ? 'Nenhum contato com nome encontrado na API' : `${updatedCount} nomes sincronizados`
+      });
     }
 
     if (action === 'sync_chat') {
