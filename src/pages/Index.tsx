@@ -68,28 +68,49 @@ export default function Index() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('sidebar_collapsed') === 'true');
 
+  const fetchProducts = useCallback(async () => {
+    if (!storeId) return;
+    const { data } = await (supabase as any).from('produtos').select('*').eq('loja_id', storeId).order('criado_em', { ascending: false });
+    setProducts(data || []);
+  }, [storeId]);
+
+  const fetchLeads = useCallback(async () => {
+    if (!storeId) return;
+    const { data } = await (supabase as any).from('leads').select('*').eq('loja_id', storeId).order('criado_em', { ascending: false });
+    setLeads(data || []);
+  }, [storeId]);
+
+  const fetchVendas = useCallback(async () => {
+    if (!storeId) return;
+    const { data } = await (supabase as any).from('vendas').select('*').eq('loja_id', storeId).order('criado_em', { ascending: false });
+    setVendas(data || []);
+  }, [storeId]);
+
+  const fetchAgents = useCallback(async () => {
+    if (!storeId) return;
+    const { data } = await (supabase as any).from('usuarios_loja').select('user_id, nome').eq('loja_id', storeId).eq('status', 'aprovado');
+    setAgents(data?.map((agent: any) => ({ id: agent.user_id, nome: agent.nome || 'Agente' })) || []);
+  }, [storeId]);
+
   const fetchAll = useCallback(async () => {
     if (!storeId) return;
-    const [{ data: p }, { data: l }, { data: v }, { data: a }] = await Promise.all([
-      (supabase as any).from('produtos').select('*').eq('loja_id', storeId).order('criado_em', { ascending: false }),
-      (supabase as any).from('leads').select('*').eq('loja_id', storeId).order('criado_em', { ascending: false }),
-      (supabase as any).from('vendas').select('*').eq('loja_id', storeId).order('criado_em', { ascending: false }),
-      (supabase as any).from('usuarios_loja').select('user_id, nome').eq('loja_id', storeId).eq('status', 'aprovado'),
-    ]);
-    setProducts(p || []);
-    setLeads(l || []);
-    setVendas(v || []);
-    setAgents(a?.map((agent: any) => ({ id: agent.user_id, nome: agent.nome || 'Agente' })) || []);
-  }, [storeId]);
+    await Promise.all([fetchProducts(), fetchLeads(), fetchVendas(), fetchAgents()]);
+  }, [fetchProducts, fetchLeads, fetchVendas, fetchAgents, storeId]);
 
   useEffect(() => {
     if (!storeId) return;
     fetchAll();
-    const ch1 = supabase.channel('produtos-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'produtos' }, () => fetchAll()).subscribe();
-    const ch2 = supabase.channel('leads-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => fetchAll()).subscribe();
-    const ch3 = supabase.channel('vendas-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'vendas' }, () => fetchAll()).subscribe();
-    return () => { supabase.removeChannel(ch1); supabase.removeChannel(ch2); supabase.removeChannel(ch3); };
-  }, [storeId, fetchAll]);
+
+    const ch1 = supabase.channel('produtos-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'produtos', filter: `loja_id=eq.${storeId}` }, () => fetchProducts()).subscribe();
+    const ch2 = supabase.channel('leads-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'leads', filter: `loja_id=eq.${storeId}` }, () => fetchLeads()).subscribe();
+    const ch3 = supabase.channel('vendas-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'vendas', filter: `loja_id=eq.${storeId}` }, () => fetchVendas()).subscribe();
+    
+    return () => {
+      supabase.removeChannel(ch1);
+      supabase.removeChannel(ch2);
+      supabase.removeChannel(ch3);
+    };
+  }, [storeId, fetchProducts, fetchLeads, fetchVendas, fetchAll]);
 
   useEffect(() => {
     if (!storeId) return;

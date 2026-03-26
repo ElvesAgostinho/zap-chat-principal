@@ -238,13 +238,27 @@ Deno.serve(async (req) => {
     if (body.action === 'sync_all_profiles') {
       const logs: string[] = [];
       logs.push("[webhook] Starting bulk sync of profiles...");
-      const { data: leads } = await supabase.from('leads').select('id, telefone, loja_id');
-      const storeId = body.store_id; // Filter by store if provided
+      const storeId = body.store_id;
       
-      let targetLeads = leads || [];
-      if (storeId) targetLeads = targetLeads.filter((l: any) => l.loja_id === storeId);
+      // Query ONLY leads that don't have a photo yet to save resources
+      let query = supabase.from('leads').select('id, telefone, loja_id, foto_url').is('foto_url', null);
+      if (storeId) query = query.eq('loja_id', storeId);
+      
+      const { data: leads, error: leadsErr } = await query;
 
-      logs.push(`[webhook] Target leads: ${targetLeads.length}`);
+      if (leadsErr) {
+        logs.push(`[webhook] Database error: ${JSON.stringify(leadsErr)}`);
+        return new Response(JSON.stringify({ ok: false, error: 'db_error', logs }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+
+      let targetLeads = leads || [];
+      // Limit to 30 leads per request to stay within 60s Edge Function timeout
+      const totalAvailable = targetLeads.length;
+      targetLeads = targetLeads.slice(0, 30);
+
+      logs.push(`[webhook] Target leads (without photo): ${totalAvailable}. Processing batch of ${targetLeads.length}`);
 
       const { data: lojas } = await supabase.from('lojas').select('id, instance_name');
       const lojaMap = new Map(lojas?.map(l => [l.id, l.instance_name]));
@@ -261,8 +275,14 @@ Deno.serve(async (req) => {
           logs.push(`[webhook] Error syncing lead ${lead.id}: ${innerError?.message || 'Unknown error'}`);
         }
       }
-      logs.push(`[webhook] Bulk sync complete. Updated ${count} leads.`);
-      return new Response(JSON.stringify({ ok: true, processed: count, logs }), {
+      logs.push(`[webhook] Batch sync complete. Updated ${count} leads. Remaining without photo: ${Math.max(0, totalAvailable - count)}`);
+      return new Response(JSON.stringify({ 
+        ok: true, 
+        processed: count, 
+        remaining: Math.max(0, totalAvailable - count),
+        message: totalAvailable > count ? "Algumas fotos foram sincronizadas. Clique novamente para continuar." : "Sincronização concluída!",
+        logs 
+      }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
