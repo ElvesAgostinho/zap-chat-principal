@@ -584,6 +584,8 @@ Deno.serve(async (req) => {
         await updateInstanceStatus(store_id, instanceName, 'qr_pending');
         return json({ success: true, status: 'qr_ready', data: createQr });
       }
+      
+      console.log(`[generate_qrcode] ensureInstance no QR, trying connect. CreateRes full: ${JSON.stringify(createResult.data)}`);
 
       const connect = await evo(`/instance/connect/${instanceName}`, { method: 'GET' });
       console.log(`[generate_qrcode] connect [${connect.status}]:`, JSON.stringify(connect.data).slice(0, 200));
@@ -631,10 +633,24 @@ Deno.serve(async (req) => {
           return json({ success: true, status: 'qr_ready', data: reconnectQr });
         }
 
-        return json({ success: false, status: 'error', error: 'Não foi possível gerar QR Code. Tente reiniciar.' }, 500);
+        return json({ 
+          success: false, 
+          status: 'error', 
+          error: 'Não foi possível gerar QR Code. Tente reiniciar a instância manualmente.',
+          details: {
+            currentState,
+            connect: connect.data,
+            reconnect: reconnect.data
+          }
+        }, 200);
       }
 
-      return json({ success: false, status: 'error', error: 'Estado inesperado. Tente reiniciar a instância.' }, 500);
+      return json({ 
+        success: false, 
+        status: 'error', 
+        error: 'Estado inesperado da instância na Evolution API.',
+        details: { currentState, connect: connect.data }
+      }, 200);
     }
 
     if (action === 'sync_history' || action === 'sync_preview') {
@@ -666,7 +682,7 @@ Deno.serve(async (req) => {
       
       if (leadFetchError) {
         console.error(`[sync_names] DB Error: ${leadFetchError.message}`);
-        return json({ success: false, error: leadFetchError.message, debug: 'Failed to fetch leads from DB. Likely missing column.' }, 400);
+        return json({ success: false, error: leadFetchError.message, debug: 'Failed to fetch leads from DB.' }, 200);
       }
 
       let updatedCount = 0;
@@ -808,7 +824,7 @@ Deno.serve(async (req) => {
     // ============================================================
     if (action === 'test_message') {
       const { phone } = body;
-      if (!phone) return json({ error: 'phone is required for test_message' }, 400);
+      if (!phone) return json({ success: false, error: 'phone is required for test_message' }, 200);
 
       const state = await getConnectionState(instanceName);
       if (state !== 'open' && state !== 'connected') {
@@ -870,7 +886,7 @@ Deno.serve(async (req) => {
       }
 
       if (!connect.ok) {
-        return json({ success: false, error: `Falha ao reiniciar [${connect.status}]` }, 500);
+        return json({ success: false, error: `Falha ao reiniciar [${connect.status}]` }, 200);
       }
 
       return json({ success: true, status: 'restarted', data: connect.data });
@@ -881,7 +897,7 @@ Deno.serve(async (req) => {
     // ============================================================
     if (action === 'setup_webhook') {
       const webhookUrl = body.webhookUrl;
-      if (!webhookUrl) return json({ error: 'webhookUrl required' }, 400);
+      if (!webhookUrl) return json({ success: false, error: 'webhookUrl required' }, 200);
 
       const result = await evo(`/webhook/set/${instanceName}`, {
         method: 'POST',
@@ -900,7 +916,7 @@ Deno.serve(async (req) => {
       return json({ success: result.ok, data: result.data });
     }
 
-    return json({ error: 'Invalid action. Use: generate_qrcode, check_connection, test_message, logout, restart, setup_webhook, force_sync, sync_chat' }, 400);
+    return json({ success: false, error: 'Invalid action. Use: generate_qrcode, check_connection, test_message, logout, restart, setup_webhook, force_sync, sync_chat' }, 200);
   } catch (error: any) {
     console.error('[whatsapp-connection] Global Failure:', error);
     return new Response(JSON.stringify({ 

@@ -111,11 +111,10 @@ export default function ConversationsPanel({ initialLeads, initialAgents }: { in
       const { data, error } = await supabase.functions.invoke('whatsapp-webhook', {
         body: { action: 'sync_all_profiles', store_id: storeId }
       });
-      console.log('Sync response:', data, error);
-      if (error) throw error;
+      if (data?.success === false || data?.ok === false) throw new Error(data.error || 'Erro na sincronização');
       
       const count = data?.processed ?? 0;
-      toast.success(`${count} fotos sincronizadas com sucesso!`);
+      toast.success(data?.message || `${count} fotos sincronizadas com sucesso!`);
       // Reload lead data to show new photos
       const { data: nextLeads } = await (supabase as any).from('leads').select('id, nome, telefone, controle_conversa, precisa_humano, foto_url, atendente_id').eq('loja_id', storeId);
       if (nextLeads) setLeads(nextLeads);
@@ -142,7 +141,7 @@ export default function ConversationsPanel({ initialLeads, initialAgents }: { in
         body: { action: 'sync_names', instance: storeData.instance_name, store_id: storeId }
       });
       
-      if (error) throw error;
+      if (data?.success === false || data?.ok === false) throw new Error(data.error || 'Erro na sincronização de nomes');
       
       console.log('[sync_names] Response details:', data);
       const count = data?.updated ?? 0;

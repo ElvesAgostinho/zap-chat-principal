@@ -97,9 +97,12 @@ export default function CampaignsPanel({ storeId, products }: CampaignsPanelProp
       const r = selected[i];
       if (!r.telefone) { setSendProgress({ current: i + 1, total: totalOps }); continue; }
       try {
-        const { error } = await supabase.functions.invoke('send-whatsapp', { body: { instance: instanceName, number: r.telefone, text: campaignMsg } });
-        if (!error) successCount++;
-      } catch {}
+        const { data, error } = await supabase.functions.invoke('send-whatsapp', { body: { instance: instanceName, number: r.telefone, text: campaignMsg } });
+        if (!error && data?.success !== false) successCount++;
+        else if (data?.error) console.warn(`[CampaignsPanel] Failed to send to ${r.telefone}:`, data.error);
+      } catch (err) {
+        console.error(`[CampaignsPanel] Invoke error for ${r.telefone}:`, err);
+      }
       setSendProgress({ current: i + 1, total: totalOps });
     }
 
@@ -108,8 +111,13 @@ export default function CampaignsPanel({ storeId, products }: CampaignsPanelProp
         const body: Record<string, unknown> = { instance: instanceName, statusPost: true };
         if (product.imagem) { body.mediaUrl = product.imagem; body.mediaType = 'image'; body.caption = campaignMsg; }
         else { body.text = campaignMsg; }
-        await supabase.functions.invoke('send-whatsapp', { body });
-      } catch {}
+        const { data, error } = await supabase.functions.invoke('send-whatsapp', { body });
+        if (error || data?.success === false) {
+          toast.error(`Falha ao publicar no Status: ${data?.error || 'Erro desconhecido'}`);
+        }
+      } catch (err) {
+        console.error('[CampaignsPanel] Status publish error:', err);
+      }
       setSendProgress(prev => ({ ...prev, current: prev.current + 1 }));
     }
 

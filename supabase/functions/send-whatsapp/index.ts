@@ -9,16 +9,14 @@ Deno.serve(async (req) => {
   }
 
   const EVOLUTION_API_KEY = Deno.env.get('EVOLUTION_API_KEY');
-  if (!EVOLUTION_API_KEY) {
-    return new Response(JSON.stringify({ error: 'EVOLUTION_API_KEY not configured' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  }
-
   const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
-  if (!EVOLUTION_API_URL) {
-    return new Response(JSON.stringify({ error: 'EVOLUTION_API_URL not configured' }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  
+  if (!EVOLUTION_API_KEY || !EVOLUTION_API_URL) {
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: 'EVOLUTION_API_KEY or EVOLUTION_API_URL not configured' 
+    }), {
+      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
@@ -26,90 +24,60 @@ Deno.serve(async (req) => {
     const { instance, number, text, mediaUrl, mediaType, caption, statusPost } = await req.json();
 
     if (!instance) {
-      return new Response(JSON.stringify({ error: 'Missing required field: instance' }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      return new Response(JSON.stringify({ success: false, error: 'Missing required field: instance' }), {
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     const rawUrl = EVOLUTION_API_URL.replace(/\/+$/, '');
     const baseUrl = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
-    const headers = {
-      'Content-Type': 'application/json',
-      'apikey': EVOLUTION_API_KEY,
-    };
+    const headers = { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY };
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
 
     let response;
-
-    if (statusPost) {
-      // Post to WhatsApp Status/Stories using Evolution API sendStatus endpoint
-      const statusBody: Record<string, unknown> = {
-        allContacts: true,
-      };
-
-      if (mediaUrl) {
-        statusBody.type = mediaType || 'image';
-        statusBody.content = mediaUrl;
-        statusBody.caption = caption || '';
-      } else {
-        statusBody.type = 'text';
-        statusBody.content = text || '';
-        statusBody.backgroundColor = '#25D366';
-        statusBody.font = 1;
-      }
-
-      response = await fetch(`${baseUrl}/chat/sendStatus/${instance}`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(statusBody),
-      });
-    } else if (mediaUrl) {
-      // Send media message to a contact
-      if (!number) {
-        return new Response(JSON.stringify({ error: 'Missing required field: number' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      response = await fetch(`${baseUrl}/message/sendMedia/${instance}`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          number,
-          mediatype: mediaType || 'image',
-          media: mediaUrl,
+    try {
+      if (statusPost) {
+        const statusBody = {
+          allContacts: true,
+          type: mediaUrl ? (mediaType || 'image') : 'text',
+          content: mediaUrl || text || '',
           caption: caption || '',
-        }),
-      });
-    } else {
-      // Send text message to a contact
-      if (!number || !text) {
-        return new Response(JSON.stringify({ error: 'Missing required fields: number, text' }), {
-          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          backgroundColor: '#25D366',
+          font: 1,
+        };
+        response = await fetch(`${baseUrl}/chat/sendStatus/${instance}`, {
+          method: 'POST', headers, body: JSON.stringify(statusBody), signal: controller.signal
+        });
+      } else if (mediaUrl) {
+        if (!number) throw new Error('Missing number for media message');
+        response = await fetch(`${baseUrl}/message/sendMedia/${instance}`, {
+          method: 'POST', headers, body: JSON.stringify({ number, mediatype: mediaType || 'image', media: mediaUrl, caption: caption || '' }), signal: controller.signal
+        });
+      } else {
+        if (!number || !text) throw new Error('Missing number/text for message');
+        response = await fetch(`${baseUrl}/message/sendText/${instance}`, {
+          method: 'POST', headers, body: JSON.stringify({ number, text }), signal: controller.signal
         });
       }
-      response = await fetch(`${baseUrl}/message/sendText/${instance}`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          number,
-          text,
-        }),
-      });
+    } finally {
+      clearTimeout(timeoutId);
     }
 
     const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(`Evolution API error [${response.status}]: ${JSON.stringify(data)}`);
-    }
+    if (!response.ok) throw new Error(`Evolution API error [${response.status}]: ${JSON.stringify(data)}`);
 
     return new Response(JSON.stringify({ success: true, data }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-  } catch (error: unknown) {
-    console.error('Error sending WhatsApp message:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return new Response(JSON.stringify({ success: false, error: errorMessage }), {
-      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  } catch (error: any) {
+    console.error('[send-whatsapp] Error:', error);
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error.name === 'AbortError' ? 'Timeout: Servidor WhatsApp demorou muito a responder' : error.message 
+    }), {
+      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
