@@ -302,14 +302,17 @@ Deno.serve(async (req) => {
             const phone = jid.replace(/@s\.whatsapp\.net$/, '');
             
             // Try different name fields from Evolution
-            let name = c?.pushName || c?.name || c?.notify || c?.verifiedName || '';
+            // pushName is usually the user-set name. notify is often the same.
+            let name = c?.pushName || c?.notify || c?.name || c?.verifiedName || '';
             
-            // If name is numeric and same as phone, try to find a better one
-            if (name === phone || name.replace(/\D/g, '') === phone) {
-              name = c?.verifiedName || c?.name || '';
-            }
-
-            if (name && name !== phone && name.length > 1) {
+            // Clean names like "244936..." to see if they are just the raw phone
+            const cleanName = name.replace(/\D/g, '');
+            
+            // ACCEPT CRITERIA:
+            // 1. Name is not empty
+            // 2. Name is not EXACTLY the same as raw phone (e.g. "244912345678")
+            // 3. We allow formatted names like "+244 912 345 678" as they are better than nothing
+            if (name && name !== phone) {
               contactMap.set(phone, name);
             }
           }
