@@ -272,72 +272,63 @@ Deno.serve(async (req) => {
       attempts: []
     };
     
+    // We will try the provided instance name and its lowercase version
+    const instancesToTry = Array.from(new Set([instanceName, instanceName.toLowerCase()]));
+    
     const endpoints = [
-      { path: `/chat/findContacts/${instanceName}`, method: 'POST', body: {} },
-      { path: `/chat/getContacts/${instanceName}`, method: 'GET' },
-      { path: `/chat/findContacts/${instanceName}`, method: 'POST', body: { where: {} } },
-      { path: `/chat/findContacts/${instanceName}`, method: 'GET' }
+      { path: (inst: string) => `/chat/findContacts/${inst}`, method: 'POST', body: { where: {} } },
+      { path: (inst: string) => `/chat/getContacts/${inst}`, method: 'GET' },
+      { path: (inst: string) => `/chat/findContacts/${inst}`, method: 'GET' }
     ];
-
-    for (const ep of endpoints) {
-      try {
-        const res = await evo(ep.path, { 
-          method: ep.method, 
-          body: ep.body ? JSON.stringify(ep.body) : undefined 
-        });
-        
-        const contacts = extractList(res.data, ['data', 'contacts', 'records', 'contacts']);
+ 
+    for (const inst of instancesToTry) {
         for (const ep of endpoints) {
-          const path = ep.path.replace(`/${instanceName}`, `/${inst}`);
-          const res = await evo(path, {
-            method: ep.method,
-            body: ep.body ? JSON.stringify(ep.body) : undefined
-          });
-
-          debug.attempts.push({ 
-            path: path, 
-            method: ep.method, 
-            status: res.status, 
-            ok: res.ok 
-          });
-
-          if (!res.ok) continue;
-
-          const contacts = extractList(res.data, ['data', 'contacts', 'records', 'contacts']);
-          debug.attempts[debug.attempts.length - 1].count = contacts.length;
-
-          if (contacts.length > 0) {
-            for (const c of contacts) {
-              const jid = String(c?.id || c?.remoteJid || c?.jid || '');
-              if (!jid.endsWith('@s.whatsapp.net')) continue;
-              const phone = jid.replace(/@s\.whatsapp\.net$/, '');
-              
-              // Try different name fields from Evolution
-              let name = c?.pushName || c?.notify || c?.name || c?.verifiedName || '';
-              
-              // Clean names like "244936..." to see if they are just the raw phone
-              const cleanName = name.replace(/\D/g, '');
-              
-              // ACCEPT CRITERIA:
-              // 1. Name is not empty
-              // 2. Name is not EXACTLY the same as raw phone (e.g. "244912345678")
-              // 3. We allow formatted names like "+244 912 345 678" as they are better than nothing
-              if (name && name !== phone) {
-                contactMap.set(phone, name);
+          try {
+            const path = ep.path(inst);
+            const res = await evo(path, { 
+              method: ep.method, 
+              body: ep.body ? JSON.stringify(ep.body) : undefined 
+            });
+            
+            debug.attempts.push({ 
+                instance: inst,
+                path: path, 
+                method: ep.method, 
+                status: res.status, 
+                ok: res.ok 
+            });
+ 
+            if (!res.ok) continue;
+ 
+            const contacts = extractList(res.data, ['data', 'contacts', 'records', 'contacts']);
+            debug.attempts[debug.attempts.length - 1].count = contacts.length;
+ 
+            if (contacts.length > 0) {
+              for (const c of contacts) {
+                const jid = String(c?.id || c?.remoteJid || c?.jid || '');
+                if (!jid.endsWith('@s.whatsapp.net')) continue;
+                const phone = jid.replace(/@s\.whatsapp\.net$/, '');
+                
+                // Try different name fields from Evolution
+                const name = c?.pushName || c?.notify || c?.name || c?.verifiedName || '';
+                
+                // ACCEPT CRITERIA:
+                // 1. Name is not empty
+                // 2. Name is not EXACTLY the same as raw phone (e.g. "244912345678")
+                // 3. We allow formatted names like "+244 912 345 678" as they are better than nothing
+                if (name && name !== phone) {
+                  contactMap.set(phone, name);
+                }
+              }
+              if (contactMap.size > 0) {
+                console.log(`[fetchContacts] Success with ${inst} using ${path}: ${contactMap.size} names`);
+                return { map: contactMap, debug: { ...debug, successInstance: inst, successPath: path, count: contactMap.size } };
               }
             }
-            if (contactMap.size > 0) {
-              console.log(`[fetchContacts] Success with ${inst} using ${ep.path}: ${contactMap.size} names`);
-              // Return a sample of found names for debugging
-              const sampleNames = Array.from(contactMap.entries()).slice(0, 5).map(([phone, name]) => `${name} (${phone})`);
-              return { map: contactMap, debug: { ...debug, successInstance: inst, sampleNames } };
-            }
+          } catch (e) {
+            console.error(`[fetchContacts] Error with instance ${inst} during ${ep.method} ${ep.path(inst)}:`, e);
           }
         }
-      } catch (e) {
-        console.error(`[fetchContacts] Error with instance ${inst}:`, e);
-        debug.attempts.push({ instance: inst, error: String(e) });
-      }
     }
     return { map: contactMap, debug: { ...debug, message: 'No contacts found in any instance attempt' } };
   };

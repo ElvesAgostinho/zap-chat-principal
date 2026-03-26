@@ -176,7 +176,7 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
                     className={`w-full flex items-center gap-3 rounded-xl transition-all duration-200 group relative
                       ${collapsed ? 'justify-center py-3' : 'px-3 py-2.5'}
                       ${isActive
-                        ? 'bg-white/[0.04] text-white shadow-sm'
+                        ? 'bg-primary/10 text-primary shadow-sm'
                         : item.locked 
                         ? 'text-slate-600 cursor-not-allowed opacity-50'
                         : 'text-slate-400 hover:text-white hover:bg-white/[0.02]'
@@ -195,7 +195,7 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
                         <motion.span
                           initial={{ opacity: 0 }}
                           animate={{ opacity: 1 }}
-                          className={`text-[13px] font-medium overflow-hidden whitespace-nowrap flex-1 text-left ${isActive ? 'text-white' : ''}`}
+                          className={`text-[13px] font-bold overflow-hidden whitespace-nowrap flex-1 text-left ${isActive ? 'text-primary' : ''}`}
                         >
                           {item.label}
                         </motion.span>
