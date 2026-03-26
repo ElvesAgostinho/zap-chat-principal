@@ -74,8 +74,8 @@ export default function ChatPanel() {
     (supabase as any).from('leads').select('nome, telefone, controle_conversa, precisa_humano, foto_url, atendente_id, fonte, status').eq('id', leadId).maybeSingle()
       .then(({ data }: any) => {
         if (data) { 
-          setLeadName(data.nome || 'Lead'); 
-          setLeadPhone(data.telefone || ''); 
+          setLeadName(data.nome?.trim() || data.telefone || 'Lead'); 
+          setLeadPhone(data.telefone || 'Sem número'); 
           setControleConversa(data.controle_conversa || 'bot'); 
           setPrecisaHumano(data.precisa_humano === true); 
           setLeadFoto(data.foto_url || null);
@@ -291,42 +291,42 @@ export default function ChatPanel() {
   return (
     <div className="fixed inset-0 flex bg-[hsl(var(--whatsapp-bg))] overflow-hidden">
       <div className={`flex-1 flex flex-col h-full transition-all duration-300 ${showProfile ? 'mr-[350px]' : ''}`}>
-        {/* Header - Refined with card background and border */}
-        <div className="px-4 py-3 flex items-center gap-3 flex-shrink-0 bg-card/80 backdrop-blur-xl border-b border-border/50 shadow-sm z-10">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
+        {/* Header - Refined with brand emerald background for high contrast */}
+        <div className="px-4 py-3 flex items-center gap-3 flex-shrink-0 bg-[hsl(var(--header-emerald))] border-b border-white/10 shadow-md z-10 transition-colors">
+          <button onClick={() => navigate(-1)} className="p-2 rounded-xl text-[hsl(var(--header-foreground))] hover:bg-white/10 transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary flex items-center justify-center flex-shrink-0 border border-border/50 shadow-inner">
+          <div className="w-10 h-10 rounded-full overflow-hidden bg-white/20 flex items-center justify-center flex-shrink-0 border border-white/20 shadow-inner">
             {leadFoto ? (
               <img src={leadFoto} alt={leadName} className="w-full h-full object-cover" onError={(e) => { (e.target as any).src = ''; (e.target as any).style.display = 'none'; }} />
             ) : null}
-            <span className="text-muted-foreground font-bold text-sm tracking-tight">{leadName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
+            <span className="text-[hsl(var(--header-foreground))] font-bold text-sm tracking-tight">{leadName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="font-bold text-foreground text-[15px] truncate">{leadName}</h2>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">{leadPhone || 'Sem telefone'}</p>
+            <h2 className="font-bold text-[hsl(var(--header-foreground))] text-[15px] truncate">{leadName}</h2>
+            <p className="text-[10px] text-[hsl(var(--header-foreground))]/80 uppercase tracking-widest font-semibold">{leadPhone}</p>
           </div>
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setShowProfile(!showProfile)} 
-              className={`p-2 rounded-xl transition-all ${showProfile ? 'bg-primary text-white shadow-glow' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}
+              className={`p-2 rounded-xl transition-all ${showProfile ? 'bg-white text-[hsl(var(--header-emerald))] shadow-elevated' : 'text-[hsl(var(--header-foreground))] hover:bg-white/10'}`}
               title="Informações do Lead"
             >
               <Info className="w-5 h-5" />
             </button>
             <div className={`hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold shadow-sm 
-              ${!storeBotActive ? 'bg-destructive/10 text-destructive border border-destructive/20' : 
-                isHumanMode ? 'bg-orange-500/10 text-orange-600 border border-orange-500/20' : 
-                'bg-primary/10 text-primary border border-primary/20'}`}>
+              ${!storeBotActive ? 'bg-white/20 text-white border border-white/30' : 
+                isHumanMode ? 'bg-orange-400 text-white' : 
+                'bg-white/20 text-white border border-white/30'}`}>
               {!storeBotActive ? (
-                <><X className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none">BOT OFF</span></>
+                <><X className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none text-[8px]">BOT OFF</span></>
               ) : isHumanMode ? (
-                <><User className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none">HUMANO</span></>
+                <><User className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none text-[8px]">HUMANO</span></>
               ) : (
-                <><Bot className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none text-primary">BOT</span></>
+                <><Bot className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none text-[8px]">BOT</span></>
               )}
             </div>
-            <button onClick={scheduleFollowup} className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors" title="Agendar Follow-up" >
+            <button onClick={scheduleFollowup} className="p-2 rounded-xl text-[hsl(var(--header-foreground))] hover:bg-white/10 transition-colors" title="Agendar Follow-up" >
               <CalendarClock className="w-5 h-5" />
             </button>
             {isHumanMode ? (

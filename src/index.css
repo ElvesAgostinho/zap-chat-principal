@@ -6,23 +6,23 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 220 50% 10%;
+    --background: 158 35% 98%;
+    --foreground: 220 50% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 50% 10%;
+    --card-foreground: 220 50% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 50% 10%;
+    --popover-foreground: 220 50% 12%;
 
     --primary: 158 85% 25%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 20% 96%;
-    --secondary-foreground: 220 50% 12%;
+    --secondary: 158 20% 95%;
+    --secondary-foreground: 158 85% 15%;
 
-    --muted: 220 14% 94%;
-    --muted-foreground: 220 20% 35%;
+    --muted: 158 20% 92%;
+    --muted-foreground: 158 85% 30%;
 
     --accent: 158 60% 96%;
     --accent-foreground: 158 85% 15%;
@@ -54,6 +54,9 @@
     --badge-red: 0 84% 60%;
     --sidebar-width: 260px;
     --sidebar-collapsed-width: 68px;
+
+    --header-emerald: 158 85% 25%;
+    --header-foreground: 0 0% 100%;
 
     --chart-1: 153 60% 33%;
     --chart-2: 217 91% 60%;
@@ -98,6 +101,9 @@
     --whatsapp-bubble-received: 224 71% 8%;
     --whatsapp-bg: 224 71% 2%;
     --badge-red: 0 84% 60%;
+
+    --header-emerald: 158 100% 10%;
+    --header-foreground: 0 0% 98%;
 
     --shadow-card: 0 8px 16px rgba(0, 0, 0, 0.6);
     --shadow-elevated: 0 25px 50px -12px rgba(0, 0, 0, 0.8);

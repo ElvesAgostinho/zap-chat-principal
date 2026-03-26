@@ -107,10 +107,10 @@ export default function AdminPanel() {
 
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-border/50 pb-4">
         <div>
-          <p className="text-metadata mb-1">VendaZap</p>
-          <h1 className="text-display text-lg">Configurações Master</h1>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-1">CRM TOP</p>
+          <h1 className="text-2xl font-black text-foreground tracking-tight">Configurações Master</h1>
         </div>
         <div className="flex items-center gap-2">
           <div className="flex bg-secondary p-1 rounded-xl">
@@ -140,19 +140,22 @@ export default function AdminPanel() {
       ) : loja && (
         <>
           {/* Store Code - Prominent */}
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-primary/5 border-2 border-primary/20 p-5 rounded-2xl space-y-2">
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-[hsl(var(--header-emerald))] p-6 rounded-[2rem] space-y-3 shadow-glow border border-white/10">
             <div className="flex items-center gap-2">
-              <KeyRound className="w-5 h-5 text-primary" />
-              <h2 className="font-semibold text-foreground">Código da Loja</h2>
+              <KeyRound className="w-5 h-5 text-white" />
+              <h2 className="font-bold text-white text-sm uppercase tracking-widest">Código da Loja</h2>
             </div>
-            <p className="text-xs text-muted-foreground">Compartilhe este código com os funcionários para se cadastrarem.</p>
-            <div className="flex items-center gap-3">
-              <span className="text-3xl font-mono font-bold text-primary tracking-[0.3em]">{loja.codigo_unico}</span>
-              <motion.button whileTap={{ scale: 0.95 }} onClick={copyCode} className="p-2 rounded-xl bg-primary/10 text-primary">
-                {copied ? <CheckCircle className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+            <p className="text-[11px] text-white/70 font-medium">Compartilhe este código com os funcionários para se cadastrarem.</p>
+            <div className="flex items-center gap-4 py-2">
+              <span className="text-4xl font-black text-white tracking-[0.4em] drop-shadow-md">{loja.codigo_unico}</span>
+              <motion.button whileTap={{ scale: 0.95 }} onClick={copyCode} className="p-3 rounded-2xl bg-white/20 text-white hover:bg-white/30 backdrop-blur-md transition-all">
+                {copied ? <CheckCircle className="w-6 h-6" /> : <Copy className="w-6 h-6" />}
               </motion.button>
             </div>
-            <p className="text-[11px] text-muted-foreground">Loja: <strong className="text-foreground">{loja.nome}</strong></p>
+            <div className="flex items-center gap-2 pt-2 border-t border-white/10">
+              <Store className="w-3.5 h-3.5 text-white/60" />
+              <p className="text-[11px] text-white font-bold">Identidade: <span className="uppercase tracking-tighter">{loja.nome}</span></p>
+            </div>
           </motion.div>
 
           {/* WhatsApp Connection */}
