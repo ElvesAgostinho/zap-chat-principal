@@ -87,7 +87,7 @@ const getNavGroups = (
 };
 
 export default function Sidebar({ active, onChange, alertCount = 0, orderCount = 0, chatCount = 0, showAdmin = false, onSearch, storeName }: SidebarProps) {
-  const { signOut, userName, plano } = useAuth();
+  const { signOut, userName, plano, storeProfilePic, storePhone, role } = useAuth();
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== 'undefined' && window.innerWidth < 1024) return true;
     return localStorage.getItem('sidebar_collapsed') === 'true';
@@ -252,19 +252,43 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
         </button>
 
         {/* User profile */}
-        <div className={`flex items-center gap-3 rounded-2xl bg-muted/30 p-2.5 transition-all
-          ${collapsed ? 'justify-center w-10 h-10 p-0 mx-auto' : 'px-3 py-2.5'}`}
+        <div className={`flex flex-col gap-2 rounded-2xl bg-muted/30 p-2.5 transition-all
+          ${collapsed ? 'items-center p-2' : 'px-3 py-3'}`}
         >
-          <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center flex-shrink-0 shadow-sm border border-white/20">
-            <span className="text-white text-[10px] font-black tracking-tighter">{initials}</span>
-          </div>
-          {!collapsed && (
-            <div className="flex-1 min-w-0">
-              <p className="text-[12px] font-bold text-foreground truncate">{userName || 'Admin'}</p>
-              <p className="text-[9px] text-muted-foreground uppercase tracking-widest leading-none mt-0.5">Administrador</p>
+          {/* WhatsApp Admin Instance Info */}
+          {(storeProfilePic || storePhone) && (
+            <div className={`flex items-center gap-3 w-full border-b border-border/50 pb-2 mb-1 ${collapsed ? 'justify-center pb-0 border-0 mb-0' : ''}`}>
+              {storeProfilePic ? (
+                <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 shadow-sm border border-emerald-500/30">
+                  <img src={storeProfilePic} alt="WhatsApp Avatar" className="w-full h-full object-cover" />
+                </div>
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center flex-shrink-0 shadow-sm border border-emerald-500/30">
+                  <span className="text-emerald-500 text-[10px] font-black"><Zap className="w-4 h-4" /></span>
+                </div>
+              )}
+              {!collapsed && (
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-bold text-emerald-500 truncate flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    WhatsApp
+                  </p>
+                  <p className="text-[10px] text-muted-foreground tracking-wider font-mono mt-0.5 truncate">{storePhone ? `+${storePhone}` : 'Conectado'}</p>
+                </div>
+              )}
             </div>
           )}
-          {!collapsed && (
+
+          {/* User Info */}
+          <div className={`flex items-center gap-3 w-full ${collapsed ? 'hidden' : ''}`}>
+            <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center flex-shrink-0 shadow-sm border border-white/20">
+              <span className="text-white text-[10px] font-black tracking-tighter">{initials}</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] font-bold text-foreground truncate">{userName || 'Admin'}</p>
+              <p className="text-[9px] text-muted-foreground uppercase tracking-widest leading-none mt-0.5">{role === 'admin' ? 'Administrador' : 'Funcionário'}</p>
+            </div>
+            
             <button
               onClick={signOut}
               className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
@@ -272,7 +296,7 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
             >
               <LogOut className="w-4 h-4" />
             </button>
-          )}
+          </div>
         </div>
 
         {/* Collapse toggle */}

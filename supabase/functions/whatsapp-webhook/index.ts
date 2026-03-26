@@ -800,9 +800,43 @@ Deno.serve(async (req) => {
         const statusMap: Record<string, string> = {
           open: 'connected', close: 'disconnected', connecting: 'connecting',
         };
+        const newStatus = statusMap[state] || state;
+        const updateData: any = { instance_status: newStatus };
+
+        // Tentar capturar o número da própria instância
+        const senderJid = body.sender || body.data?.sender || '';
+        const instancePhone = senderJid.replace('@s.whatsapp.net', '');
+        if (instancePhone) {
+          updateData.instance_number = instancePhone;
+        }
+
+        // Se conectou, vamos buscar a foto de perfil do admin conectado
+        if (newStatus === 'connected' && EVOLUTION_API_URL && EVOLUTION_API_KEY && instancePhone) {
+          try {
+            const rawUrl = EVOLUTION_API_URL.replace(/\/+$/, '');
+            const baseUrl = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
+            
+            const picRes = await fetch(`${baseUrl}/chat/fetchProfilePictureUrl/${instanceName}`, {
+               method: 'POST',
+               headers: { 'apikey': EVOLUTION_API_KEY, 'Content-Type': 'application/json' },
+               body: JSON.stringify({ number: instancePhone })
+            });
+            if (picRes.ok) {
+              const picData = await picRes.json();
+              const profileUrl = picData?.profilePictureUrl || picData?.url || picData?.data?.profilePictureUrl;
+              if (profileUrl) {
+                // Evolution serve um link da internet (se não encontrar enviará 404, por isso a checagem dupla)
+                updateData.instance_profile_pic = profileUrl;
+              }
+            }
+          } catch (e) {
+            console.error('[webhook] Error fetching instance profile pic:', e);
+          }
+        }
+
         await supabase
           .from('lojas')
-          .update({ instance_status: statusMap[state] || state })
+          .update(updateData)
           .eq('instance_name', instanceName);
       }
 

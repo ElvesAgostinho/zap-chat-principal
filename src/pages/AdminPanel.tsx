@@ -54,9 +54,31 @@ export default function AdminPanel() {
     }
   };
 
+  const pendingEmployees = employees.filter(e => e.status === 'pendente');
+  const approvedEmployees = employees.filter(e => e.status === 'aprovado');
+  const isConnected = loja?.instance_status === 'connected';
+
+  const GET_MAX_EMPLOYEES = (p: string | null) => {
+    if (p === 'enterprise') return 999;
+    if (p === 'profissional') return 5;
+    return 2; // Starter = 2 accounts total
+  };
+
   const handleApprove = async (id: string) => {
+    const currentCount = approvedEmployees.length;
+    const maxCount = GET_MAX_EMPLOYEES(plano);
+
+    if (currentCount >= maxCount && !isSuperAdmin) {
+      toast({ 
+        title: 'Limite de Usuários Atingido', 
+        description: `O seu plano ${plano || 'Starter'} permite o balcão de até ${maxCount} utilizador(es). Por favor, contacte o suporte para fazer upgrade.`, 
+        variant: 'destructive' 
+      });
+      return;
+    }
+
     await (supabase as any).from('usuarios_loja').update({ status: 'aprovado' }).eq('id', id);
-    toast({ title: 'Funcionário aprovado!' });
+    toast({ title: 'Funcionário aprovado com sucesso!' });
     fetchData();
   };
 
@@ -123,9 +145,6 @@ export default function AdminPanel() {
     }
   };
 
-  const pendingEmployees = employees.filter(e => e.status === 'pendente');
-  const approvedEmployees = employees.filter(e => e.status === 'aprovado');
-  const isConnected = loja?.instance_status === 'connected';
 
   return (
     <div className="space-y-5">

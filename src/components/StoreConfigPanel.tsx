@@ -7,7 +7,6 @@ import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import WhatsAppConnectionPanel from '@/components/WhatsAppConnectionPanel';
 
 const IDIOMAS = [
   { value: 'pt-AO', label: '🇦🇴 Português (Angola)' },
@@ -141,8 +140,6 @@ export default function StoreConfigPanel() {
         </motion.div>
       )}
 
-      {/* WhatsApp Connection - Only for Admins */}
-      {isAdmin && <WhatsAppConnectionPanel />}
 
       {/* Idioma */}
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card p-5 rounded-2xl shadow-card space-y-3">

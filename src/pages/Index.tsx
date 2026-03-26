@@ -60,6 +60,7 @@ export default function Index() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [agents, setAgents] = useState<{id: string, nome: string}[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Produto | null>(null);
   const [showAddLead, setShowAddLead] = useState(false);
@@ -92,10 +93,16 @@ export default function Index() {
     setAgents(data?.map((agent: any) => ({ id: agent.user_id, nome: agent.nome || 'Agente' })) || []);
   }, [storeId]);
 
+  const fetchMessages = useCallback(async () => {
+    if (!storeId) return;
+    const { data } = await (supabase as any).from('mensagens').select('lead_id, lead_nome, conteudo, tipo, created_at, is_bot, respondido_por_nome').eq('loja_id', storeId).order('created_at', { ascending: false });
+    setMessages(data || []);
+  }, [storeId]);
+
   const fetchAll = useCallback(async () => {
     if (!storeId) return;
-    await Promise.all([fetchProducts(), fetchLeads(), fetchVendas(), fetchAgents()]);
-  }, [fetchProducts, fetchLeads, fetchVendas, fetchAgents, storeId]);
+    await Promise.all([fetchProducts(), fetchLeads(), fetchVendas(), fetchAgents(), fetchMessages()]);
+  }, [fetchProducts, fetchLeads, fetchVendas, fetchAgents, fetchMessages, storeId]);
 
   useEffect(() => {
     if (!storeId) return;
@@ -104,13 +111,19 @@ export default function Index() {
     const ch1 = supabase.channel('produtos-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'produtos' }, () => fetchProducts()).subscribe();
     const ch2 = supabase.channel('leads-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => fetchLeads()).subscribe();
     const ch3 = supabase.channel('vendas-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'vendas' }, () => fetchVendas()).subscribe();
+    const ch4 = supabase.channel('mensagens-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'mensagens' }, (payload: any) => {
+      const newMsg = payload.new;
+      if (newMsg && newMsg.loja_id === storeId) setMessages(prev => [newMsg, ...prev]);
+      else fetchMessages();
+    }).subscribe();
     
     return () => {
       supabase.removeChannel(ch1);
       supabase.removeChannel(ch2);
       supabase.removeChannel(ch3);
+      supabase.removeChannel(ch4);
     };
-  }, [storeId, fetchProducts, fetchLeads, fetchVendas, fetchAll]);
+  }, [storeId, fetchProducts, fetchLeads, fetchVendas, fetchMessages, fetchAll]);
 
   useEffect(() => {
     if (!storeId) return;
@@ -231,7 +244,7 @@ export default function Index() {
             </div>
           </div>
         );
-      case 'chat': return <ConversationsPanel initialLeads={leads} initialAgents={agents} />;
+      case 'chat': return <ConversationsPanel initialLeads={leads} initialAgents={agents} messages={messages} />;
       case 'delivery': return <DeliveryPanel initialVendas={(vendas || []).filter(v => v.status_entrega !== 'entregue')} />;
       case 'alerts': return <AlertsPanel initialLeads={(leads || []).filter(l => l.precisa_humano)} />;
       case 'schedule': return <SchedulingPanel />;

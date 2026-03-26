@@ -36,6 +36,19 @@ Deno.serve(async (req) => {
   const baseUrl = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
 
   try {
+    // === FOLLOW-UPS NATIVOS (HARD-CODED) DESATIVADOS ======
+    // A pedido do usuário, o sistema nativo e incontrolável de follow-ups
+    // foi desligado. O CRM dependerá exclusivamente das regras de automação
+    // customizáveis (via n8n ou webhooks de campanhas ativas).
+    return new Response(JSON.stringify({
+      success: true,
+      msg: 'Follow-ups natives disabled per user request. Use Automations instead.',
+      followups_sent: 0,
+      post_sale_sent: 0,
+    }), {
+      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+
     let followupsSent = 0;
     let postSaleSent = 0;
 

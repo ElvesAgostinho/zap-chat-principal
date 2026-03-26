@@ -16,14 +16,12 @@ interface Conversation {
   controleConversa: string; precisaHumano: boolean; atendenteId?: string | null; fotoUrl?: string | null;
 }
 
-export default function ConversationsPanel({ initialLeads, initialAgents }: { initialLeads: LeadRow[], initialAgents: Agent[] }) {
+export default function ConversationsPanel({ initialLeads, initialAgents, messages = [] }: { initialLeads: LeadRow[], initialAgents: Agent[], messages?: MsgRow[] }) {
   const navigate = useNavigate();
   const { storeId } = useAuth();
   const [search, setSearch] = useState(() => sessionStorage.getItem('chat_search') || '');
   const [filter, setFilter] = useState<'all' | 'unread' | 'bot' | 'human'>(() => (sessionStorage.getItem('chat_filter') as any) || 'all');
-  const [messages, setMessages] = useState<MsgRow[]>([]);
   const [leads, setLeads] = useState<LeadRow[]>(initialLeads);
-  const [loading, setLoading] = useState(true);
   const [agents] = useState<Agent[]>(initialAgents);
   const [syncing, setSyncing] = useState(false);
 
@@ -38,40 +36,7 @@ export default function ConversationsPanel({ initialLeads, initialAgents }: { in
     }
   }, [initialLeads]);
 
-  useEffect(() => {
-    if (!storeId) { setLoading(false); return; }
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const loadMessages = () => (supabase as any).from('mensagens').select('lead_id, lead_nome, conteudo, tipo, created_at, is_bot, respondido_por_nome').eq('loja_id', storeId).order('created_at', { ascending: false });
-        const { data: initialMessages } = await loadMessages();
-        const { data: storeData } = await (supabase as any).from('lojas').select('instance_name, instance_status').eq('id', storeId).maybeSingle();
-        
-        let nextMessages = initialMessages || [];
-        if (nextMessages.length === 0 && storeData?.instance_name && storeData?.instance_status === 'connected') {
-          console.log('No messages found, triggering force_sync...');
-          try {
-            await supabase.functions.invoke('whatsapp-connection', { body: { action: 'force_sync', instance: storeData.instance_name, store_id: storeId } });
-            const { data: syncedMessages } = await loadMessages();
-            nextMessages = syncedMessages || [];
-          } catch (syncErr) {
-            console.error('Sync failed:', syncErr);
-          }
-        }
-        setMessages(nextMessages);
-      } catch (err) {
-        console.error('Fetch data failed:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-    const channel = supabase.channel('mensagens-rt').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens' }, (payload: any) => {
-      const newMsg = payload.new as MsgRow & { loja_id: string };
-      if (newMsg.loja_id === storeId) setMessages(prev => [newMsg, ...prev]);
-    }).subscribe();
-    return () => { supabase.removeChannel(channel); };
-  }, [storeId]);
+
 
   const conversations = useMemo<Conversation[]>(() => {
     const grouped = new Map<string, MsgRow[]>();
@@ -215,8 +180,8 @@ export default function ConversationsPanel({ initialLeads, initialAgents }: { in
           </div>
         </div>
       </div>
-      {loading && <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-[hsl(var(--whatsapp-mid))]" /></div>}
-      {!loading && (
+      {!messages && <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-[hsl(var(--whatsapp-mid))]" /></div>}
+      {messages && (
         <div className="space-y-1.5">
           <AnimatePresence mode="popLayout">
             {filtered.map(conv => (
