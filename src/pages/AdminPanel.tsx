@@ -26,6 +26,7 @@ export default function AdminPanel() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'geral' | 'api'>('geral');
+  const [connectingInProcess, setConnectingInProcess] = useState(false);
   
   const isPro = plano === 'profissional' || plano === 'enterprise' || isSuperAdmin;
 
@@ -66,7 +67,10 @@ export default function AdminPanel() {
 
   const handleConnectInstance = async () => {
     if (!loja) return;
+    setConnectingInProcess(true);
     const instanceName = loja.instance_name || `store_${loja.id.slice(0, 8)}`;
+    console.log('[AdminPanel] Connecting instance:', instanceName);
+    
     try {
       // Create instance if none exists
       if (!loja.instance_name) {
@@ -75,10 +79,14 @@ export default function AdminPanel() {
         if (createData?.success === false) throw new Error(createData.error || 'Erro ao criar instância');
         await (supabase as any).from('lojas').update({ instance_name: instanceName }).eq('id', loja.id);
       }
-      // Get QR
-      const { data, error } = await supabase.functions.invoke('manage-instance', { body: { action: 'connect', instanceName } });
+
+      // Get QR via unified whatsapp-connection
+      const { data, error } = await supabase.functions.invoke('whatsapp-connection', { 
+        body: { action: 'generate_qrcode', instance: instanceName, store_id: loja.id } 
+      });
       if (error) throw error;
       if (data?.success === false) throw new Error(data.error || 'Erro ao conectar');
+      
       const base64 = data?.data?.base64;
       if (base64) {
         const qrSrc = base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
@@ -86,10 +94,15 @@ export default function AdminPanel() {
         if (w) {
           w.document.write(`<html><head><title>QR - ${instanceName}</title></head><body style="display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f5f5f5;font-family:sans-serif;flex-direction:column;gap:16px"><img src="${qrSrc}" style="width:300px;height:300px;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,0.1)"/><p style="color:#666;font-size:14px">Escaneie com WhatsApp</p></body></html>`);
         }
+      } else if (data?.status !== 'connected') {
+        throw new Error(`QR não disponível. Payload: ${JSON.stringify(data?.data || data).slice(0, 150)}`);
       }
+
       // Poll status
       const poll = setInterval(async () => {
-        const { data: s } = await supabase.functions.invoke('manage-instance', { body: { action: 'status', instanceName } });
+        const { data: s, error: sErr } = await supabase.functions.invoke('manage-instance', { body: { action: 'status', instanceName } });
+        if (sErr) return;
+        
         const state = s?.data?.instance?.state || s?.data?.state;
         if (state === 'open' || state === 'connected') {
           await (supabase as any).from('lojas').update({ instance_status: 'connected', instance_name: instanceName }).eq('id', loja.id);
@@ -100,7 +113,10 @@ export default function AdminPanel() {
       }, 5000);
       setTimeout(() => clearInterval(poll), 120000);
     } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+      console.error('[AdminPanel] Connection error:', err);
+      toast({ title: 'Erro de Conexão', description: err.message, variant: 'destructive' });
+    } finally {
+      setConnectingInProcess(false);
     }
   };
 
@@ -192,7 +208,15 @@ export default function AdminPanel() {
                 </span>
               </div>
               {!isConnected && (
-                <motion.button whileTap={{ scale: 0.95 }} onClick={handleConnectInstance} className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium">Conectar</motion.button>
+                <motion.button 
+                  whileTap={{ scale: 0.95 }} 
+                  onClick={handleConnectInstance} 
+                  disabled={connectingInProcess}
+                  className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium disabled:opacity-50 flex items-center gap-2"
+                >
+                  {connectingInProcess && <Loader2 className="w-3 h-3 animate-spin" />}
+                  {connectingInProcess ? 'Conectando...' : 'Conectar'}
+                </motion.button>
               )}
             </div>
             {loja.instance_name && <p className="text-[10px] font-mono text-muted-foreground mt-1">{loja.instance_name}</p>}
