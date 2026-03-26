@@ -105,7 +105,7 @@ export default function ConversationsPanel({ initialLeads, initialAgents }: { in
     if (!storeId) return;
     setSyncing(true);
     try {
-      console.log('Invoking sync-profiles action...');
+      console.log('Invoking sync-all-profiles action...');
       const { data, error } = await supabase.functions.invoke('whatsapp-webhook', {
         body: { action: 'sync_all_profiles', store_id: storeId }
       });
@@ -115,11 +115,42 @@ export default function ConversationsPanel({ initialLeads, initialAgents }: { in
       const count = data?.processed ?? 0;
       toast.success(`${count} fotos sincronizadas com sucesso!`);
       // Reload lead data to show new photos
-      const { data: nextLeads } = await (supabase as any).from('leads').select('id, nome, telefone, controle_conversa, precisa_humano, foto_url').eq('loja_id', storeId);
+      const { data: nextLeads } = await (supabase as any).from('leads').select('id, nome, telefone, controle_conversa, precisa_humano, foto_url, atendente_id').eq('loja_id', storeId);
       if (nextLeads) setLeads(nextLeads);
     } catch (err: any) {
       console.error('Error syncing profiles:', err);
-      toast.error('Erro ao sincronizar fotos. Verifique a conexão.');
+      toast.error('Erro ao sincronizar fotos.');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  const handleSyncNames = async () => {
+    if (!storeId) return;
+    setSyncing(true);
+    try {
+      const { data: storeData } = await (supabase as any).from('lojas').select('instance_name').eq('id', storeId).maybeSingle();
+      if (!storeData?.instance_name) {
+        toast.error('Instância não configurada.');
+        return;
+      }
+
+      console.log('Invoking sync_names action...');
+      const { data, error } = await supabase.functions.invoke('whatsapp-connection', {
+        body: { action: 'sync_names', instance: storeData.instance_name, store_id: storeId }
+      });
+      
+      if (error) throw error;
+      
+      const count = data?.updated ?? 0;
+      toast.success(`${count} nomes sincronizados com sucesso!`);
+      
+      // Reload lead data to show new names
+      const { data: nextLeads } = await (supabase as any).from('leads').select('id, nome, telefone, controle_conversa, precisa_humano, foto_url, atendente_id').eq('loja_id', storeId);
+      if (nextLeads) setLeads(nextLeads);
+    } catch (err: any) {
+      console.error('Error syncing names:', err);
+      toast.error('Erro ao sincronizar nomes.');
     } finally {
       setSyncing(false);
     }
@@ -155,15 +186,26 @@ export default function ConversationsPanel({ initialLeads, initialAgents }: { in
             </button>
           ))}
           <div className="w-px h-6 bg-border mx-1" />
-          <button 
-            onClick={handleSyncProfiles}
-            disabled={syncing}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-muted text-foreground border border-border hover:bg-accent transition-all disabled:opacity-50"
-            title="Sincronizar fotos do WhatsApp"
-          >
-            {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">Sincronizar Fotos</span>
-          </button>
+          <div className="flex gap-1.5">
+            <button 
+              onClick={handleSyncProfiles}
+              disabled={syncing}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-muted text-foreground border border-border hover:bg-accent transition-all disabled:opacity-50"
+              title="Sincronizar fotos do WhatsApp"
+            >
+              {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
+              <span className="hidden sm:inline">Fotos</span>
+            </button>
+            <button 
+              onClick={handleSyncNames}
+              disabled={syncing}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-muted text-foreground border border-border hover:bg-accent transition-all disabled:opacity-50"
+              title="Sincronizar nomes do WhatsApp"
+            >
+              {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <User className="w-3.5 h-3.5" />}
+              <span className="hidden sm:inline">Nomes</span>
+            </button>
+          </div>
         </div>
       </div>
       {loading && <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-[hsl(var(--whatsapp-mid))]" /></div>}
@@ -197,6 +239,9 @@ export default function ConversationsPanel({ initialLeads, initialAgents }: { in
                       <h3 className="font-semibold text-sm text-foreground truncate">{conv.leadName}</h3>
                       <time className="text-[10px] text-muted-foreground flex-shrink-0">{formatTime(conv.lastMessageTime)}</time>
                     </div>
+                    {conv.phone && (
+                      <p className="text-[10px] text-muted-foreground/70 font-medium mb-1">{conv.phone}</p>
+                    )}
                     <div className="flex items-center gap-1.5 opacity-90">
                       {conv.precisaHumano ? <span className="relative flex h-2.5 w-2.5 flex-shrink-0"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[hsl(var(--badge-red))] opacity-75" /><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[hsl(var(--badge-red))]" /></span>
                       : conv.isBot ? <Bot className="w-3.5 h-3.5 text-[hsl(var(--whatsapp-mid))] flex-shrink-0 mb-[1px]" /> : <User className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mb-[1px]" />}

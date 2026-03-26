@@ -587,6 +587,27 @@ Deno.serve(async (req) => {
       return json({ success: true, status: 'force_sync_complete', instance: instanceName, sync });
     }
 
+    if (action === 'sync_names') {
+      console.log(`[sync_names] Fetching names from Evolution for store=${store_id}`);
+      const contactNames = await fetchContacts(instanceName);
+      if (contactNames.size === 0) {
+        return json({ success: true, updated: 0, message: 'Nenhum contato com nome encontrado na API' });
+      }
+
+      const { data: leads } = await sb.from('leads').select('id, telefone, nome').eq('loja_id', store_id);
+      let updatedCount = 0;
+      for (const lead of (leads || [])) {
+        const phone = lead.telefone.replace(/\D/g, '');
+        const apiName = contactNames.get(phone);
+        // Only update if we have a name and the current name is a phone/placeholder
+        if (apiName && (lead.nome === lead.telefone || !lead.nome || /^\+?\d+$/.test(lead.nome))) {
+           await sb.from('leads').update({ nome: apiName }).eq('id', lead.id);
+           updatedCount++;
+        }
+      }
+      return json({ success: true, updated: updatedCount, total_contacts: contactNames.size });
+    }
+
     if (action === 'sync_chat') {
       const sync = await syncChatHistoryFromEvolution(store_id, instanceName, body.phone || null);
       return json({ success: true, status: 'sync_chat_complete', instance: instanceName, sync });
