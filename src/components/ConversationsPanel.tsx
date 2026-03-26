@@ -33,7 +33,9 @@ export default function ConversationsPanel({ initialLeads, initialAgents }: { in
   }, [search, filter]);
 
   useEffect(() => {
-    setLeads(initialLeads);
+    if (initialLeads && initialLeads.length > 0) {
+      setLeads(initialLeads);
+    }
   }, [initialLeads]);
 
   useEffect(() => {

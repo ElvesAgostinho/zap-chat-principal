@@ -26,7 +26,7 @@ function MessageMedia({ url, type }: { url: string; type: string }) {
   if (type === 'audio') return (
     <div className="flex items-center gap-1 bg-black/5 dark:bg-white/5 p-1 rounded-full w-[240px]">
       <div className="w-9 h-9 rounded-full bg-[hsl(var(--whatsapp-mid))] flex items-center justify-center flex-shrink-0 shadow-sm ml-1">
-         <Mic className="w-4 h-4 text-white" />
+         <Mic className="w-4 h-4 text-primary-foreground" />
       </div>
       <audio src={url} controls controlsList="nodownload" className="w-full h-9 [&::-webkit-media-controls-enclosure]:bg-transparent" preload="metadata" />
     </div>
@@ -315,9 +315,9 @@ export default function ChatPanel() {
               <Info className="w-5 h-5" />
             </button>
             <div className={`hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold shadow-sm 
-              ${!storeBotActive ? 'bg-white/20 text-white border border-white/30' : 
-                isHumanMode ? 'bg-orange-400 text-white' : 
-                'bg-white/20 text-white border border-white/30'}`}>
+              ${!storeBotActive ? 'bg-secondary text-muted-foreground border border-border' : 
+                isHumanMode ? 'bg-orange-500 text-white shadow-glow' : 
+                'bg-primary/10 text-primary border border-primary/20'}`}>
               {!storeBotActive ? (
                 <><X className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none text-[8px]">BOT OFF</span></>
               ) : isHumanMode ? (
@@ -334,7 +334,7 @@ export default function ChatPanel() {
                 <RotateCcw className="w-3.5 h-3.5 mb-[1px]" /> <span className="leading-none">Bot</span>
               </button>
             ) : (
-              <button onClick={assumeConversation} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-white text-[11px] font-bold hover:bg-primary/90 transition-all shadow-glow">
+              <button onClick={assumeConversation} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-[11px] font-bold hover:bg-primary/90 transition-all shadow-glow">
                 <UserCheck className="w-3.5 h-3.5 mb-[1px]" /> <span className="leading-none">Assumir</span>
               </button>
             )}
@@ -344,10 +344,10 @@ export default function ChatPanel() {
         {/* Human attention banner */}
         <AnimatePresence>
           {precisaHumano && (
-            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-orange-500/95 backdrop-blur-md px-4 py-2 flex items-center gap-3 overflow-hidden">
-              <div className="flex-shrink-0 w-2 h-2 rounded-full bg-white animate-pulse" />
-              <p className="text-[11px] text-white font-black uppercase tracking-widest">Aguardando Resposta Manual</p>
-              <button onClick={assumeConversation} className="ml-auto text-[10px] bg-white text-orange-600 px-3 py-1 rounded-full font-black uppercase tracking-tighter hover:bg-orange-50 transition-colors">Resolver Agora</button>
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-orange-500 px-4 py-2 flex items-center gap-3 overflow-hidden shadow-glow">
+              <div className="flex-shrink-0 w-2 h-2 rounded-full bg-orange-100 animate-pulse" />
+              <p className="text-[11px] text-orange-50 font-black uppercase tracking-widest">Aguardando Resposta Manual</p>
+              <button onClick={assumeConversation} className="ml-auto text-[10px] bg-white text-orange-600 px-3 py-1 rounded-full font-black uppercase tracking-tighter hover:bg-white/90 transition-colors shadow-sm">Resolver Agora</button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -429,7 +429,7 @@ export default function ChatPanel() {
 
         {/* Input bar - More contrast and border */}
         <footer className="bg-card border-t-2 border-primary/20 bg-gradient-to-b from-card to-secondary/30 px-4 py-3 pb-6 sm:pb-3 flex gap-3 flex-shrink-0 z-30 min-h-[76px] items-end">
-          <button onClick={() => setShowAttach(!showAttach)} className={`w-11 h-11 flex-shrink-0 rounded-2xl flex items-center justify-center transition-all ${showAttach ? 'bg-primary text-white shadow-glow' : 'bg-muted text-muted-foreground hover:bg-muted/80 border border-border'}`}>
+          <button onClick={() => setShowAttach(!showAttach)} className={`w-11 h-11 flex-shrink-0 rounded-2xl flex items-center justify-center transition-all ${showAttach ? 'bg-primary text-primary-foreground shadow-glow' : 'bg-muted text-muted-foreground hover:bg-muted/80 border border-border'}`}>
             <Plus className="w-5 h-5" />
           </button>
           <div className="flex-1 relative flex items-end">
@@ -441,7 +441,7 @@ export default function ChatPanel() {
               className="w-full bg-background text-foreground text-[15px] font-medium rounded-2xl pl-4 pr-12 py-3 focus:ring-2 focus:ring-primary/20 focus:outline-none transition-all resize-none min-h-[44px] max-h-[120px] shadow-sm border border-border/60"
             />
             <button onClick={sendMessage} disabled={sending || (!input.trim() && !mediaPreview)}
-              className="absolute right-1.5 bottom-1.5 w-[34px] h-[34px] rounded-xl bg-primary text-white flex items-center justify-center disabled:opacity-30 hover:scale-105 active:scale-95 transition-all shadow-glow">
+              className="absolute right-1.5 bottom-1.5 w-[34px] h-[34px] rounded-xl bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-30 hover:scale-105 active:scale-95 transition-all shadow-glow">
               {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 ml-0.5" />}
             </button>
           </div>
@@ -478,7 +478,7 @@ export default function ChatPanel() {
                     <User className="w-10 h-10 text-muted-foreground/30" />
                   )}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                    <Camera className="w-6 h-6 text-white" />
+                    <Camera className="w-6 h-6 text-primary-foreground" />
                   </div>
                 </div>
                 <input ref={profileFileRef} type="file" accept="image/*" className="hidden" onChange={handleProfileUpload} />

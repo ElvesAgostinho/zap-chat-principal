@@ -99,9 +99,24 @@
   }
 }
 
-/* Force light mode contrast for sidebar */
+/* Force light mode contrast for neutral text, icons and titles */
+:root:not(.dark) {
+  --foreground: 224 71% 4%;
+  --muted-foreground: 215 25% 20%;
+}
+
+/* Force contrast on text-white EXCEPT when inside primary/destructive/emerald containers or gradients */
+:root:not(.dark) .text-white:not(.bg-primary *, .bg-destructive *, .bg-orange-500 *, .bg-emerald-500 *, .gradient-primary *, .bg-primary, .bg-destructive, .bg-orange-500, .bg-emerald-500, .gradient-primary, .shadow-glow *) {
+  color: hsl(var(--foreground)) !important;
+}
+
+:root:not(.dark) .bg-black\/40 {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
 :root:not(.dark) .sidebar-item-text {
   color: hsl(var(--sidebar-foreground)) !important;
+  font-weight: 600;
 }
 
 :root:not(.dark) .sidebar-item-text.active {
@@ -109,7 +124,21 @@
 }
 
 :root:not(.dark) .sidebar-group-label {
-  color: hsl(215, 25%, 27%) !important;
+  color: hsl(215, 25% , 20%) !important;
+  opacity: 1 !important;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Universal high-contrast for common shadcn/tailwind patterns in light mode */
+:root:not(.dark) .text-muted-foreground {
+  color: hsl(215, 25%, 25%) !important;
+}
+
+:root:not(.dark) .text-slate-400,
+:root:not(.dark) .text-slate-500 {
+  color: hsl(215, 25%, 30%) !important;
 }
 
 @layer base {

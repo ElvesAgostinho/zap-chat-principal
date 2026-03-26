@@ -260,7 +260,12 @@ Deno.serve(async (req) => {
     const rawEvent = body.event || body.eventType || body.type || '';
     const eventNormalized = rawEvent.toLowerCase().replace(/_/g, '.');
 
-    console.log(`[webhook] event=${rawEvent} normalized=${eventNormalized} instance=${body.instance || 'unknown'} payload=${JSON.stringify(body).slice(0, 800)}`);
+    console.log(`[webhook] RECEIVED EVENT: ${rawEvent} | normalized: ${eventNormalized} | instance: ${body.instance || 'unknown'}`);
+    
+    // Quick debug: If it's a message, log its content to console clearly
+    if (eventNormalized === 'messages.upsert' && body.data?.message) {
+      console.log(`[webhook] Message from ${body.data.pushName || 'unknown'}: ${JSON.stringify(body.data.message).slice(0, 200)}`);
+    }
 
     // ===== HANDLE MESSAGES =====
     if (eventNormalized === 'messages.upsert') {
@@ -432,8 +437,11 @@ Deno.serve(async (req) => {
       const { error: msgError } = await supabase.from('mensagens').insert(msgInsert);
 
       if (msgError) {
-        console.error('[webhook] Error saving message:', msgError);
-        throw msgError;
+        console.error('[webhook] ERROR SAVING MESSAGE TO DB:', msgError);
+        // Continue even if save fails, try to respond? 
+        // Actually, we need the message to exist for history, but let's not block the bot if possible
+      } else {
+        console.log(`[webhook] Message saved successfully for lead ${leadId}`);
       }
 
       console.log(`[webhook] Message saved: ${fromMe ? 'OUT' : 'IN'} from ${leadName} (${phone}): ${contentToSave.slice(0, 60)}${persistedMediaUrl ? ' [media:' + persistedMediaType + ']' : ''}`);
@@ -499,13 +507,23 @@ Deno.serve(async (req) => {
               botBody.image_url = persistedMediaUrl;
             }
 
+            console.log(`[webhook] Calling AI bot for lead ${leadId}...`);
             const botResponse = await fetch(`${supabaseUrl}/functions/v1/ai-sales-bot`, {
               method: 'POST',
               headers: { 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' },
               body: JSON.stringify(botBody),
             });
 
+            if (!botResponse.ok) {
+              const errText = await botResponse.text();
+              console.error(`[webhook] AI Bot function failed with status ${botResponse.status}:`, errText);
+              return new Response(JSON.stringify({ ok: true, saved: true, bot: 'ai_function_error' }), {
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+              });
+            }
+
             const botData = await botResponse.json();
+            console.log(`[webhook] AI Bot replied success=${botData.success}`);
 
             if (botData.success && botData.reply) {
               const sendResponse = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {

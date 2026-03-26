@@ -244,6 +244,9 @@ Deno.serve(async (req) => {
 
     console.log(`AI reply for lead ${lead_id}: ${rawReply.slice(0, 200)}`);
 
+    const productsToSend: Array<{ nome: string; preco: number | null; imagem: string }> = [];
+    const addedNames = new Set<string>();
+
     // 6. Parse markers
     const markerRegex = /\[ENVIAR_PRODUTO:([^\]]+)\]/gi;
     const requestedProducts: string[] = [];
@@ -291,9 +294,17 @@ Deno.serve(async (req) => {
       .replace(/\s{2,}/g, ' ')
       .trim();
 
+    // 6.5 Fallback if AI returned ONLY markers but no text, or just failed
+    let finalReply = cleanReply;
+    if (!finalReply && !productsToSend.length && !orderData && !scheduleData && !paymentMatch && !locationMatch) {
+      finalReply = "Como posso ajudar você hoje?";
+    } else if (!finalReply && (productsToSend.length || orderData || scheduleData || paymentMatch || locationMatch)) {
+       // If we have markers but no text, we can leave it empty or add a tiny transition
+       // finalReply = ""; // Webhook will handle markers
+    }
+
     // 7. Match products
-    const productsToSend: Array<{ nome: string; preco: number | null; imagem: string }> = [];
-    const addedNames = new Set<string>();
+    // (Declaration moved up to fix scoping in fallback)
 
     const addProduct = async (found: any) => {
       if (addedNames.has(found.nome)) return;

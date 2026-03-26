@@ -10,14 +10,14 @@ export default function ProductCard({ product, onDelete }: ProductCardProps) {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      className="bg-white/[0.02] p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-all group flex gap-4 items-center shadow-sm"
+      className="bg-card p-4 rounded-2xl border border-border/50 hover:border-border transition-all group flex gap-4 items-center shadow-card hover:shadow-elevated"
     >
-      <div className="w-16 h-16 rounded-xl bg-white/5 border border-white/10 overflow-hidden flex-shrink-0 flex items-center justify-center">
-        {product.imagem ? <img src={product.imagem} alt={product.nome} className="object-cover w-full h-full" /> : <Package className="w-6 h-6 text-slate-700" />}
+      <div className="w-16 h-16 rounded-xl bg-secondary border border-border overflow-hidden flex-shrink-0 flex items-center justify-center">
+        {product.imagem ? <img src={product.imagem} alt={product.nome} className="object-cover w-full h-full" /> : <Package className="w-6 h-6 text-muted-foreground" />}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <h3 className="font-bold text-white truncate text-sm">{product.nome}</h3>
+          <h3 className="font-bold text-foreground truncate text-sm">{product.nome}</h3>
           {product.categoria && (
             <span className="text-[9px] bg-primary/10 text-primary px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
                 {product.categoria}

@@ -11,16 +11,16 @@ interface Props { venda: Venda; onOpenChat?: (leadId: string) => void; }
 export default function OrderCardEnhanced({ venda, onOpenChat }: Props) {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      className="bg-white/[0.02] p-5 rounded-2xl border border-white/5 hover:border-white/10 transition-all group shadow-sm"
+      className="bg-card p-5 rounded-2xl border border-border/50 hover:border-border transition-all group shadow-card hover:shadow-elevated"
     >
       <div className="flex items-center justify-between mb-4">
         <div className="flex gap-4 items-center min-w-0">
-          <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 overflow-hidden flex-shrink-0 flex items-center justify-center">
-            {venda.produto_imagem ? <img src={venda.produto_imagem} alt={venda.produto || ''} className="object-cover w-full h-full" /> : <Package className="w-6 h-6 text-slate-700" />}
+          <div className="w-12 h-12 rounded-xl bg-secondary border border-border overflow-hidden flex-shrink-0 flex items-center justify-center">
+            {venda.produto_imagem ? <img src={venda.produto_imagem} alt={venda.produto || ''} className="object-cover w-full h-full" /> : <Package className="w-6 h-6 text-muted-foreground" />}
           </div>
           <div className="min-w-0">
-            <h3 className="font-bold text-white truncate text-sm mb-0.5">{venda.cliente_nome || 'Cliente'}</h3>
-            <p className="text-xs text-slate-400 font-medium truncate">{venda.produto} · <span className="text-primary font-bold">{formatCurrency(venda.valor)}</span></p>
+            <h3 className="font-bold text-foreground truncate text-sm mb-0.5">{venda.cliente_nome || 'Cliente'}</h3>
+            <p className="text-xs text-muted-foreground font-medium truncate">{venda.produto} · <span className="text-primary font-bold">{formatCurrency(venda.valor)}</span></p>
           </div>
         </div>
         <div className="flex flex-col items-end gap-1.5 flex-shrink-0 ml-2">
@@ -31,15 +31,15 @@ export default function OrderCardEnhanced({ venda, onOpenChat }: Props) {
             }`}>
                 {venda.status}
             </span>
-            <time className="text-[10px] text-slate-500 font-bold tabular-nums">{formatTime(venda.criado_em)}</time>
+            <time className="text-[10px] text-muted-foreground font-bold tabular-nums">{formatTime(venda.criado_em)}</time>
         </div>
       </div>
       
-      <div className="flex items-center gap-3 pt-3 border-t border-white/5">
-        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+      <div className="flex items-center gap-3 pt-3 border-t border-border/50">
+        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
             <Truck className="w-3.5 h-3.5" /> {deliveryStatusLabels[venda.status_entrega] || 'Pendente'}
         </span>
-        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
             <CreditCard className="w-3.5 h-3.5" /> {paymentStatusLabels[venda.pagamento_status] || 'Pendente'}
         </span>
         
@@ -54,8 +54,8 @@ export default function OrderCardEnhanced({ venda, onOpenChat }: Props) {
       </div>
       
       {venda.observacoes && (
-          <div className="mt-3 p-3 rounded-xl bg-white/[0.02] border border-white/5">
-              <p className="text-[11px] text-slate-400 font-medium"><span className="text-primary mr-2">●</span>{venda.observacoes}</p>
+          <div className="mt-3 p-3 rounded-xl bg-secondary/50 border border-border/50">
+              <p className="text-[11px] text-muted-foreground font-medium"><span className="text-primary mr-2">●</span>{venda.observacoes}</p>
           </div>
       )}
     </motion.div>
