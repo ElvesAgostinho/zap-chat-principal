@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Store, Wifi, WifiOff, Users, Trash2, Loader2, Copy, CheckCircle, UserCheck, XCircle, KeyRound } from 'lucide-react';
+import { Plus, Store, Wifi, WifiOff, Users, Trash2, Loader2, Copy, CheckCircle, UserCheck, XCircle, KeyRound, Code } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
