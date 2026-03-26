@@ -55,8 +55,12 @@ export default function WhatsAppConnectionPanel() {
       const data = await invoke('generate_qrcode');
       if (data.status === 'connected') { setStatus('connected'); return; }
       const base64 = data?.data?.base64;
-      if (base64) { setQrCode(base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`); setStatus('qr_pending'); }
-      else throw new Error('QR não disponível');
+      if (base64) { 
+        setQrCode(base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`); 
+        setStatus('qr_pending'); 
+      } else {
+        throw new Error(`QR não disponível. Payload recebido: ${JSON.stringify(data?.data || data).slice(0, 150)}`);
+      }
     } catch (err: any) { setStatus('error'); setError(err.message); }
   };
 
