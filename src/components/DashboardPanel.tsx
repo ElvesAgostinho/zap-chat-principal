@@ -18,7 +18,7 @@ interface DashboardPanelProps {
   onAddProduct?: () => void;
 }
 
-const PIPELINE_COLORS = ['hsl(210, 14%, 60%)', 'hsl(217, 91%, 60%)', 'hsl(43, 96%, 56%)', 'hsl(153, 60%, 40%)'];
+const PIPELINE_COLORS = ['hsl(215, 25%, 65%)', 'hsl(217, 91%, 60%)', 'hsl(43, 96%, 56%)', 'hsl(158, 85%, 35%)'];
 
 export default function DashboardPanel({ vendas, leads, products, alertCount, onAddLead, onAddProduct }: DashboardPanelProps) {
   const { role, storeId, storeCode, storeSlug } = useAuth();
@@ -203,7 +203,7 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
                   const msg = encodeURIComponent(`Confira nosso catálogo online: ${window.location.origin}/loja/${finalSlug}`);
                   window.open(`https://wa.me/?text=${msg}`, '_blank');
                 }}
-                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-2xl font-bold text-xs shadow-glow-emerald transition-all"
+                className="flex items-center gap-2 bg-primary hover:brightness-110 text-white px-5 py-2.5 rounded-2xl font-bold text-xs shadow-glow transition-all"
               >
                 <MessageSquare className="w-4 h-4 fill-current" /> Compartilhar
               </button>
@@ -313,7 +313,7 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
                     <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
                     <Tooltip content={<CustomTooltip />} />
                     <Area type="monotone" dataKey="valor" name="Receita" stroke="hsl(var(--primary))" strokeWidth={3} fill="url(#revenue)" />
-                    <Area type="monotone" dataKey="lucro" name="Lucro" stroke="#10b981" strokeWidth={3} fill="url(#profit)" />
+                    <Area type="monotone" dataKey="lucro" name="Lucro" stroke="hsl(158, 85%, 35%)" strokeWidth={3} fill="url(#profit)" />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>

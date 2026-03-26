@@ -291,33 +291,33 @@ export default function ChatPanel() {
   return (
     <div className="fixed inset-0 flex bg-[hsl(var(--whatsapp-bg))] overflow-hidden">
       <div className={`flex-1 flex flex-col h-full transition-all duration-300 ${showProfile ? 'mr-[350px]' : ''}`}>
-        {/* Header */}
-        <div className="px-4 py-2.5 flex items-center gap-3 flex-shrink-0 bg-[hsl(var(--whatsapp-dark))] shadow-md z-10">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors">
+        {/* Header - Refined with card background and border */}
+        <div className="px-4 py-3 flex items-center gap-3 flex-shrink-0 bg-card/80 backdrop-blur-xl border-b border-border/50 shadow-sm z-10">
+          <button onClick={() => navigate(-1)} className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="w-10 h-10 rounded-full overflow-hidden bg-white/10 flex items-center justify-center flex-shrink-0 border border-white/10 shadow-inner">
+          <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary flex items-center justify-center flex-shrink-0 border border-border/50 shadow-inner">
             {leadFoto ? (
               <img src={leadFoto} alt={leadName} className="w-full h-full object-cover" onError={(e) => { (e.target as any).src = ''; (e.target as any).style.display = 'none'; }} />
             ) : null}
-            <span className="text-white font-bold text-sm tracking-tight">{leadName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
+            <span className="text-muted-foreground font-bold text-sm tracking-tight">{leadName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="font-bold text-white text-[15px] truncate">{leadName}</h2>
-            <p className="text-[10px] text-white/40 uppercase tracking-widest font-semibold">{leadPhone || 'Sem telefone'}</p>
+            <h2 className="font-bold text-foreground text-[15px] truncate">{leadName}</h2>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">{leadPhone || 'Sem telefone'}</p>
           </div>
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setShowProfile(!showProfile)} 
-              className={`p-2 rounded-xl transition-all ${showProfile ? 'bg-primary text-white shadow-glow' : 'text-white/80 hover:text-white hover:bg-white/10'}`}
+              className={`p-2 rounded-xl transition-all ${showProfile ? 'bg-primary text-white shadow-glow' : 'text-muted-foreground hover:text-foreground hover:bg-secondary'}`}
               title="Informações do Lead"
             >
               <Info className="w-5 h-5" />
             </button>
             <div className={`hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold shadow-sm 
-              ${!storeBotActive ? 'bg-red-500/20 text-red-200 border border-red-500/30' : 
-                isHumanMode ? 'bg-orange-500/20 text-orange-200 border border-orange-500/30' : 
-                'bg-emerald-500/20 text-emerald-200 border border-emerald-500/30'}`}>
+              ${!storeBotActive ? 'bg-destructive/10 text-destructive border border-destructive/20' : 
+                isHumanMode ? 'bg-orange-500/10 text-orange-600 border border-orange-500/20' : 
+                'bg-primary/10 text-primary border border-primary/20'}`}>
               {!storeBotActive ? (
                 <><X className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none text-red-200">BOT OFF</span></>
               ) : isHumanMode ? (
@@ -326,11 +326,11 @@ export default function ChatPanel() {
                 <><Bot className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none text-emerald-200">BOT</span></>
               )}
             </div>
-            <button onClick={scheduleFollowup} className="p-2 rounded-xl text-white/80 hover:text-white hover:bg-white/10 transition-colors" title="Agendar Follow-up" >
+            <button onClick={scheduleFollowup} className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors" title="Agendar Follow-up" >
               <CalendarClock className="w-5 h-5" />
             </button>
             {isHumanMode ? (
-              <button onClick={returnToBot} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/10 text-white/90 text-[11px] font-bold hover:bg-white/20 transition-all">
+              <button onClick={returnToBot} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-secondary text-foreground text-[11px] font-bold hover:bg-secondary/80 transition-all border border-border/50">
                 <RotateCcw className="w-3.5 h-3.5 mb-[1px]" /> <span className="leading-none">Bot</span>
               </button>
             ) : (

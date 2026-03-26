@@ -214,7 +214,7 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
                     title={collapsed ? (item.locked ? `${item.label} (BLOQUEADO)` : item.label) : undefined}
                   >
                     {isActive && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-primary shadow-[2px_0_8px_rgba(34,197,94,0.4)]" />
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-primary shadow-glow" />
                     )}
                     <item.icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? 'text-primary' : ''}`} strokeWidth={isActive ? 2.2 : 1.7} />
                     <AnimatePresence>
@@ -250,7 +250,7 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
         {plano !== 'enterprise' && !collapsed && (
           <button
             onClick={() => setUpgradeOpen(true)}
-            className="w-full mb-2 p-3 rounded-xl bg-gradient-to-br from-primary to-emerald-600 text-white flex flex-col gap-1 hover:brightness-110 transition-all shadow-glow group"
+            className="w-full mb-2 p-3 rounded-xl bg-gradient-to-br from-primary via-primary to-emerald-500 text-white flex flex-col gap-1 hover:brightness-110 transition-all shadow-glow group"
           >
             <div className="flex items-center justify-between w-full">
               <span className="text-[10px] font-black uppercase tracking-widest text-white/80">Plano {plano || 'Iniciante'}</span>
