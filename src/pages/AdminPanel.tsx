@@ -27,6 +27,7 @@ export default function AdminPanel() {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'geral' | 'api'>('geral');
   const [connectingInProcess, setConnectingInProcess] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   
   const isPro = plano === 'profissional' || plano === 'enterprise' || isSuperAdmin;
 
@@ -68,6 +69,7 @@ export default function AdminPanel() {
   const handleConnectInstance = async () => {
     if (!loja) return;
     setConnectingInProcess(true);
+    setConnectionError(null);
     const instanceName = loja.instance_name || `store_${loja.id.slice(0, 8)}`;
     console.log('[AdminPanel] Connecting instance:', instanceName);
     
@@ -114,6 +116,7 @@ export default function AdminPanel() {
       setTimeout(() => clearInterval(poll), 120000);
     } catch (err: any) {
       console.error('[AdminPanel] Connection error:', err);
+      setConnectionError(err.message);
       toast({ title: 'Erro de Conexão', description: err.message, variant: 'destructive' });
     } finally {
       setConnectingInProcess(false);
@@ -220,6 +223,11 @@ export default function AdminPanel() {
               )}
             </div>
             {loja.instance_name && <p className="text-[10px] font-mono text-muted-foreground mt-1">{loja.instance_name}</p>}
+            {connectionError && (
+              <div className="mt-3 p-3 bg-destructive/10 border border-destructive/20 rounded-xl">
+                <p className="text-xs text-destructive font-medium break-all">{connectionError}</p>
+              </div>
+            )}
           </motion.div>
 
           {/* Pending Employees */}
