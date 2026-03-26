@@ -273,17 +273,22 @@ export default function Index() {
       >
         <div className="max-w-6xl mx-auto px-6 py-8 pt-20 lg:pt-8">
           {/* Unified Header */}
-          <header className="mb-8 flex items-end justify-between">
+          <header className="mb-10 flex items-end justify-between border-b border-white/5 pb-6">
             <motion.div
               key={activeTab + '-title'}
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <h1 className="text-3xl font-extrabold tracking-tight text-foreground">{authStoreName || 'CRM TOP'}</h1>
-              <p className="text-sm font-bold text-primary uppercase tracking-[0.2em] mt-1.5 flex items-center gap-2">
-                {TAB_TITLES[activeTab]}
-              </p>
+              <h1 className="text-4xl font-bold tracking-tight text-white mb-2">{authStoreName || 'CRM TOP'}</h1>
+              <div className="flex items-center gap-3">
+                <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
+                    Official Hub
+                </span>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-[0.2em] border-l border-white/10 pl-3">
+                    {TAB_TITLES[activeTab]}
+                </p>
+              </div>
             </motion.div>
           </header>
 

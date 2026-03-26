@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { DollarSign, ShoppingBag, Users, TrendingUp, AlertTriangle, Copy, BarChart3, Bell, ArrowUpRight, ArrowDownRight, Target, Calendar, MessageSquare, Plus, Download } from 'lucide-react';
+import { DollarSign, ShoppingBag, Users, TrendingUp, AlertTriangle, Copy, BarChart3, Bell, ArrowUpRight, ArrowDownRight, Target, Calendar, MessageSquare, Plus, Download, Globe } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Produto, Lead, Venda } from '@/types';
 import { formatCurrency } from '@/data/mock';
@@ -118,19 +118,19 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
   }, [chartData]);
 
   const stats = [
-    { icon: DollarSign, label: 'Lucro Real', value: formatCurrency(realProfit), color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10', trend: trend, showTrend: true },
-    { icon: TrendingUp, label: 'Previsão Mês', value: formatCurrency(revenueForecast), color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10', trend: 0, showTrend: false },
-    { icon: Users, label: 'Leads Ativos', value: `${leads.length - clientCount}`, color: 'text-violet-600 dark:text-violet-400', bg: 'bg-violet-500/10', trend: 0, showTrend: false },
-    { icon: AlertTriangle, label: 'Leads Frios', value: coldLeadsCount.toString(), color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-500/10', trend: 0, showTrend: false },
+    { icon: DollarSign, label: 'Lucro Real', value: formatCurrency(realProfit), color: 'text-primary', bg: 'bg-primary/10', trend: trend, showTrend: true },
+    { icon: TrendingUp, label: 'Previsão Mês', value: formatCurrency(revenueForecast), color: 'text-blue-500', bg: 'bg-blue-500/10', trend: 0, showTrend: false },
+    { icon: Users, label: 'Leads Ativos', value: `${leads.length - clientCount}`, color: 'text-indigo-500', bg: 'bg-indigo-500/10', trend: 0, showTrend: false },
+    { icon: AlertTriangle, label: 'Atenção IA', value: coldLeadsCount.toString(), color: 'text-amber-500', bg: 'bg-amber-500/10', trend: 0, showTrend: false },
   ];
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (!active || !payload?.length) return null;
     return (
-      <div className="bg-card border border-border rounded-xl px-3 py-2 shadow-elevated text-xs">
-        <p className="text-muted-foreground mb-1">{label}</p>
-        <p className="font-semibold text-foreground">{formatCurrency(payload[0].value)}</p>
-        <p className="text-muted-foreground">{payload[0].payload.vendas} pedido(s)</p>
+      <div className="bg-card border border-white/10 rounded-xl px-4 py-3 shadow-2xl text-[11px] backdrop-blur-md">
+        <p className="text-slate-500 mb-1 font-bold uppercase tracking-wider">{label}</p>
+        <p className="font-bold text-white text-base">{formatCurrency(payload[0].value)}</p>
+        <p className="text-primary font-medium">{payload[0].payload.vendas} pedido(s)</p>
       </div>
     );
   };
@@ -138,57 +138,55 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
   return (
     <div className="space-y-6 animate-fade-in-up">
       {/* Tabs */}
-      <div className="flex border-b border-border mb-2">
+      <div className="flex border-b border-white/5 mb-4">
         <button 
           onClick={() => setActiveTab('geral')}
-          className={`px-6 py-2.5 text-xs font-black uppercase tracking-widest transition-all relative ${activeTab === 'geral' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+          className={`px-6 py-3 text-[11px] font-bold uppercase tracking-widest transition-all relative ${activeTab === 'geral' ? 'text-primary' : 'text-slate-500 hover:text-white'}`}
         >
-          Visão Geral
-          {activeTab === 'geral' && <motion.div layoutId="tab-active" className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full" />}
+          Visão Estratégica
+          {activeTab === 'geral' && <motion.div layoutId="tab-active" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full shadow-[0_0_10px_rgba(34,197,94,0.5)]" />}
         </button>
         <button 
           onClick={() => setActiveTab('insights')}
-          className={`px-6 py-2.5 text-xs font-black uppercase tracking-widest transition-all relative ${activeTab === 'insights' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+          className={`px-6 py-3 text-[11px] font-bold uppercase tracking-widest transition-all relative ${activeTab === 'insights' ? 'text-primary' : 'text-slate-500 hover:text-white'}`}
         >
-          Insights de ROI
-          {activeTab === 'insights' && <motion.div layoutId="tab-active" className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full" />}
+          Performance de ROI
+          {activeTab === 'insights' && <motion.div layoutId="tab-active" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full shadow-[0_0_10px_rgba(34,197,94,0.5)]" />}
         </button>
       </div>
 
       {activeTab === 'geral' ? (
-        <div className="space-y-6">
-          {/* Store Link */}
+        <div className="space-y-8">
+          {/* Store Link Banner */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-r from-primary/10 via-violet-500/5 to-transparent p-5 rounded-3xl border border-primary/20 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6"
+            className="relative overflow-hidden group p-6 rounded-2xl bg-white/[0.02] border border-white/5 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6"
           >
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center text-white shadow-glow flex-shrink-0">
-                <ShoppingBag className="w-6 h-6" />
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-50" />
+            
+            <div className="flex items-center gap-5 relative z-10">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary flex-shrink-0">
+                <Globe className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-bold text-foreground">Sua Loja está Online! 🚀</h3>
-                <p className="text-xs text-muted-foreground">Compartilhe o link do seu catálogo para receber pedidos no WhatsApp.</p>
+                <h3 className="font-bold text-white text-base">Hub Comercial Ativo 🚀</h3>
+                <p className="text-xs text-slate-500 font-medium">Capture leads e pedidos automaticamente através do seu catálogo digital.</p>
               </div>
             </div>
             
-            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-              <div className="flex-1 md:flex-none flex items-center gap-2 bg-card px-4 py-2.5 rounded-2xl border border-border/60 shadow-sm group min-w-[200px]">
-                <span className="text-[10px] text-muted-foreground font-mono truncate max-w-[150px]">
-                  {window.location.origin}/loja/{storeSlug || (isAdmin ? storeCode : '...')}
+            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto relative z-10">
+              <div className="flex-1 md:flex-none flex items-center gap-3 bg-black/40 px-4 py-2.5 rounded-xl border border-white/5 group min-w-[240px]">
+                <span className="text-[11px] text-slate-400 font-medium truncate">
+                  {window.location.host}/loja/{storeSlug || (isAdmin ? storeCode : '...')}
                 </span>
                 <button
                   onClick={() => { 
-                    if (storeSlug) {
-                      navigator.clipboard.writeText(`${window.location.origin}/loja/${storeSlug}`); 
-                      toast.success('Link copiado!'); 
-                    } else if (isAdmin && storeCode) {
-                      navigator.clipboard.writeText(`${window.location.origin}/loja/${storeCode}`); 
-                      toast.success('Link (código) copiado!'); 
-                    }
+                    const url = `${window.location.origin}/loja/${storeSlug || storeCode}`;
+                    navigator.clipboard.writeText(url); 
+                    toast.success('Link copiado!'); 
                   }}
-                  className="p-1.5 hover:bg-secondary rounded-lg transition-colors"
+                  className="p-1.5 hover:bg-white/10 rounded-lg transition-colors ml-auto"
                 >
                   <Copy className="w-3.5 h-3.5 text-primary" />
                 </button>
@@ -196,34 +194,38 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
               <button
                 onClick={() => {
                   const finalSlug = storeSlug || (isAdmin ? storeCode : null);
-                  if (!finalSlug) {
-                    toast.error('Configure o link da loja primeiro!');
-                    return;
-                  }
-                  const msg = encodeURIComponent(`Confira nosso catálogo online: ${window.location.origin}/loja/${finalSlug}`);
-                  window.open(`https://wa.me/?text=${msg}`, '_blank');
+                  if (!finalSlug) return;
+                  window.open(`https://wa.me/?text=${encodeURIComponent(`Confira nosso catálogo: ${window.location.origin}/loja/${finalSlug}`)}`, '_blank');
                 }}
-                className="flex items-center gap-2 bg-primary hover:brightness-110 text-white px-5 py-2.5 rounded-2xl font-bold text-xs shadow-glow transition-all"
+                className="flex items-center gap-2 bg-primary text-black px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg hover:scale-105 transition-all"
               >
-                <MessageSquare className="w-4 h-4 fill-current" /> Compartilhar
+                <MessageSquare className="w-4 h-4 fill-current" /> Partilhar Link
               </button>
             </div>
           </motion.div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map((stat, i) => (
-              <motion.div key={stat.label} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }} className="bg-card p-4 rounded-2xl shadow-card border border-border/50 stat-card">
-                <div className="flex items-center justify-between mb-3">
-                  <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center`}><stat.icon className={`w-5 h-5 ${stat.color}`} /></div>
+              <motion.div 
+                key={stat.label} 
+                initial={{ opacity: 0, y: 12 }} 
+                animate={{ opacity: 1, y: 0 }} 
+                transition={{ delay: i * 0.05 }} 
+                className="bg-white/[0.02] p-5 rounded-2xl border border-white/5 hover:border-white/10 transition-all group"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center border border-white/5`}>
+                    <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                  </div>
                   {stat.showTrend && stat.trend !== 0 && (
-                    <span className={`flex items-center gap-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${stat.trend > 0 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-red-500/10 text-red-600 dark:text-red-400'}`}>
+                    <span className={`flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${stat.trend > 0 ? 'bg-primary/10 text-primary' : 'bg-red-500/10 text-red-400'}`}>
                       {stat.trend > 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}{Math.abs(stat.trend)}%
                     </span>
                   )}
                 </div>
-                <p className="text-xl font-bold text-foreground tabular-nums">{stat.value}</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">{stat.label}</p>
+                <p className="text-2xl font-bold text-white tracking-tight tabular-nums">{stat.value}</p>
+                <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mt-1">{stat.label}</p>
               </motion.div>
             ))}
           </div>
@@ -247,14 +249,39 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
                 </div>
               </div>
             </div>
-            <div className="h-[200px]">
+            <div className="h-[240px] mt-4">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-                  <defs><linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} /><stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} /></linearGradient></defs>
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
-                  <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`} />
+                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#22C55E" stopOpacity={0.15} />
+                      <stop offset="95%" stopColor="#22C55E" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} 
+                    stroke="transparent" 
+                    tickLine={false} 
+                    axisLine={false} 
+                    dy={10}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} 
+                    stroke="transparent" 
+                    tickLine={false} 
+                    axisLine={false} 
+                    tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}k`} 
+                  />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="valor" stroke="hsl(var(--primary))" strokeWidth={2.5} fill="url(#salesGradient)" />
+                  <Area 
+                    type="monotone" 
+                    dataKey="valor" 
+                    stroke="#22C55E" 
+                    strokeWidth={3} 
+                    fill="url(#salesGradient)" 
+                    animationDuration={1500}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

@@ -287,46 +287,59 @@ Deno.serve(async (req) => {
         });
         
         const contacts = extractList(res.data, ['data', 'contacts', 'records', 'contacts']);
-        debug.attempts.push({ 
-          path: ep.path, 
-          method: ep.method, 
-          status: res.status, 
-          count: contacts.length,
-          ok: res.ok 
-        });
+        for (const ep of endpoints) {
+          const path = ep.path.replace(`/${instanceName}`, `/${inst}`);
+          const res = await evo(path, {
+            method: ep.method,
+            body: ep.body ? JSON.stringify(ep.body) : undefined
+          });
 
-        if (contacts.length > 0) {
-          for (const c of contacts) {
-            const jid = String(c?.id || c?.remoteJid || c?.jid || '');
-            if (!jid.endsWith('@s.whatsapp.net')) continue;
-            const phone = jid.replace(/@s\.whatsapp\.net$/, '');
-            
-            // Try different name fields from Evolution
-            // pushName is usually the user-set name. notify is often the same.
-            let name = c?.pushName || c?.notify || c?.name || c?.verifiedName || '';
-            
-            // Clean names like "244936..." to see if they are just the raw phone
-            const cleanName = name.replace(/\D/g, '');
-            
-            // ACCEPT CRITERIA:
-            // 1. Name is not empty
-            // 2. Name is not EXACTLY the same as raw phone (e.g. "244912345678")
-            // 3. We allow formatted names like "+244 912 345 678" as they are better than nothing
-            if (name && name !== phone) {
-              contactMap.set(phone, name);
+          debug.attempts.push({ 
+            path: path, 
+            method: ep.method, 
+            status: res.status, 
+            ok: res.ok 
+          });
+
+          if (!res.ok) continue;
+
+          const contacts = extractList(res.data, ['data', 'contacts', 'records', 'contacts']);
+          debug.attempts[debug.attempts.length - 1].count = contacts.length;
+
+          if (contacts.length > 0) {
+            for (const c of contacts) {
+              const jid = String(c?.id || c?.remoteJid || c?.jid || '');
+              if (!jid.endsWith('@s.whatsapp.net')) continue;
+              const phone = jid.replace(/@s\.whatsapp\.net$/, '');
+              
+              // Try different name fields from Evolution
+              let name = c?.pushName || c?.notify || c?.name || c?.verifiedName || '';
+              
+              // Clean names like "244936..." to see if they are just the raw phone
+              const cleanName = name.replace(/\D/g, '');
+              
+              // ACCEPT CRITERIA:
+              // 1. Name is not empty
+              // 2. Name is not EXACTLY the same as raw phone (e.g. "244912345678")
+              // 3. We allow formatted names like "+244 912 345 678" as they are better than nothing
+              if (name && name !== phone) {
+                contactMap.set(phone, name);
+              }
             }
-          }
-          if (contactMap.size > 0) {
-            console.log(`[fetchContacts] Success with ${ep.path} [${ep.method}]: ${contactMap.size} names`);
-            break; 
+            if (contactMap.size > 0) {
+              console.log(`[fetchContacts] Success with ${inst} using ${ep.path}: ${contactMap.size} names`);
+              // Return a sample of found names for debugging
+              const sampleNames = Array.from(contactMap.entries()).slice(0, 5).map(([phone, name]) => `${name} (${phone})`);
+              return { map: contactMap, debug: { ...debug, successInstance: inst, sampleNames } };
+            }
           }
         }
       } catch (e) {
-        debug.attempts.push({ path: ep.path, error: String(e) });
+        console.error(`[fetchContacts] Error with instance ${inst}:`, e);
+        debug.attempts.push({ instance: inst, error: String(e) });
       }
     }
-    
-    return { map: contactMap, debug };
+    return { map: contactMap, debug: { ...debug, message: 'No contacts found in any instance attempt' } };
   };
 
   const syncPreviewFromEvolution = async (storeId: string | null, instanceName: string, force = false) => {

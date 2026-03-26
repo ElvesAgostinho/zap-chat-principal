@@ -42,25 +42,25 @@ export const Header = () => {
   return (
     <header 
       className={`fixed top-0 left-0 right-0 z-[100] transition-all duration-500 ${
-        isScrolled ? 'py-4 bg-[#0B0F12]/80 backdrop-blur-xl border-b border-white/5' : 'py-8 bg-transparent'
+        isScrolled ? 'py-4 bg-[#0B0F14]/80 backdrop-blur-xl border-b border-white/5' : 'py-8 bg-transparent'
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 lg:px-12 flex items-center justify-between">
         {/* LOGO */}
         <a href="#" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center group-hover:scale-110 transition-transform shadow-glow">
-            <Zap className="w-6 h-6 text-primary fill-current" />
+          <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-105 transition-transform border border-primary/20">
+            <Zap className="w-5 h-5 text-primary fill-current" />
           </div>
-          <span className="text-xl font-black uppercase italic tracking-widest text-white">CRM TOP</span>
+          <span className="text-xl font-bold tracking-tight text-white italic uppercase">CRM TOP</span>
         </a>
 
         {/* DESKTOP NAV */}
-        <nav className="hidden lg:flex items-center gap-12">
+        <nav className="hidden lg:flex items-center gap-10">
           {navLinks.map((link) => (
             <a 
               key={link.name} 
               href={link.href}
-              className="text-[10px] font-black uppercase tracking-[0.25em] text-white/50 hover:text-primary transition-colors"
+              className="text-[11px] font-bold uppercase tracking-[0.15em] text-slate-400 hover:text-white transition-colors"
             >
               {link.name}
             </a>
@@ -68,27 +68,27 @@ export const Header = () => {
           
           {user ? (
             <DropdownMenu>
-              <DropdownMenuTrigger className="px-6 py-2.5 rounded-full glass-card border-primary/20 text-[10px] font-black uppercase tracking-[0.2em] text-white hover:bg-primary hover:text-black transition-all flex items-center gap-2 outline-none">
-                Dashboard <User className="w-3 h-3" />
+              <DropdownMenuTrigger className="px-5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-[11px] font-bold uppercase tracking-[0.1em] text-white hover:bg-white/10 transition-all flex items-center gap-2 outline-none">
+                Aceder Painel <User className="w-3.5 h-3.5" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-[#0B0F12] border-white/10 text-white rounded-2xl w-56 p-2 z-[200]">
-                <DropdownMenuItem asChild className="hover:bg-primary/20 hover:text-primary transition-colors cursor-pointer rounded-xl font-bold p-0 mb-1">
+              <DropdownMenuContent align="end" className="bg-[#0B0F14] border-white/10 text-white rounded-xl w-56 p-2 z-[200] shadow-2xl">
+                <DropdownMenuItem asChild className="hover:bg-primary/10 hover:text-primary transition-colors cursor-pointer rounded-lg font-bold p-0 mb-1">
                   <Link to="/admin" className="w-full h-full px-3 py-3 flex items-center gap-3 text-[11px] uppercase tracking-wider">
-                    <User className="w-4 h-4" /> Ir para Dashboard
+                    <User className="w-4 h-4" /> Dashboard Admin
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  className="hover:bg-red-500/20 hover:text-red-500 text-white/70 transition-colors cursor-pointer rounded-xl font-bold px-3 py-3 flex items-center gap-3 text-[11px] uppercase tracking-wider"
+                  className="hover:bg-red-500/10 hover:text-red-500 text-white/70 transition-colors cursor-pointer rounded-lg font-bold px-3 py-3 flex items-center gap-3 text-[11px] uppercase tracking-wider"
                   onClick={() => supabase.auth.signOut().then(() => navigate('/'))}
                 >
-                  <LogOut className="w-4 h-4" /> Terminar Sessão
+                  <LogOut className="w-4 h-4" /> Sair
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <Link 
               to="/login" 
-              className="px-6 py-2.5 rounded-full glass-card border-primary/20 text-[10px] font-black uppercase tracking-[0.2em] text-white hover:bg-primary hover:text-black transition-all flex items-center gap-2"
+              className="px-6 py-2.5 rounded-xl bg-primary text-black text-[11px] font-bold uppercase tracking-[0.15em] hover:scale-105 transition-all shadow-[0_0_20px_rgba(34,197,94,0.3)]"
             >
               Área Restrita
             </Link>

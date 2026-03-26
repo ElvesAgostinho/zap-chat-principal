@@ -132,56 +132,27 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
   const sidebarContent = (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border flex-shrink-0">
-        <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center flex-shrink-0 shadow-glow">
-          <Zap className="w-5 h-5 text-white" />
+      <div className="flex items-center gap-3 px-6 h-20 border-b border-white/5 flex-shrink-0 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0 shadow-[0_0_20px_rgba(34,197,94,0.3)]">
+          <Zap className="w-6 h-6 text-black" />
         </div>
         <AnimatePresence>
           {!collapsed && (
             <motion.div
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: 'auto' }}
-              exit={{ opacity: 0, width: 0 }}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
               className="overflow-hidden whitespace-nowrap flex-1"
             >
-              <h1 className="text-[14px] font-black text-foreground leading-tight truncate max-w-[150px]">{storeName || 'CRM TOP'}</h1>
-              <p className="text-[9px] text-primary font-bold uppercase tracking-widest leading-none mt-0.5">Painel Gestão</p>
+              <h1 className="text-[15px] font-bold text-white leading-tight tracking-tight truncate">{storeName || 'CRM TOP'}</h1>
+              <p className="text-[10px] text-primary font-bold uppercase tracking-widest leading-none mt-1">Enterprise Hub</p>
             </motion.div>
           )}
         </AnimatePresence>
-        
-        {/* Notifications Center */}
-        <div className={collapsed ? "hidden" : "block"}>
-          <NotificationsCenter />
-        </div>
       </div>
 
-      {/* Search button */}
-      {onSearch && (
-        <div className="px-3 pt-3">
-          <button
-            onClick={onSearch}
-            className={`w-full flex items-center gap-2 rounded-xl text-sm transition-all duration-200
-              ${collapsed
-                ? 'justify-center p-2.5 bg-secondary text-muted-foreground hover:text-foreground'
-                : 'px-3 py-2.5 bg-secondary text-muted-foreground hover:bg-secondary/80'
-              }`}
-          >
-            <Search className="w-4 h-4 flex-shrink-0" />
-            {!collapsed && (
-              <>
-                <span className="flex-1 text-left text-xs">Buscar...</span>
-                <kbd className="hidden md:inline-flex h-5 items-center gap-0.5 rounded border border-border px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
-                  ⌘K
-                </kbd>
-              </>
-            )}
-          </button>
-        </div>
-      )}
-
       {/* Nav groups */}
-      <nav className="flex-1 overflow-y-auto scrollbar-thin px-3 py-3 space-y-4">
+      <nav className="flex-1 overflow-y-auto scrollbar-none px-4 space-y-6 pb-6">
         {navGroups.map(group => (
           <div key={group.label}>
             <AnimatePresence>
@@ -189,14 +160,13 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="text-[10px] uppercase tracking-widest text-muted-foreground font-semibold px-3 mb-1.5"
+                  className="text-[10px] uppercase font-bold tracking-[0.15em] text-slate-500 px-3 mb-3"
                 >
                   {group.label}
                 </motion.p>
               )}
             </AnimatePresence>
-            <div className="space-y-0.5">
+            <div className="space-y-1">
               {group.items.map(item => {
                 const isActive = active === item.id;
                 return (
@@ -204,35 +174,35 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
                     key={item.id}
                     onClick={() => handleTabChange(item)}
                     className={`w-full flex items-center gap-3 rounded-xl transition-all duration-200 group relative
-                      ${collapsed ? 'justify-center p-2.5' : 'px-3 py-2.5'}
+                      ${collapsed ? 'justify-center py-3' : 'px-3 py-2.5'}
                       ${isActive
-                        ? 'bg-primary/10 text-primary font-medium shadow-sm'
+                        ? 'bg-white/[0.04] text-white shadow-sm'
                         : item.locked 
-                        ? 'text-muted-foreground/50 cursor-not-allowed'
-                        : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                        ? 'text-slate-600 cursor-not-allowed opacity-50'
+                        : 'text-slate-400 hover:text-white hover:bg-white/[0.02]'
                       }`}
                     title={collapsed ? (item.locked ? `${item.label} (BLOQUEADO)` : item.label) : undefined}
                   >
                     {isActive && (
-                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full bg-primary shadow-glow" />
+                      <motion.div 
+                        layoutId="active-nav-indicator"
+                        className="absolute left-0 w-1 h-5 rounded-r-full bg-primary shadow-[0_0_12px_rgba(34,197,94,0.4)]" 
+                      />
                     )}
-                    <item.icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? 'text-primary' : ''}`} strokeWidth={isActive ? 2.2 : 1.7} />
+                    <item.icon className={`w-[18px] h-[18px] flex-shrink-0 ${isActive ? 'text-primary' : 'group-hover:scale-110 transition-transform'}`} strokeWidth={isActive ? 2.5 : 2} />
                     <AnimatePresence>
                       {!collapsed && (
                         <motion.span
-                          initial={{ opacity: 0, width: 0 }}
-                          animate={{ opacity: 1, width: 'auto' }}
-                          exit={{ opacity: 0, width: 0 }}
-                          className="text-[13px] overflow-hidden whitespace-nowrap flex-1 text-left"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className={`text-[13px] font-medium overflow-hidden whitespace-nowrap flex-1 text-left ${isActive ? 'text-white' : ''}`}
                         >
                           {item.label}
                         </motion.span>
                       )}
                     </AnimatePresence>
-                    {(item.badge ?? 0) > 0 && (
-                      <span className={`min-w-[18px] h-[18px] rounded-full bg-[hsl(var(--badge-red))] text-white text-[10px] font-bold flex items-center justify-center px-1
-                        ${collapsed ? 'absolute -top-0.5 -right-0.5' : ''}`}
-                      >
+                    {(item.badge ?? 0) > 0 && !collapsed && (
+                      <span className="min-w-[18px] h-[18px] rounded-full bg-primary text-black text-[9px] font-black flex items-center justify-center px-1">
                         {(item.badge ?? 0) > 99 ? '99+' : item.badge}
                       </span>
                     )}
@@ -245,7 +215,7 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
       </nav>
 
       {/* Bottom section */}
-      <div className="border-t border-sidebar-border px-3 py-3 space-y-2 flex-shrink-0">
+      <div className="border-t border-white/5 px-4 py-4 space-y-3 flex-shrink-0">
         {/* Upgrade Call to Action */}
         {plano !== 'enterprise' && !collapsed && (
           <button

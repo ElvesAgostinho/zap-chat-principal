@@ -81,32 +81,32 @@ export const PricingCard: React.FC<PricingCardProps> = ({
     >
       <div 
         className={`
-          relative h-full flex flex-col p-8 rounded-[40px] border transition-all duration-500
+          relative h-full flex flex-col p-8 rounded-2xl border transition-all duration-300
           ${highlight 
-            ? 'border-primary/50 shadow-glow bg-primary/5' 
-            : 'border-white/10 bg-white/5 backdrop-blur-xl'}
-          group-hover:border-primary/50
+            ? 'border-primary/40 bg-primary/[0.03] shadow-[0_0_40px_rgba(34,197,94,0.05)]' 
+            : 'border-white/5 bg-white/[0.02]'}
+          hover:border-primary/50 group-hover:translate-y-[-4px]
         `}
       >
         <div className="flex flex-col h-full">
               {popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-5 py-1.5 rounded-full bg-gradient-to-r from-primary to-secondary text-white text-[10px] font-black uppercase tracking-[0.2em] shadow-glow z-10">
-                  Recomendado
+                <div className="absolute -top-3 left-6 px-3 py-1 rounded-full bg-primary text-black text-[10px] font-bold uppercase tracking-wider z-10">
+                  Mais Popular
                 </div>
               )}
 
               <div className="mb-8">
-                <h3 className="text-xl font-black uppercase italic tracking-tighter text-white mb-2">{name}</h3>
+                <h3 className="text-lg font-bold text-white mb-2">{name}</h3>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-black text-white tracking-tighter">{price}</span>
-                  {price.includes('Kz') && <span className="text-xs text-white/40 font-bold uppercase tracking-widest">/mês</span>}
+                  <span className="text-4xl font-bold text-white tracking-tight">{price}</span>
+                  {price.includes('Kz') && <span className="text-xs text-slate-500 font-medium">/mês</span>}
                 </div>
               </div>
 
               <ul className="space-y-4 mb-10 flex-1">
                 {features.map((f, i) => (
-                  <li key={i} className="flex items-start gap-3 text-xs font-medium text-white/70">
-                    <CheckCircle2 className={`w-4 h-4 mt-0.5 shrink-0 ${highlight ? 'text-primary' : 'text-primary/50'}`} />
+                  <li key={i} className="flex items-start gap-3 text-sm font-medium text-slate-400">
+                    <CheckCircle2 className={`w-4 h-4 mt-0.5 shrink-0 ${highlight ? 'text-primary' : 'text-slate-600'}`} />
                     <span>{f}</span>
                   </li>
                 ))}
@@ -117,10 +117,10 @@ export const PricingCard: React.FC<PricingCardProps> = ({
                   <button 
                     onClick={handleAction}
                     className={`
-                      w-full py-5 rounded-full font-black text-xs uppercase tracking-[0.2em] transition-all
+                      w-full py-4 rounded-xl font-bold text-sm transition-all
                       ${highlight 
-                        ? 'bg-primary text-black shadow-glow hover:bg-white' 
-                        : 'bg-white/10 text-white hover:bg-white hover:text-black'}
+                        ? 'bg-primary text-black shadow-[0_10px_30px_rgba(34,197,94,0.2)] hover:scale-[1.02]' 
+                        : 'bg-white/5 text-white hover:bg-white/10'}
                       flex items-center justify-center gap-2 group/btn
                     `}
                   >
