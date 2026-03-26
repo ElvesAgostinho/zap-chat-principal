@@ -107,10 +107,7 @@ async function persistMedia(
   mediaObj: any,
 ): Promise<string | null> {
   try {
-    // Try to get the media URL directly from the message object
     const directUrl = mediaObj?.url || mediaObj?.directPath;
-    
-    // Use Evolution API to get base64 of the media
     const mediaRes = await fetch(`${baseUrl}/chat/getBase64FromMediaMessage/${instanceName}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'apikey': apiKey },
@@ -119,7 +116,6 @@ async function persistMedia(
 
     if (!mediaRes.ok) {
       console.warn(`[webhook] Failed to fetch media base64: ${mediaRes.status}`);
-      // Fallback: try directUrl if available
       if (directUrl && directUrl.startsWith('http')) return directUrl;
       return null;
     }
@@ -134,16 +130,14 @@ async function persistMedia(
       return null;
     }
 
-    // Determine file extension
     const extMap: Record<string, string> = {
       'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif',
       'video/mp4': 'mp4', 'audio/ogg': 'ogg', 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a',
       'application/pdf': 'pdf',
     };
     const ext = extMap[mimeType] || mimeType.split('/')[1] || 'bin';
-    const fileName = `${storeId}/${Date.now()}-${messageId.slice(-8)}.${ext}`;
+    const fileName = `${storeId}/media/${Date.now()}-${messageId.slice(-8)}.${ext}`;
 
-    // Decode base64 and upload
     const binaryData = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
     const { error: uploadErr } = await supabase.storage
       .from('chat-media')
@@ -155,7 +149,6 @@ async function persistMedia(
     }
 
     const { data: urlData } = supabase.storage.from('chat-media').getPublicUrl(fileName);
-    console.log(`[webhook] Media persisted: ${urlData?.publicUrl}`);
     return urlData?.publicUrl || null;
   } catch (e) {
     console.error('[webhook] persistMedia error:', e);
@@ -163,46 +156,65 @@ async function persistMedia(
   }
 }
 
-async function fetchProfilePicture(supabase: any, evolutionUrl: string, instanceName: string, apiKey: string, phone: string, leadId: string, logs: string[] = []) {
+/** Downloads a profile picture from a URL and saves it to Supabase Storage */
+async function persistProfilePicture(supabase: any, storeId: string, leadId: string, imageUrl: string, phone: string, logs: string[]): Promise<string | null> {
+  try {
+    logs.push(`[webhook] Persisting profile picture for ${phone}...`);
+    const response = await fetch(imageUrl);
+    if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+    
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = new Uint8Array(arrayBuffer);
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    const ext = contentType.split('/')[1] || 'jpg';
+    const fileName = `${storeId}/profiles/${leadId}-${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('chat-media') // Use existing bucket or 'contact-photos' if available
+      .upload(fileName, buffer, { contentType, upsert: true });
+
+    if (uploadError) {
+      logs.push(`[webhook] Storage upload error for ${phone}: ${JSON.stringify(uploadError)}`);
+      return imageUrl; // Fallback to original URL
+    }
+
+    const { data } = supabase.storage.from('chat-media').getPublicUrl(fileName);
+    logs.push(`[webhook] Profile picture persisted successfully to: ${data.publicUrl}`);
+    return data.publicUrl;
+  } catch (e: any) {
+    logs.push(`[webhook] Error persisting profile picture for ${phone}: ${e.message}`);
+    return imageUrl;
+  }
+}
+
+async function fetchProfilePicture(supabase: any, evolutionUrl: string, instanceName: string, apiKey: string, phone: string, leadId: string, storeId: string, logs: string[] = []) {
   try {
     const rawUrl = evolutionUrl.replace(/\/+$/, '');
     const baseUrl = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
     const fetchUrl = `${baseUrl}/chat/fetchProfilePictureUrl/${instanceName}`;
     
-    logs.push(`[webhook] Fetching profile picture for ${phone} from: ${fetchUrl} (POST)`);
+    logs.push(`[webhook] Fetching profile picture for ${phone} from: ${fetchUrl}`);
     
     const res = await fetch(fetchUrl, {
       method: 'POST',
-      headers: { 
-        'apikey': apiKey,
-        'Content-Type': 'application/json'
-      },
+      headers: { 'apikey': apiKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({ number: phone })
     });
     
     if (res.ok) {
       const data = await res.json();
-      logs.push(`[webhook] Evolution API response for ${phone}: ${JSON.stringify(data)}`);
+      const transientUrl = data?.profilePictureUrl || data?.url || data?.data?.profilePictureUrl || data?.data?.url;
       
-      const url = data?.profilePictureUrl || data?.url || data?.data?.profilePictureUrl || data?.data?.url;
-      
-      if (url && url.startsWith('http')) {
-        const { error: updateError } = await supabase.from('leads').update({ foto_url: url }).eq('id', leadId);
-        if (updateError) {
-          logs.push(`[webhook] Error updating DB for lead ${leadId}: ${JSON.stringify(updateError)}`);
-        } else {
-          logs.push(`[webhook] Profile picture updated for lead ${leadId}: ${url}`);
-        }
-        return url;
-      } else {
-        logs.push(`[webhook] No valid URL found in response for ${phone}`);
+      if (transientUrl && transientUrl.startsWith('http')) {
+        // Persist it!
+        const permanentUrl = await persistProfilePicture(supabase, storeId, leadId, transientUrl, phone, logs);
+        const { error: updateError } = await supabase.from('leads').update({ foto_url: permanentUrl }).eq('id', leadId);
+        if (updateError) logs.push(`[webhook] Error updating DB for lead ${leadId}: ${JSON.stringify(updateError)}`);
+        return permanentUrl;
       }
-    } else {
-      const errorText = await res.text();
-      logs.push(`[webhook] Evolution API returned ${res.status} for ${phone}: ${errorText}`);
     }
   } catch (e: any) {
-    logs.push(`[webhook] Critical error fetching profile picture for ${phone}: ${e?.message || 'Unknown error'}`);
+    logs.push(`[webhook] Critical error fetching profile picture for ${phone}: ${e?.message}`);
   }
   return null;
 }
@@ -240,12 +252,10 @@ Deno.serve(async (req) => {
       let count = 0;
       for (const lead of targetLeads) {
         try {
-          const instance = lojaMap.get(lead.loja_id);
-          if (instance && lead.telefone && EVOLUTION_API_URL && EVOLUTION_API_KEY) {
-            await fetchProfilePicture(supabase, EVOLUTION_API_URL, instance, EVOLUTION_API_KEY, lead.telefone.replace(/\D/g, ''), lead.id, logs);
+          const instance = lojaMap.get(lead.loja_id) || "Whats"; // Fallback to default
+          if (lead.telefone && EVOLUTION_API_URL && EVOLUTION_API_KEY) {
+            await fetchProfilePicture(supabase, EVOLUTION_API_URL, instance, EVOLUTION_API_KEY, lead.telefone.replace(/\D/g, ''), lead.id, lead.loja_id, logs);
             count++;
-          } else {
-            logs.push(`[webhook] Skipping lead ${lead.id}: Missing instance=${!!instance}, phone=${!!lead.telefone}, url=${!!EVOLUTION_API_URL}, key=${!!EVOLUTION_API_KEY}`);
           }
         } catch (innerError: any) {
           logs.push(`[webhook] Error syncing lead ${lead.id}: ${innerError?.message || 'Unknown error'}`);
@@ -402,7 +412,7 @@ Deno.serve(async (req) => {
             console.log(`[webhook] New lead created for ${pushName || phone}`);
             // Fetch profile picture for new lead
             if (baseUrl && EVOLUTION_API_KEY) {
-              fetchProfilePicture(supabase, baseUrl, instanceName, EVOLUTION_API_KEY, phone, newLead.id);
+              fetchProfilePicture(supabase, baseUrl, instanceName, EVOLUTION_API_KEY, phone, newLead.id, storeId);
             }
           }
         }

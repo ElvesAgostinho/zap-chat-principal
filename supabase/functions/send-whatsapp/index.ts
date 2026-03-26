@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
         statusBody.font = 1;
       }
 
-      response = await fetch(`${baseUrl}/message/sendStatus/${instance}`, {
+      response = await fetch(`${baseUrl}/chat/sendStatus/${instance}`, {
         method: 'POST',
         headers,
         body: JSON.stringify(statusBody),
