@@ -264,7 +264,20 @@ Deno.serve(async (req) => {
     return `+${phone}`;
   };
 
-  /** Fetch contacts from Evolution API with exhaustive diagnostic */
+  /** Fetch individual profile as fallback */
+  const fetchProfile = async (instanceName: string, number: string) => {
+    try {
+      const res = await evo(`/chat/fetchProfile/${instanceName}`, { 
+        method: 'POST', 
+        body: JSON.stringify({ number }) 
+      });
+      if (res.ok) return res.data?.pushName || res.data?.name || res.data?.verifiedName || null;
+    } catch (e) {
+      console.error(`[fetchProfile] Error:`, e);
+    }
+    return null;
+  };
+
   const fetchContacts = async (instanceName: string): Promise<{ map: Map<string, string>, debug: any }> => {
     const contactMap = new Map<string, string>();
     const debug: any = { 
@@ -272,13 +285,11 @@ Deno.serve(async (req) => {
       attempts: []
     };
     
-    // We will try the provided instance name and its lowercase version
     const instancesToTry = Array.from(new Set([instanceName, instanceName.toLowerCase()]));
     
     const endpoints = [
       { path: (inst: string) => `/chat/findContacts/${inst}`, method: 'POST', body: { where: {} } },
-      { path: (inst: string) => `/chat/getContacts/${inst}`, method: 'GET' },
-      { path: (inst: string) => `/chat/findContacts/${inst}`, method: 'GET' }
+      { path: (inst: string) => `/chat/getContacts/${inst}`, method: 'GET' }
     ];
  
     for (const inst of instancesToTry) {
@@ -308,29 +319,19 @@ Deno.serve(async (req) => {
                 const jid = String(c?.id || c?.remoteJid || c?.jid || '');
                 if (!jid.endsWith('@s.whatsapp.net')) continue;
                 const phone = jid.replace(/@s\.whatsapp\.net$/, '');
-                
-                // Try different name fields from Evolution
                 const name = c?.pushName || c?.notify || c?.name || c?.verifiedName || '';
-                
-                // ACCEPT CRITERIA:
-                // 1. Name is not empty
-                // 2. Name is not EXACTLY the same as raw phone (e.g. "244912345678")
-                // 3. We allow formatted names like "+244 912 345 678" as they are better than nothing
                 if (name && name !== phone) {
                   contactMap.set(phone, name);
                 }
               }
-              if (contactMap.size > 0) {
-                console.log(`[fetchContacts] Success with ${inst} using ${path}: ${contactMap.size} names`);
-                return { map: contactMap, debug: { ...debug, successInstance: inst, successPath: path, count: contactMap.size } };
-              }
             }
           } catch (e) {
-            console.error(`[fetchContacts] Error with instance ${inst} during ${ep.method} ${ep.path(inst)}:`, e);
+            console.error(`[fetchContacts] Error:`, e);
           }
         }
+        if (contactMap.size > 0) break;
     }
-    return { map: contactMap, debug: { ...debug, message: 'No contacts found in any instance attempt' } };
+    return { map: contactMap, debug };
   };
 
   const syncPreviewFromEvolution = async (storeId: string | null, instanceName: string, force = false) => {
@@ -651,7 +652,7 @@ Deno.serve(async (req) => {
       if (leads) {
         const leadMap = new Map((leads || []).map(l => [l.telefone.replace(/\D/g, ''), l]));
         
-        // 1. Update from Evolution Contacts
+        // 1. Update from Evolution Contacts List
         for (const [phone, name] of contactNames.entries()) {
           const lead = leadMap.get(phone);
           if (lead && name && name !== lead.nome) {
@@ -660,33 +661,51 @@ Deno.serve(async (req) => {
             if (isNewNameNumeric && isOldNameHuman) continue;
 
             const { error } = await sb.from('leads').update({ nome: name }).eq('id', lead.id);
-            if (!error) updatedCount++;
+            if (!error) {
+              updatedCount++;
+              lead.nome = name; // Update local map for consistency
+            }
           }
         }
 
-        // 2. RECOVERY: Try to find names in messages history for leads still without names
-        console.log(`[sync_names] Starting history recovery for leads...`);
-        const leadsWithoutNames = leads.filter(l => !/[a-zA-Z]/.test(l.nome || ''));
+        // 2. RECOVERY: Try to find names in messages history or Deep Fetch for leads still without names
+        console.log(`[sync_names] Starting deep recovery for leads...`);
+        const leadsToFix = leads.filter(l => !/[a-zA-Z]/.test(l.nome || ''));
         
-        if (leadsWithoutNames.length > 0) {
-          for (const lead of leadsWithoutNames) {
-            // Check the last 10 messages for this lead to find a pushName
+        if (leadsToFix.length > 0) {
+          for (const lead of leadsToFix) {
+            const phone = lead.telefone.replace(/\D/g, '');
+            
+            // 2a. Try Deep Fetch Profile
+            const pn = await fetchProfile(instanceName, phone);
+            if (pn && /[a-zA-Z]/.test(pn)) {
+              const { error } = await sb.from('leads').update({ nome: pn }).eq('id', lead.id);
+              if (!error) {
+                updatedCount++;
+                continue; // Found it!
+              }
+            }
+
+            // 2b. Fallback to Message History Metadata
             const { data: msgs } = await sb.from('mensagens')
               .select('metadata')
               .eq('lead_id', lead.id)
               .not('metadata', 'is', null)
               .order('created_at', { ascending: false })
-              .limit(10);
+              .limit(5);
             
             if (msgs) {
               for (const m of msgs) {
                 const meta = m.metadata as any;
-                const foundName = meta?.pushName || meta?.notify || meta?.verifiedName || meta?.instance?.pushName;
+                // Check multiple locations in metadata for pushName
+                const foundName = meta?.pushName || meta?.notify || meta?.verifiedName || meta?.instance?.pushName || 
+                                 meta?.message?.pushName || meta?.record?.pushName;
+                
                 if (foundName && /[a-zA-Z]/.test(foundName)) {
                   const { error } = await sb.from('leads').update({ nome: foundName }).eq('id', lead.id);
                   if (!error) {
                     updatedCount++;
-                    break; // Found one name, move to next lead
+                    break;
                   }
                 }
               }

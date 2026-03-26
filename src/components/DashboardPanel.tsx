@@ -161,7 +161,7 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden group p-6 rounded-2xl bg-white/[0.02] border border-white/5 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6"
+            className="relative overflow-hidden group p-6 rounded-2xl bg-muted/30 border border-border shadow-sm flex flex-col md:flex-row items-center justify-between gap-6"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-50" />
             
@@ -170,14 +170,14 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
                 <Globe className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-bold text-white text-base">Hub Comercial Ativo 🚀</h3>
+                <h3 className="font-bold text-foreground text-base">Hub Comercial Ativo 🚀</h3>
                 <p className="text-xs text-slate-500 font-medium">Capture leads e pedidos automaticamente através do seu catálogo digital.</p>
               </div>
             </div>
             
             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto relative z-10">
-              <div className="flex-1 md:flex-none flex items-center gap-3 bg-black/40 px-4 py-2.5 rounded-xl border border-white/5 group min-w-[240px]">
-                <span className="text-[11px] text-slate-400 font-medium truncate">
+              <div className="flex-1 md:flex-none flex items-center gap-3 bg-secondary px-4 py-2.5 rounded-xl border border-border group min-w-[240px]">
+                <span className="text-[11px] text-muted-foreground font-medium truncate">
                   {window.location.host}/loja/{storeSlug || (isAdmin ? storeCode : '...')}
                 </span>
                 <button
@@ -212,7 +212,7 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
                 initial={{ opacity: 0, y: 12 }} 
                 animate={{ opacity: 1, y: 0 }} 
                 transition={{ delay: i * 0.05 }} 
-                className="bg-white/[0.02] p-5 rounded-2xl border border-white/5 hover:border-white/10 transition-all group"
+                className="bg-card p-5 rounded-2xl border border-border hover:border-primary/20 transition-all group shadow-sm"
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center border border-white/5`}>
@@ -224,7 +224,7 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
                     </span>
                   )}
                 </div>
-                <p className="text-2xl font-bold text-white tracking-tight tabular-nums">{stat.value}</p>
+                <p className="text-2xl font-bold text-foreground tracking-tight tabular-nums">{stat.value}</p>
                 <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mt-1">{stat.label}</p>
               </motion.div>
             ))}

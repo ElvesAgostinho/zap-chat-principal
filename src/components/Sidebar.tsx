@@ -144,7 +144,7 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
               exit={{ opacity: 0, x: -10 }}
               className="overflow-hidden whitespace-nowrap flex-1"
             >
-              <h1 className="text-[15px] font-bold text-white leading-tight tracking-tight truncate">{storeName || 'CRM TOP'}</h1>
+              <h1 className="text-[15px] font-bold text-foreground leading-tight tracking-tight truncate">{storeName || 'CRM TOP'}</h1>
               <p className="text-[10px] text-primary font-bold uppercase tracking-widest leading-none mt-1">Enterprise Hub</p>
             </motion.div>
           )}
@@ -178,8 +178,8 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
                       ${isActive
                         ? 'bg-primary/10 text-primary shadow-sm'
                         : item.locked 
-                        ? 'text-slate-600 cursor-not-allowed opacity-50'
-                        : 'text-slate-400 hover:text-white hover:bg-white/[0.02]'
+                        ? 'text-muted-foreground/30 cursor-not-allowed'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted/50'
                       }`}
                     title={collapsed ? (item.locked ? `${item.label} (BLOQUEADO)` : item.label) : undefined}
                   >

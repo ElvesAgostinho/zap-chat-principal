@@ -280,12 +280,12 @@ export default function Index() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <h1 className="text-4xl font-bold tracking-tight text-white mb-2">{authStoreName || 'CRM TOP'}</h1>
+              <h1 className="text-4xl font-bold tracking-tight text-foreground mb-2">{authStoreName || 'CRM TOP'}</h1>
               <div className="flex items-center gap-3">
                 <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
                     Official Hub
                 </span>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-[0.2em] border-l border-white/10 pl-3">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-[0.2em] border-l border-border pl-3">
                     {TAB_TITLES[activeTab]}
                 </p>
               </div>
