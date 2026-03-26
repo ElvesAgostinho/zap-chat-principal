@@ -264,44 +264,57 @@ Deno.serve(async (req) => {
     return `+${phone}`;
   };
 
-  /** Fetch contacts from Evolution API with multiple fallbacks */
+  /** Fetch contacts from Evolution API with exhaustive diagnostic */
   const fetchContacts = async (instanceName: string): Promise<{ map: Map<string, string>, debug: any }> => {
     const contactMap = new Map<string, string>();
-    const debug: any = { post_status: null, get_status: null, items: 0 };
+    const debug: any = { 
+      instance: instanceName,
+      attempts: []
+    };
     
-    try {
-      // Try POST first (Standard for v2)
-      const postResult = await evo(`/chat/findContacts/${instanceName}`, { 
-        method: 'POST', 
-        body: JSON.stringify({ where: {} }) 
-      });
-      debug.post_status = postResult.status;
-      
-      let contacts = extractList(postResult.data, ['data', 'contacts', 'records']);
-      
-      // If POST was empty or error, try GET (Standard for v1 or some v2 builds)
-      if (contacts.length === 0) {
-        const getResult = await evo(`/chat/getContacts/${instanceName}`, { method: 'GET' });
-        debug.get_status = getResult.status;
-        contacts = extractList(getResult.data, ['data', 'contacts', 'records']);
-      }
+    const endpoints = [
+      { path: `/chat/findContacts/${instanceName}`, method: 'POST', body: {} },
+      { path: `/chat/getContacts/${instanceName}`, method: 'GET' },
+      { path: `/chat/findContacts/${instanceName}`, method: 'POST', body: { where: {} } },
+      { path: `/chat/findContacts/${instanceName}`, method: 'GET' }
+    ];
 
-      debug.items = contacts.length;
+    for (const ep of endpoints) {
+      try {
+        const res = await evo(ep.path, { 
+          method: ep.method, 
+          body: ep.body ? JSON.stringify(ep.body) : undefined 
+        });
+        
+        const contacts = extractList(res.data, ['data', 'contacts', 'records', 'contacts']);
+        debug.attempts.push({ 
+          path: ep.path, 
+          method: ep.method, 
+          status: res.status, 
+          count: contacts.length,
+          ok: res.ok 
+        });
 
-      for (const c of contacts) {
-        const jid = String(c?.id || c?.remoteJid || c?.jid || '');
-        if (!jid.endsWith('@s.whatsapp.net')) continue;
-        const phone = jid.replace(/@s\.whatsapp\.net$/, '');
-        const name = c?.pushName || c?.name || c?.notify || c?.verifiedName || '';
-        if (name && name !== phone) {
-          contactMap.set(phone, name);
+        if (contacts.length > 0) {
+          for (const c of contacts) {
+            const jid = String(c?.id || c?.remoteJid || c?.jid || '');
+            if (!jid.endsWith('@s.whatsapp.net')) continue;
+            const phone = jid.replace(/@s\.whatsapp\.net$/, '');
+            const name = c?.pushName || c?.name || c?.notify || c?.verifiedName || '';
+            if (name && name !== phone) {
+              contactMap.set(phone, name);
+            }
+          }
+          if (contactMap.size > 0) {
+            console.log(`[fetchContacts] Success with ${ep.path} [${ep.method}]: ${contactMap.size} names`);
+            break; // Stop if we found names
+          }
         }
+      } catch (e) {
+        debug.attempts.push({ path: ep.path, error: String(e) });
       }
-      console.log(`[fetchContacts] Final count with names: ${contactMap.size}`);
-    } catch (e) {
-      console.error('[fetchContacts] failed fully:', e);
-      debug.error = String(e);
     }
+    
     return { map: contactMap, debug };
   };
 
