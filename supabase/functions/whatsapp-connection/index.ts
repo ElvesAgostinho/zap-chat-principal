@@ -264,32 +264,45 @@ Deno.serve(async (req) => {
     return `+${phone}`;
   };
 
-  /** Fetch contacts from Evolution API to get pushNames */
-  const fetchContacts = async (instanceName: string): Promise<Map<string, string>> => {
+  /** Fetch contacts from Evolution API with multiple fallbacks */
+  const fetchContacts = async (instanceName: string): Promise<{ map: Map<string, string>, debug: any }> => {
     const contactMap = new Map<string, string>();
+    const debug: any = { post_status: null, get_status: null, items: 0 };
+    
     try {
-      const result = await evo(`/chat/findContacts/${instanceName}`, { method: 'POST', body: JSON.stringify({}) });
-      console.log(`[fetchContacts] findContacts [${result.status}]`);
-      if (result.ok) {
-        const contacts = extractList(result.data, ['data', 'contacts', 'records']);
-        console.log(`[fetchContacts] Extracted ${contacts.length} items from API`);
-        for (const c of contacts) {
-          const jid = String(c?.id || c?.remoteJid || c?.jid || '');
-          if (!jid.endsWith('@s.whatsapp.net')) continue;
-          const phone = jid.replace(/@s\.whatsapp\.net$/, '');
-          const name = c?.pushName || c?.name || c?.notify || c?.verifiedName || '';
-          if (name && name !== phone) {
-            contactMap.set(phone, name);
-          }
-        }
-        console.log(`[fetchContacts] Got ${contactMap.size} contacts with names`);
-      } else {
-        console.error(`[fetchContacts] API Error: ${result.status}`, result.data);
+      // Try POST first (Standard for v2)
+      const postResult = await evo(`/chat/findContacts/${instanceName}`, { 
+        method: 'POST', 
+        body: JSON.stringify({ where: {} }) 
+      });
+      debug.post_status = postResult.status;
+      
+      let contacts = extractList(postResult.data, ['data', 'contacts', 'records']);
+      
+      // If POST was empty or error, try GET (Standard for v1 or some v2 builds)
+      if (contacts.length === 0) {
+        const getResult = await evo(`/chat/getContacts/${instanceName}`, { method: 'GET' });
+        debug.get_status = getResult.status;
+        contacts = extractList(getResult.data, ['data', 'contacts', 'records']);
       }
+
+      debug.items = contacts.length;
+
+      for (const c of contacts) {
+        const jid = String(c?.id || c?.remoteJid || c?.jid || '');
+        if (!jid.endsWith('@s.whatsapp.net')) continue;
+        const phone = jid.replace(/@s\.whatsapp\.net$/, '');
+        const name = c?.pushName || c?.name || c?.notify || c?.verifiedName || '';
+        if (name && name !== phone) {
+          contactMap.set(phone, name);
+        }
+      }
+      console.log(`[fetchContacts] Final count with names: ${contactMap.size}`);
     } catch (e) {
-      console.error('[fetchContacts] failed:', e);
+      console.error('[fetchContacts] failed fully:', e);
+      debug.error = String(e);
     }
-    return contactMap;
+    return { map: contactMap, debug };
   };
 
   const syncPreviewFromEvolution = async (storeId: string | null, instanceName: string, force = false) => {
@@ -307,7 +320,8 @@ Deno.serve(async (req) => {
     }
 
     // Fetch contacts for pushName resolution
-    const contactNames = await fetchContacts(instanceName);
+    const contactsResult = await fetchContacts(instanceName);
+    const contactNames = contactsResult.map;
 
     const chatsResult = await evo(`/chat/findChats/${instanceName}`, { method: 'POST' });
     console.log(`[syncPreview] findChats [${chatsResult.status}]`);
@@ -369,7 +383,7 @@ Deno.serve(async (req) => {
     }
 
     // Also import contacts that have pushName but may not have recent chats
-    for (const [phone, name] of contactNames) {
+    for (const [phone, name] of contactNames.entries()) {
       if (chatPhones.has(phone)) continue; // already handled
       if (phone.length < 7) continue;
 
@@ -592,7 +606,8 @@ Deno.serve(async (req) => {
 
     if (action === 'sync_names') {
       console.log(`[sync_names] Fetching names from Evolution for store=${store_id}`);
-      const contactNames = await fetchContacts(instanceName);
+      const contactsResult = await fetchContacts(instanceName);
+      const contactNames = contactsResult.map;
       
       const { data: leads } = await sb.from('leads').select('id, telefone, nome').eq('loja_id', store_id);
       let updatedCount = 0;
@@ -616,8 +631,24 @@ Deno.serve(async (req) => {
         success: true, 
         updated: updatedCount, 
         total_contacts: contactNames.size,
+        debug_api: contactsResult.debug,
         debug_sample: sampleMapping,
         message: contactNames.size === 0 ? 'Nenhum contato com nome encontrado na API' : `${updatedCount} nomes sincronizados`
+      });
+    }
+
+    if (action === 'debug_db') {
+      const { data: store } = await sb.from('lojas').select('*').eq('id', store_id).maybeSingle();
+      const { count: leadCount } = await sb.from('leads').select('id', { count: 'exact', head: true }).eq('loja_id', store_id);
+      return json({ 
+        success: true, 
+        store, 
+        lead_count: leadCount,
+        env: {
+          has_api_key: !!EVOLUTION_API_KEY,
+          has_api_url: !!EVOLUTION_API_URL,
+          supabase_url: supabaseUrl
+        }
       });
     }
 
