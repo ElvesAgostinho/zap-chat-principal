@@ -188,33 +188,43 @@ async function persistProfilePicture(supabase: any, storeId: string, leadId: str
 }
 
 async function fetchProfilePicture(supabase: any, evolutionUrl: string, instanceName: string, apiKey: string, phone: string, leadId: string, storeId: string, logs: string[] = []) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout per request
+  
   try {
     const rawUrl = evolutionUrl.replace(/\/+$/, '');
     const baseUrl = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
     const fetchUrl = `${baseUrl}/chat/fetchProfilePictureUrl/${instanceName}`;
     
-    logs.push(`[webhook] Fetching profile picture for ${phone} from: ${fetchUrl}`);
+    logs.push(`[webhook] Fetching profile picture for ${phone}...`);
     
     const res = await fetch(fetchUrl, {
       method: 'POST',
       headers: { 'apikey': apiKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ number: phone })
+      body: JSON.stringify({ number: phone }),
+      signal: controller.signal
     });
+    
+    clearTimeout(timeoutId);
     
     if (res.ok) {
       const data = await res.json();
       const transientUrl = data?.profilePictureUrl || data?.url || data?.data?.profilePictureUrl || data?.data?.url;
       
       if (transientUrl && transientUrl.startsWith('http')) {
-        // Persist it!
         const permanentUrl = await persistProfilePicture(supabase, storeId, leadId, transientUrl, phone, logs);
-        const { error: updateError } = await supabase.from('leads').update({ foto_url: permanentUrl }).eq('id', leadId);
-        if (updateError) logs.push(`[webhook] Error updating DB for lead ${leadId}: ${JSON.stringify(updateError)}`);
+        await supabase.from('leads').update({ foto_url: permanentUrl }).eq('id', leadId);
         return permanentUrl;
       }
     }
   } catch (e: any) {
-    logs.push(`[webhook] Critical error fetching profile picture for ${phone}: ${e?.message}`);
+    if (e.name === 'AbortError') {
+      logs.push(`[webhook] Timeout fetching profile picture for ${phone}`);
+    } else {
+      logs.push(`[webhook] Error fetching profile picture for ${phone}: ${e?.message}`);
+    }
+  } finally {
+    clearTimeout(timeoutId);
   }
   return null;
 }
@@ -240,12 +250,17 @@ Deno.serve(async (req) => {
       logs.push("[webhook] Starting bulk sync of profiles...");
       const storeId = body.store_id;
       
-      // Query leads that either have NULL or EMPTY STRING as foto_url
-      let query = supabase.from('leads')
-        .select('id, telefone, loja_id, foto_url')
-        .or('foto_url.is.null,foto_url.eq.""');
-        
-      if (storeId) query = query.eq('loja_id', storeId);
+      // Query leads that don't have a photo OR have a transient Evolution URL
+      let query = supabase.from('leads').select('id, telefone, loja_id, foto_url');
+      
+      // We want cases where foto_url is null OR contains 'evolution' (transient URL)
+      const filterOr = 'foto_url.is.null,foto_url.ilike.%evolution%';
+      
+      if (storeId) {
+        query = query.eq('loja_id', storeId).or(filterOr);
+      } else {
+        query = query.or(filterOr);
+      }
       
       const { data: leads, error: leadsErr } = await query;
 
@@ -257,9 +272,9 @@ Deno.serve(async (req) => {
       }
 
       let targetLeads = leads || [];
-      // Limit to 30 leads per request to stay within 60s Edge Function timeout
+      // Limit to 10 leads per request to be extremely safe within 60s Edge Function timeout
       const totalAvailable = targetLeads.length;
-      targetLeads = targetLeads.slice(0, 30);
+      targetLeads = targetLeads.slice(0, 10);
 
       logs.push(`[webhook] Target leads (without photo): ${totalAvailable}. Processing batch of ${targetLeads.length}`);
 
@@ -802,10 +817,14 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ ok: true, event: rawEvent, handled: false }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-  } catch (error) {
-    console.error('[webhook] Error:', error);
-    return new Response(JSON.stringify({ error: String(error) }), {
-      status: 500,
+  } catch (error: any) {
+    console.error('[webhook] Critical Global Error:', error);
+    return new Response(JSON.stringify({ 
+      ok: false, 
+      error: error?.message || String(error),
+      stack: error?.stack
+    }), {
+      status: 200, // Return 200 so the frontend can show the specific error
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

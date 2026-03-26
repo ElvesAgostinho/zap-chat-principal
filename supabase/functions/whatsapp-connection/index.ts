@@ -23,8 +23,15 @@ Deno.serve(async (req) => {
 
   const EVOLUTION_API_KEY = Deno.env.get('EVOLUTION_API_KEY');
   const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
+
   if (!EVOLUTION_API_KEY || !EVOLUTION_API_URL) {
-    return json({ error: 'EVOLUTION_API_KEY or EVOLUTION_API_URL not configured' }, 500);
+    console.error('[whatsapp-connection] Missing configuration');
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: 'EVOLUTION_API_KEY or EVOLUTION_API_URL not configured' 
+    }), {
+      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+    });
   }
 
   const rawUrl = EVOLUTION_API_URL.replace(/\/+$/, '');
@@ -32,9 +39,22 @@ Deno.serve(async (req) => {
   const apiHeaders = { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY };
 
   const evo = async (path: string, init: RequestInit = {}) => {
-    const res = await fetch(`${baseUrl}${path}`, { ...init, headers: apiHeaders });
-    const data = await parseBody(res);
-    return { ok: res.ok, status: res.status, data };
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 20000); // 20s timeout
+    try {
+      const res = await fetch(`${baseUrl}${path}`, { 
+        ...init, 
+        headers: { ...apiHeaders, ...(init.headers || {}) },
+        signal: controller.signal
+      });
+      const data = await parseBody(res);
+      return { ok: res.ok, status: res.status, data };
+    } catch (e: any) {
+      const isTimeout = e.name === 'AbortError';
+      return { ok: false, status: isTimeout ? 408 : 500, data: { error: isTimeout ? 'Evolution API timeout' : e.message } };
+    } finally {
+      clearTimeout(id);
+    }
   };
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -881,9 +901,15 @@ Deno.serve(async (req) => {
     }
 
     return json({ error: 'Invalid action. Use: generate_qrcode, check_connection, test_message, logout, restart, setup_webhook, force_sync, sync_chat' }, 400);
-  } catch (error: unknown) {
-    console.error('WhatsApp connection error:', error);
-    const msg = error instanceof Error ? error.message : 'Unknown error';
-    return json({ success: false, error: msg }, 500);
+  } catch (error: any) {
+    console.error('[whatsapp-connection] Global Failure:', error);
+    return new Response(JSON.stringify({ 
+      success: false, 
+      error: error?.message || String(error),
+      details: 'Check Evolution API logs or connection state.'
+    }), { 
+      status: 200, // Return 200 so UI can parse the error JSON
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+    });
   }
 });

@@ -70,12 +70,15 @@ export default function AdminPanel() {
     try {
       // Create instance if none exists
       if (!loja.instance_name) {
-        await supabase.functions.invoke('manage-instance', { body: { action: 'create', instanceName } });
+        const { data: createData, error: createError } = await supabase.functions.invoke('manage-instance', { body: { action: 'create', instanceName } });
+        if (createError) throw createError;
+        if (createData?.success === false) throw new Error(createData.error || 'Erro ao criar instância');
         await (supabase as any).from('lojas').update({ instance_name: instanceName }).eq('id', loja.id);
       }
       // Get QR
       const { data, error } = await supabase.functions.invoke('manage-instance', { body: { action: 'connect', instanceName } });
       if (error) throw error;
+      if (data?.success === false) throw new Error(data.error || 'Erro ao conectar');
       const base64 = data?.data?.base64;
       if (base64) {
         const qrSrc = base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;

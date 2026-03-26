@@ -26,6 +26,7 @@ export default function WhatsAppConnectionPanel() {
       body: { action, instance: instanceName, store_id: storeId, ...extra },
     });
     if (error) throw error;
+    if (data?.success === false) throw new Error(data.error || 'Erro na conexão');
     return data;
   }, [instanceName, storeId]);
 

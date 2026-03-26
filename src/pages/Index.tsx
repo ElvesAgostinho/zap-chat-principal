@@ -126,8 +126,8 @@ export default function Index() {
   useEffect(() => {
     const onStorage = () => setSidebarCollapsed(localStorage.getItem('sidebar_collapsed') === 'true');
     window.addEventListener('storage', onStorage);
-    const interval = setInterval(onStorage, 500);
-    return () => { window.removeEventListener('storage', onStorage); clearInterval(interval); };
+    // Remove setInterval as it's too aggressive and causes "heavy" UI
+    return () => { window.removeEventListener('storage', onStorage); };
   }, []);
 
   // Cmd+K shortcut
@@ -232,11 +232,11 @@ export default function Index() {
           </div>
         );
       case 'chat': return <ConversationsPanel initialLeads={leads} initialAgents={agents} />;
-      case 'delivery': return <DeliveryPanel initialVendas={vendas.filter(v => v.status_entrega !== 'entregue')} />;
-      case 'alerts': return <AlertsPanel initialLeads={leads.filter(l => l.precisa_humano)} />;
+      case 'delivery': return <DeliveryPanel initialVendas={(vendas || []).filter(v => v.status_entrega !== 'entregue')} />;
+      case 'alerts': return <AlertsPanel initialLeads={(leads || []).filter(l => l.precisa_humano)} />;
       case 'schedule': return <SchedulingPanel />;
-      case 'pipeline': return <PipelinePanel leads={leads} />;
-      case 'stock': return <StockPanel products={products} onUpdate={fetchAll} onAddProduct={() => { setEditingProduct(null); setShowAddProduct(true); }} onDeleteProduct={(id) => supabase.from('produtos').delete().eq('id', id).then(fetchAll)} onEditProduct={(p) => { setEditingProduct(p); setShowAddProduct(true); }} />;
+      case 'pipeline': return <PipelinePanel leads={leads || []} />;
+      case 'stock': return <StockPanel products={products || []} onUpdate={fetchAll} onAddProduct={() => { setEditingProduct(null); setShowAddProduct(true); }} onDeleteProduct={(id) => supabase.from('produtos').delete().eq('id', id).then(fetchAll)} onEditProduct={(p) => { setEditingProduct(p); setShowAddProduct(true); }} />;
       case 'products':
         return (
           <div className="space-y-5">
