@@ -113,7 +113,7 @@ Deno.serve(async (req) => {
         } else {
           throw new Error('Embedding API failed');
         }
-      } catch (e) {
+      } catch (e: any) {
         console.log('RAG Fallback Ativo - buscando catálogo tradicional:', e.message);
         // Fallback to old method (Full Catalogue)
         const { data: products } = await supabase
@@ -224,6 +224,8 @@ Deno.serve(async (req) => {
     const aiUrl = useGateway ? 'https://ai.gateway.lovable.dev/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions';
     const model = useGateway ? 'google/gemini-2.0-flash-exp' : 'gpt-4o-mini';
 
+    console.log(`[ai-bot] Calling AI (${model}) via ${useGateway ? 'Gateway' : 'Direct OpenAI'}. Key length: ${apiKey?.length || 0}`);
+
     const response = await fetch(aiUrl, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
@@ -232,17 +234,22 @@ Deno.serve(async (req) => {
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error('AI error:', response.status, errText);
+      console.error(`[ai-bot] CRITICAL AI ERROR: Status ${response.status} | Payload: ${errText}`);
+      
+      if (response.status === 401) throw new Error('Falha de Autenticação na OpenAI (Chave Inválida/Expirada)');
       if (response.status === 429) return new Response(JSON.stringify({ success: false, error: 'Rate limit' }), { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
       if (response.status === 402) return new Response(JSON.stringify({ success: false, error: 'Payment required' }), { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
-      throw new Error(`AI API error [${response.status}]`);
+      throw new Error(`AI API error [${response.status}] - ${errText.slice(0, 100)}`);
     }
 
     const data = await response.json();
     const rawReply = data.choices?.[0]?.message?.content?.trim();
-    if (!rawReply) throw new Error('No reply from AI');
+    if (!rawReply) {
+      console.error('[ai-bot] AI returned success but empty choices:', JSON.stringify(data));
+      throw new Error('No reply from AI choices');
+    }
 
-    console.log(`AI reply for lead ${lead_id}: ${rawReply.slice(0, 200)}`);
+    console.log(`[ai-bot] Success! Reply for lead ${lead_id}: "${rawReply.slice(0, 100)}..."`);
 
     const productsToSend: Array<{ nome: string; preco: number | null; imagem: string }> = [];
     const addedNames = new Set<string>();

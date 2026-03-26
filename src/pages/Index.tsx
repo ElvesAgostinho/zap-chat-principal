@@ -294,7 +294,7 @@ export default function Index() {
 
           {/* Tab Content with AnimatePresence to solve "joining everything" bug */}
           <div className="relative min-h-[60vh]">
-            <AnimatePresence mode="wait" initial={false}>
+            <AnimatePresence initial={false}>
               <motion.div
                 key={activeTab}
                 initial={{ opacity: 0, y: 15 }}

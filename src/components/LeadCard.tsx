@@ -18,12 +18,14 @@ export default function LeadCard({ lead }: { lead: Lead }) {
   const Icon = isCliente ? UserCheck : UserPlus;
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} 
-        className="bg-white/[0.02] p-5 rounded-2xl border border-white/5 hover:border-white/10 transition-all group flex flex-col gap-4 shadow-sm"
+    <motion.div 
+      initial={{ opacity: 0, y: 8 }} 
+      animate={{ opacity: 1, y: 0 }} 
+      className="bg-card p-5 rounded-2xl border border-border/50 hover:border-border transition-all group flex flex-col gap-4 shadow-card"
     >
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-4">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border ${isCliente ? 'bg-primary/20 border-primary/30 text-primary shadow-[0_0_15px_rgba(34,197,94,0.2)]' : 'bg-slate-800 border-white/5 text-slate-400'}`}>
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 border ${isCliente ? 'bg-primary/20 border-primary/30 text-primary shadow-glow' : 'bg-secondary border-border text-muted-foreground'}`}>
             {lead.foto_url ? (
               <img src={lead.foto_url} alt={lead.nome} className="w-full h-full object-cover rounded-lg" />
             ) : (
@@ -31,34 +33,34 @@ export default function LeadCard({ lead }: { lead: Lead }) {
             )}
           </div>
           <div>
-            <h3 className="font-bold text-white text-sm tracking-tight">{lead.nome}</h3>
-            <p className="text-xs text-slate-500 font-medium">{lead.telefone || 'Sem contacto'}</p>
+            <h3 className="font-bold text-foreground text-sm tracking-tight">{lead.nome}</h3>
+            <p className="text-xs text-muted-foreground font-medium">{lead.telefone || 'Sem contacto'}</p>
           </div>
         </div>
         <div className="text-right">
-            <span className="text-[10px] text-slate-600 font-bold tabular-nums block mb-1">{formatDate(lead.criado_em)}</span>
+            <span className="text-[10px] text-muted-foreground font-bold tabular-nums block mb-1">{formatDate(lead.criado_em)}</span>
             <span className={`text-[9px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-md ${
                 lead.status === 'comprado' ? 'bg-primary/10 text-primary' : 
-                lead.status === 'perdido' ? 'bg-red-500/10 text-red-400' :
-                'bg-slate-800 text-slate-500'
+                lead.status === 'perdido' ? 'bg-destructive/10 text-destructive' :
+                'bg-secondary text-muted-foreground'
             }`}>
                 {lead.status}
             </span>
         </div>
       </div>
       
-      <div className="flex items-center justify-between pt-3 border-t border-white/5">
+      <div className="flex items-center justify-between pt-3 border-t border-border/50">
         <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white/[0.03] border border-white/5 uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-secondary/80 border border-border uppercase tracking-wider">
                 <MessageCircle className="w-3 h-3 text-primary" /> {sourceLabel[lead.fonte] || lead.fonte}
             </span>
             {lead.precisa_humano && (
-                <span className="text-[10px] font-bold text-amber-500 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-amber-600 dark:text-amber-500 flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 border border-amber-500/20 uppercase tracking-wider">
                     ⚠️ Atenção IA
                 </span>
             )}
         </div>
-        {lead.interesse && <p className="text-[11px] text-slate-400 font-medium truncate max-w-[200px]">Interesse: {lead.interesse}</p>}
+        {lead.interesse && <p className="text-[11px] text-muted-foreground font-medium truncate max-w-[200px]">Interesse: {lead.interesse}</p>}
       </div>
     </motion.div>
   );

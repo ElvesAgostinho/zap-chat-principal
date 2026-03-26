@@ -132,20 +132,20 @@ export default function ApiIntegrationPanel() {
       )}
 
       <div className="space-y-3">
-        <h3 className="text-metadata flex items-center gap-2 px-1">
+        <h3 className="text-metadata flex items-center gap-2 px-1 text-muted-foreground font-bold">
           <Key className="w-3.5 h-3.5" /> Chaves Ativas
         </h3>
         
         {loading ? (
           <div className="p-12 text-center text-muted-foreground"><Code className="w-8 h-8 mx-auto mb-2 animate-pulse" /> Carregando...</div>
         ) : keys.length === 0 ? (
-          <div className="bg-card p-10 rounded-3xl border border-dashed border-border/60 text-center">
+          <div className="bg-card p-10 rounded-3xl border border-dashed border-border text-center">
             <p className="text-sm text-muted-foreground">Nenhuma chave gerada.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {keys.map(k => (
-              <div key={k.id} className="bg-card p-5 rounded-2xl border border-border/50 shadow-card flex flex-col justify-between group">
+              <div key={k.id} className="bg-card p-5 rounded-2xl border border-border shadow-card flex flex-col justify-between group">
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-bold text-foreground">{k.nome}</h4>

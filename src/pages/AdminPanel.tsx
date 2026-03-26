@@ -139,24 +139,44 @@ export default function AdminPanel() {
         <ApiIntegrationPanel />
       ) : loja && (
         <>
-          {/* Store Code - Prominent */}
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-[hsl(var(--header-emerald))] p-6 rounded-[2rem] space-y-3 shadow-glow border border-white/10">
-            <div className="flex items-center gap-2">
-              <KeyRound className="w-5 h-5 text-white" />
-              <h2 className="font-bold text-white text-sm uppercase tracking-widest">Código da Loja</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Store Code Section - Fixed Contrast */}
+        <motion.div 
+          initial={{ opacity: 0, y: 8 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          className="bg-card p-6 rounded-[2rem] space-y-3 shadow-card border border-border/50"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+              <Code className="w-4 h-4 text-primary" />
             </div>
-            <p className="text-[11px] text-white/70 font-medium">Compartilhe este código com os funcionários para se cadastrarem.</p>
-            <div className="flex items-center gap-4 py-2">
-              <span className="text-4xl font-black text-white tracking-[0.4em] drop-shadow-md">{loja.codigo_unico}</span>
-              <motion.button whileTap={{ scale: 0.95 }} onClick={copyCode} className="p-3 rounded-2xl bg-white/20 text-white hover:bg-white/30 backdrop-blur-md transition-all">
-                {copied ? <CheckCircle className="w-6 h-6" /> : <Copy className="w-6 h-6" />}
-              </motion.button>
-            </div>
-            <div className="flex items-center gap-2 pt-2 border-t border-white/10">
-              <Store className="w-3.5 h-3.5 text-white/60" />
-              <p className="text-[11px] text-white font-bold">Identidade: <span className="uppercase tracking-tighter">{loja.nome}</span></p>
-            </div>
-          </motion.div>
+            <h3 className="font-bold text-sm text-foreground uppercase tracking-widest">Código Único da Loja</h3>
+          </div>
+          <p className="text-xs text-muted-foreground leading-relaxed">Este é o seu identificador exclusivo. Use-o para integrações via API ou Webhooks externos.</p>
+          <div className="flex items-center justify-between bg-secondary/50 p-6 rounded-2xl border border-border mt-4">
+            <span className="text-4xl font-black text-foreground tracking-[0.4em] drop-shadow-sm">{loja.codigo_unico}</span>
+            <button 
+              onClick={() => { navigator.clipboard.writeText(loja.codigo_unico); toast({ title: 'Código copiado!' }); }}
+              className="p-3 bg-white dark:bg-slate-800 rounded-xl hover:scale-110 active:scale-95 transition-all shadow-sm border border-border/50"
+            >
+              <Copy className="w-5 h-5 text-primary" />
+            </button>
+          </div>
+          <p className="text-[10px] text-muted-foreground/60 italic">* Mantenha este código em segurança.</p>
+        </motion.div>
+        {/* Store Name Display - New Location */}
+        <motion.div 
+          initial={{ opacity: 0, y: 8 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          className="bg-card p-6 rounded-[2rem] space-y-3 shadow-card border border-border/50 flex items-center justify-center"
+        >
+          <div className="flex flex-col items-center gap-2">
+            <Store className="w-8 h-8 text-primary" />
+            <p className="text-sm text-muted-foreground font-bold">Identidade da Loja:</p>
+            <p className="text-2xl font-black text-foreground uppercase tracking-tighter text-center">{loja.nome}</p>
+          </div>
+        </motion.div>
+      </div>
 
           {/* WhatsApp Connection */}
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card p-4 rounded-2xl shadow-card">
