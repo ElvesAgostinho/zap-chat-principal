@@ -40,18 +40,28 @@ export default function ConversationsPanel({ initialLeads, initialAgents }: { in
     if (!storeId) { setLoading(false); return; }
     const fetchData = async () => {
       setLoading(true);
-      const loadMessages = () => (supabase as any).from('mensagens').select('lead_id, lead_nome, conteudo, tipo, created_at, is_bot, respondido_por_nome').eq('loja_id', storeId).order('created_at', { ascending: false });
-      const { data: initialMessages } = await loadMessages();
-      const { data: storeData } = await (supabase as any).from('lojas').select('instance_name, instance_status').eq('id', storeId).maybeSingle();
-      
-      let nextMessages = initialMessages || [];
-      if (nextMessages.length === 0 && storeData?.instance_name && storeData?.instance_status === 'connected') {
-        await supabase.functions.invoke('whatsapp-connection', { body: { action: 'force_sync', instance: storeData.instance_name, store_id: storeId } });
-        const { data: syncedMessages } = await loadMessages();
-        nextMessages = syncedMessages || [];
+      try {
+        const loadMessages = () => (supabase as any).from('mensagens').select('lead_id, lead_nome, conteudo, tipo, created_at, is_bot, respondido_por_nome').eq('loja_id', storeId).order('created_at', { ascending: false });
+        const { data: initialMessages } = await loadMessages();
+        const { data: storeData } = await (supabase as any).from('lojas').select('instance_name, instance_status').eq('id', storeId).maybeSingle();
+        
+        let nextMessages = initialMessages || [];
+        if (nextMessages.length === 0 && storeData?.instance_name && storeData?.instance_status === 'connected') {
+          console.log('No messages found, triggering force_sync...');
+          try {
+            await supabase.functions.invoke('whatsapp-connection', { body: { action: 'force_sync', instance: storeData.instance_name, store_id: storeId } });
+            const { data: syncedMessages } = await loadMessages();
+            nextMessages = syncedMessages || [];
+          } catch (syncErr) {
+            console.error('Sync failed:', syncErr);
+          }
+        }
+        setMessages(nextMessages);
+      } catch (err) {
+        console.error('Fetch data failed:', err);
+      } finally {
+        setLoading(false);
       }
-      setMessages(nextMessages);
-      setLoading(false);
     };
     fetchData();
     const channel = supabase.channel('mensagens-rt').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'mensagens' }, (payload: any) => {

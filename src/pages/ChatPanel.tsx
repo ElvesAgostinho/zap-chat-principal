@@ -319,11 +319,11 @@ export default function ChatPanel() {
                 isHumanMode ? 'bg-orange-500/10 text-orange-600 border border-orange-500/20' : 
                 'bg-primary/10 text-primary border border-primary/20'}`}>
               {!storeBotActive ? (
-                <><X className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none text-red-200">BOT OFF</span></>
+                <><X className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none">BOT OFF</span></>
               ) : isHumanMode ? (
-                <><User className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none text-orange-200">HUMANO</span></>
+                <><User className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none">HUMANO</span></>
               ) : (
-                <><Bot className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none text-emerald-200">BOT</span></>
+                <><Bot className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none text-primary">BOT</span></>
               )}
             </div>
             <button onClick={scheduleFollowup} className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors" title="Agendar Follow-up" >
@@ -367,8 +367,8 @@ export default function ChatPanel() {
               <motion.div key={msg.id} initial={{ opacity: 0, scale: 0.95, y: 5 }} animate={{ opacity: 1, scale: 1, y: 0 }} className={`flex ${isSent ? 'justify-end' : 'justify-start'}`}>
                 <div className={`relative max-w-[85%] sm:max-w-[70%] px-2.5 py-1.5 shadow-sm
                   ${isSent
-                    ? 'bg-[#d9fdd3] dark:bg-[#005c4b] text-[#111b21] dark:text-[#e9edef] rounded-[10px] rounded-tr-[0px] border-b border-black/[0.04]'
-                    : 'bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-[10px] rounded-tl-[0px] border-b border-black/[0.04]'
+                    ? 'bg-[hsl(var(--whatsapp-bubble-sent))] text-foreground rounded-[10px] rounded-tr-[0px] border-b border-black/[0.04]'
+                    : 'bg-[hsl(var(--whatsapp-bubble-received))] text-foreground rounded-[10px] rounded-tl-[0px] border-b border-black/[0.04]'
                   }`}
                 >
                   {msg.media_url && msg.media_type && (
