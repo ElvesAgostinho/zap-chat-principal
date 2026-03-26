@@ -106,7 +106,7 @@
 }
 
 /* Force contrast on text-white EXCEPT when inside primary/destructive/emerald containers or gradients */
-:root:not(.dark) .text-white:not(.bg-primary *, .bg-destructive *, .bg-orange-500 *, .bg-emerald-500 *, .gradient-primary *, .bg-primary, .bg-destructive, .bg-orange-500, .bg-emerald-500, .gradient-primary, .shadow-glow *) {
+:root:not(.dark) .text-white:not(.force-dark, .force-dark *, .bg-primary *, .bg-destructive *, .bg-orange-500 *, .bg-emerald-500 *, .gradient-primary *, .bg-primary, .bg-destructive, .bg-orange-500, .bg-emerald-500, .gradient-primary, .shadow-glow *) {
   color: hsl(var(--foreground)) !important;
 }
 

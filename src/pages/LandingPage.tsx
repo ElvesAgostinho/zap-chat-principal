@@ -13,7 +13,7 @@ const LandingPage = () => {
   const companyEmail = "geral@topia.solutions";
 
   return (
-    <div className="min-h-screen bg-[#0B0F14] text-white selection:bg-primary/30 selection:text-white overflow-x-hidden pt-[80px]">
+    <div className="force-dark min-h-screen bg-[#0B0F14] text-white selection:bg-primary/30 selection:text-white overflow-x-hidden pt-[80px]">
       <CursorParticles />
       <Header />
       
@@ -198,7 +198,7 @@ const LandingPage = () => {
               <li><a href="#" className="hover:text-primary transition-colors">Início</a></li>
               <li><a href="#features" className="hover:text-primary transition-colors">Funcionalidades</a></li>
               <li><a href="#pricing" className="hover:text-primary transition-colors">Planos de Elite</a></li>
-              <li><Link to="/auth" className="hover:text-primary transition-colors">Área Restrita</Link></li>
+              <li><Link to="/login" className="hover:text-primary transition-colors">Área Restrita</Link></li>
             </ul>
           </div>
 
