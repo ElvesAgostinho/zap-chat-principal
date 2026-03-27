@@ -24,7 +24,7 @@ import FloatingSupportBot from "./components/FloatingSupportBot";
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children, adminOnly = false, superAdminOnly = false }: { children: React.ReactNode; adminOnly?: boolean; superAdminOnly?: boolean }) {
-  const { user, role, loading, isSuperAdmin, statusLoja } = useAuth();
+  const { user, role, loading, isSuperAdmin, statusLoja, isExpired } = useAuth();
 
   if (loading) {
     return (
@@ -37,13 +37,13 @@ function ProtectedRoute({ children, adminOnly = false, superAdminOnly = false }:
   if (!user) return <Navigate to="/login" replace />;
   if (superAdminOnly && !isSuperAdmin) return <Navigate to="/" replace />;
   
-  // If store is pending approval, redirect to a special state or screen
+  // If store is pending approval
   if (!isSuperAdmin && statusLoja === 'pendente_aprovacao') {
     return <PendingApprovalScreen />;
   }
 
-  // If store is suspended (e.g. for non-payment)
-  if (!isSuperAdmin && statusLoja === 'suspenso') {
+  // If store is suspended (manual) or expired (auto-billing)
+  if (!isSuperAdmin && (statusLoja === 'suspenso' || isExpired)) {
     return <SuspendedScreen />;
   }
 
@@ -53,7 +53,7 @@ function ProtectedRoute({ children, adminOnly = false, superAdminOnly = false }:
 }
 
 function AppRoutes() {
-  const { user, role, loading, isSuperAdmin, statusLoja } = useAuth();
+  const { user, role, loading, isSuperAdmin, statusLoja, isExpired } = useAuth();
 
   if (loading) {
     return (
@@ -76,6 +76,8 @@ function AppRoutes() {
                 <SuperAdminPanel />
               ) : statusLoja === 'pendente_aprovacao' ? (
                 <PendingApprovalScreen />
+              ) : (statusLoja === 'suspenso' || isExpired) ? (
+                <SuspendedScreen />
               ) : (
                 <Index />
               )}

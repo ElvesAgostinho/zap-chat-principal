@@ -22,6 +22,7 @@ interface AuthState {
   storeProfilePic: string | null;
   storePhone: string | null;
   dataFim: string | null;
+  isExpired: boolean;
   signOut: () => Promise<void>;
 }
 
@@ -43,6 +44,7 @@ const AuthContext = createContext<AuthState>({
   storeProfilePic: null,
   storePhone: null,
   dataFim: null,
+  isExpired: false,
   signOut: async () => {},
 });
 
@@ -84,6 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [storeProfilePic, setStoreProfilePic] = useState<string | null>(null);
   const [storePhone, setStorePhone] = useState<string | null>(null);
   const [dataFim, setDataFim] = useState<string | null>(null);
+  const [isExpired, setIsExpired] = useState(false);
   const versionRef = useRef(0);
 
   const clearMembership = () => {
@@ -100,6 +103,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStoreProfilePic(null);
     setStorePhone(null);
     setDataFim(null);
+    setIsExpired(false);
   };
 
   const checkSuperAdmin = async (userId: string): Promise<boolean> => {
@@ -175,6 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setMembershipState('super_admin');
         setPlano('enterprise'); // Super admin has max access
         setStatusLoja('ativo');
+        setIsExpired(false);
         setLoading(false);
         return;
       }
@@ -222,7 +227,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               .eq('status', 'ativo')
               .maybeSingle();
             
-            if (sub) setDataFim(sub.data_fim);
+            if (sub && sub.data_fim) {
+              setDataFim(sub.data_fim);
+              const expDate = new Date(sub.data_fim);
+              setIsExpired(expDate < new Date());
+            } else {
+              setIsExpired(false);
+            }
           }
         }
         
@@ -395,7 +406,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{ 
         user, session, role, storeId, storeSlug, storeCode, storeName, status, userName, 
         loading, membershipState, isSuperAdmin, 
-        plano, statusLoja, storeProfilePic, storePhone, dataFim, signOut 
+        plano, statusLoja, storeProfilePic, storePhone, dataFim, isExpired, signOut 
       }}
     >
       {children}
