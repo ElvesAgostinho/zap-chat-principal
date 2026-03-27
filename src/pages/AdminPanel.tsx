@@ -145,6 +145,23 @@ export default function AdminPanel() {
     }
   };
 
+  const handleDisconnectInstance = async () => {
+    if (!loja?.instance_name) return;
+    setConnectingInProcess(true);
+    try {
+      await supabase.functions.invoke('whatsapp-connection', { 
+        body: { action: 'logout', instance: loja.instance_name, store_id: loja.id } 
+      });
+      await (supabase as any).from('lojas').update({ instance_status: 'disconnected' }).eq('id', loja.id);
+      fetchData();
+      toast({ title: 'WhatsApp desconectado com sucesso!' });
+    } catch (err: any) {
+      toast({ title: 'Erro ao desconectar', description: err.message, variant: 'destructive' });
+    } finally {
+      setConnectingInProcess(false);
+    }
+  };
+
 
   return (
     <div className="space-y-5">
@@ -229,7 +246,7 @@ export default function AdminPanel() {
                   {isConnected ? 'Conectado' : 'Desconectado'}
                 </span>
               </div>
-              {!isConnected && (
+              {!isConnected ? (
                 <motion.button 
                   whileTap={{ scale: 0.95 }} 
                   onClick={handleConnectInstance} 
@@ -238,6 +255,16 @@ export default function AdminPanel() {
                 >
                   {connectingInProcess && <Loader2 className="w-3 h-3 animate-spin" />}
                   {connectingInProcess ? 'Conectando...' : 'Conectar'}
+                </motion.button>
+              ) : (
+                <motion.button 
+                  whileTap={{ scale: 0.95 }} 
+                  onClick={handleDisconnectInstance} 
+                  disabled={connectingInProcess}
+                  className="px-3 py-1.5 rounded-lg bg-destructive text-destructive-foreground text-xs font-medium hover:bg-destructive/90 transition-colors disabled:opacity-50 flex items-center gap-2 shadow-sm"
+                >
+                  {connectingInProcess && <Loader2 className="w-3 h-3 animate-spin" />}
+                  {connectingInProcess ? 'Aguarde...' : 'Desconectar'}
                 </motion.button>
               )}
             </div>

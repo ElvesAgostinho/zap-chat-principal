@@ -367,8 +367,8 @@ export default function ChatPanel() {
               <motion.div key={msg.id} initial={{ opacity: 0, scale: 0.95, y: 5 }} animate={{ opacity: 1, scale: 1, y: 0 }} className={`flex ${isSent ? 'justify-end' : 'justify-start'}`}>
                 <div className={`relative max-w-[85%] sm:max-w-[70%] px-2.5 py-1.5 shadow-sm
                   ${isSent
-                    ? 'bg-[hsl(var(--whatsapp-bubble-sent))] text-foreground rounded-[10px] rounded-tr-[0px] border-b border-black/[0.04]'
-                    : 'bg-[hsl(var(--whatsapp-bubble-received))] text-foreground rounded-[10px] rounded-tl-[0px] border-b border-black/[0.04]'
+                    ? 'bg-primary text-primary-foreground rounded-[16px] rounded-tr-none border border-black/5 shadow-md'
+                    : 'bg-white dark:bg-card text-foreground rounded-[16px] rounded-tl-none border border-border/50 shadow-md'
                   }`}
                 >
                   {msg.media_url && msg.media_type && (
@@ -385,11 +385,11 @@ export default function ChatPanel() {
                     
                     return <p className="whitespace-pre-wrap break-words text-[14px] leading-[19px] mt-0.5 px-1 font-normal">{msg.conteudo}</p>;
                   })()}
-                  <div className={`flex items-center gap-1 mt-1 justify-end opacity-60 float-right ml-3 pt-1 text-[10px]`}>
-                    {isSent && !msg.is_bot && msg.respondido_por_nome && <span className="font-bold uppercase tracking-widest text-[#005c4b] dark:text-[#d9fdd3]/80 opacity-70">{msg.respondido_por_nome}</span>}
-                    <time className="font-medium text-[#667781] dark:text-[#8696a0]">{formatTime(msg.created_at)}</time>
-                    {isSent && msg.is_bot && <Bot className="w-3 h-3 text-[#667781] dark:text-[#8696a0]" />}
-                    {isSent && !msg.is_bot && <CheckCheck className="w-[15px] h-[15px] text-[#53bdeb] dark:text-[#53bdeb]" />}
+                  <div className={`flex items-center gap-1 mt-1 justify-end opacity-80 float-right ml-3 pt-1 text-[10px]`}>
+                    {isSent && !msg.is_bot && msg.respondido_por_nome && <span className="font-bold uppercase tracking-widest opacity-80">{msg.respondido_por_nome}</span>}
+                    <time className={`font-medium ${isSent ? 'text-primary-foreground/90' : 'text-muted-foreground'}`}>{formatTime(msg.created_at)}</time>
+                    {isSent && msg.is_bot && <Bot className="w-3 h-3 text-primary-foreground/90" />}
+                    {isSent && !msg.is_bot && <CheckCheck className="w-[15px] h-[15px] text-white" />}
                   </div>
                   <div className="clear-both" />
                 </div>
