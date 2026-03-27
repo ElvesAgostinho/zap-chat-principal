@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Check, Rocket, Diamond, Zap, Building2, ArrowLeft, Send, Loader2 } from 'lucide-react';
+import { X, Check, Rocket, Diamond, Zap, Building2, ArrowLeft, Send, Loader2, FileText, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Plan {
@@ -39,7 +39,6 @@ const plans: Plan[] = [
   }
 ];
 
-// BUG-04 fix: Generate a stable reference per user, persisted in localStorage
 function getOrCreateReference(): string {
   const key = 'zapvendas_payment_ref';
   const existing = localStorage.getItem(key);
@@ -53,12 +52,15 @@ export default function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onC
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [reference] = useState(() => getOrCreateReference());
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadComplete, setUploadComplete] = useState(false);
+  
   const [bankConfig, setBankConfig] = useState({
     bank: 'BAI (Banco Angolano de Investimentos)',
     accountName: 'ZAP VENDAS TECNOLOGIA',
     iban: 'AO06 0000 0000 0000 0000 0000 0',
   });
-
 
   useEffect(() => {
     if (isOpen) {
@@ -83,14 +85,70 @@ export default function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onC
     }
   }, [isOpen]);
 
-  const handleConfirmTransfer = () => {
-    if (!selectedPlan) return;
-    const message = `Olá! Realizei a transferência para o plano *${selectedPlan.name}*. Em anexo o comprovativo. Ref: ${reference}`;
-    window.open(`https://wa.me/351936179188?text=${encodeURIComponent(message)}`, '_blank');
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) setUploadFile(file);
+  };
+
+  const handleSubmitPayment = async () => {
+    if (!selectedPlan || !uploadFile) return;
+
+    setIsUploading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Não autenticado");
+
+      const { data: member } = await (supabase as any).from('usuarios_loja').select('loja_id').eq('user_id', user.id).single();
+      if (!member) throw new Error("Loja não encontrada");
+
+      const fileExt = uploadFile.name.split('.').pop();
+      const fileName = `${Date.now()}-${member.loja_id}.${fileExt}`;
+      const filePath = `comprovativos/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('media')
+        .upload(filePath, uploadFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('media')
+        .getPublicUrl(filePath);
+
+      const { data: pData } = await (supabase as any)
+        .from('planos')
+        .select('id')
+        .ilike('name', selectedPlan.id)
+        .single();
+
+      await (supabase as any).from('assinaturas').insert({
+        loja_id: member.loja_id,
+        plano_id: pData?.id,
+        status: 'aguardando_pagamento',
+        comprovativo_url: publicUrl,
+        data_inicio: new Date().toISOString(),
+        notas: `Pagamento de plano ${selectedPlan.name} via transferência. Ref: ${reference}`
+      });
+
+      setUploadComplete(true);
+      
+      const message = `Olá! Fiz o upload do comprovativo (PDF) para o plano *${selectedPlan.name}* no sistema. Ref: ${reference}`;
+      window.open(`https://wa.me/351936179188?text=${encodeURIComponent(message)}`, '_blank');
+      
+      setTimeout(() => {
+        handleClose();
+      }, 3000);
+    } catch (error: any) {
+      alert("Erro no upload: " + error.message);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleClose = () => {
-    setSelectedPlan(null); // reset state when closing
+    setSelectedPlan(null);
+    setUploadFile(null);
+    setUploadComplete(false);
     onClose();
   };
 
@@ -98,126 +156,110 @@ export default function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onC
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={handleClose}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-          />
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={handleClose} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
           
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-5xl bg-card rounded-[32px] shadow-elevated border border-border overflow-hidden max-h-[90vh] flex flex-col"
-          >
-            {/* O scrollbar é aplicado apenas no conteúdo interno */}
-            <div className="p-8 md:p-12 overflow-y-auto custom-scrollbar">
-              <div className="flex justify-between items-start mb-10">
-                <div>
-                  <h2 className="text-3xl font-black tracking-tighter mb-2 uppercase italic">Escale seu Negócio</h2>
-                  <p className="text-muted-foreground">Escolha o plano ideal para sua operação e desbloqueie todo o poder do ZapVendas.</p>
-                </div>
-                <button onClick={handleClose} className="p-2 rounded-full hover:bg-muted transition-colors shrink-0">
-                  <X className="w-6 h-6" />
-                </button>
+          <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }} className="relative w-full max-w-lg bg-card rounded-[32px] shadow-2xl overflow-hidden border border-border/50">
+            {/* Header */}
+            <div className="p-6 pb-0 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-display font-bold text-foreground">Explorar Planos</h2>
+                <p className="text-xs text-muted-foreground mt-1">Upgrade imediato para o seu negócio</p>
               </div>
+              <button onClick={handleClose} className="p-2 rounded-xl bg-secondary text-muted-foreground hover:bg-secondary/80 transition-colors"><X className="w-5 h-5" /></button>
+            </div>
 
+            <div className="p-6">
               {!selectedPlan ? (
-                // PASSO 1: Seleção de Planos
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid gap-3 max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar">
                   {plans.map((plan) => (
-                    <div 
-                      key={plan.id}
-                      className="p-6 rounded-2xl bg-muted/30 border border-border/50 hover:border-primary/50 transition-all flex flex-col group"
+                    <motion.button 
+                      key={plan.id} 
+                      whileHover={{ scale: 1.01 }} 
+                      whileTap={{ scale: 0.99 }} 
+                      onClick={() => setSelectedPlan(plan)} 
+                      className="group p-4 rounded-3xl border border-border/50 bg-secondary/30 hover:bg-primary/5 hover:border-primary/30 transition-all text-left flex items-center justify-between"
                     >
-                      <div className={`w-12 h-12 rounded-xl bg-${plan.color}/10 flex items-center justify-center mb-6 text-${plan.color}`}>
-                        <plan.icon className="w-6 h-6" />
+                      <div className="flex items-center gap-4">
+                        <div className={`p-3 rounded-2xl bg-${plan.color}/10 text-${plan.color}`}>
+                          <plan.icon className="w-6 h-6" />
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-base text-foreground">{plan.name}</h3>
+                          <p className="text-[10px] text-muted-foreground uppercase font-black">{plan.features[0]}</p>
+                        </div>
                       </div>
-                      <h3 className="text-xl font-bold mb-1">{plan.name}</h3>
-                      <p className="text-2xl font-black mb-6">{plan.price}</p>
-                      
-                      <div className="space-y-3 mb-8 flex-1">
-                        {plan.features.map((f, i) => (
-                          <div key={i} className="flex items-center gap-2">
-                            <Check className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                            <span className="text-[13px] text-muted-foreground font-medium">{f}</span>
-                          </div>
-                        ))}
+                      <div className="text-right">
+                        <p className="font-black text-foreground">{plan.price}</p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold">por mês</p>
                       </div>
-
-                      <button
-                        onClick={() => setSelectedPlan(plan)}
-                        className="w-full py-3 rounded-xl bg-primary text-white font-black text-xs uppercase tracking-widest shadow-glow hover:scale-[1.02] transition-all"
-                      >
-                        Selecionar Plano
-                      </button>
-                    </div>
+                    </motion.button>
                   ))}
                 </div>
               ) : (
-                // PASSO 2: Dados Bancários
-                <motion.div 
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="max-w-3xl mx-auto space-y-6"
-                >
-                  <button 
-                    onClick={() => setSelectedPlan(null)}
-                    className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4 font-medium"
-                  >
-                    <ArrowLeft className="w-4 h-4" /> Voltar aos planos
-                  </button>
-
-                  <div className="text-center mb-8">
-                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                      <selectedPlan.icon className="w-8 h-8 text-primary" />
+                <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => setSelectedPlan(null)} className="p-2 rounded-xl bg-secondary text-muted-foreground"><ArrowLeft className="w-4 h-4" /></button>
+                    <div>
+                      <h3 className="font-bold text-foreground">Pagamento: {selectedPlan.name}</h3>
+                      <p className="text-xs text-primary font-bold">{selectedPlan.price}</p>
                     </div>
-                    <h3 className="text-2xl font-bold">Plano {selectedPlan.name}</h3>
-                    <p className="text-xl font-black text-primary mt-1 text-muted-foreground">{selectedPlan.price} / mês</p>
                   </div>
 
-                  <div className="p-8 rounded-2xl bg-secondary/30 border border-border">
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Building2 className="w-6 h-6 text-primary" />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-lg">Informações para Pagamento</h4>
-                        <p className="text-sm text-muted-foreground">Efetue a transferência para a conta abaixo</p>
-                      </div>
+                  <div className="glassmorphism p-5 rounded-3xl border-primary/20 space-y-4">
+                    <div className="flex items-center gap-3 text-primary">
+                      <Building2 className="w-5 h-5" />
+                      <p className="text-xs font-bold uppercase tracking-widest">Coordenadas Bancárias</p>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm bg-background p-6 rounded-xl border border-border/50">
-                      <div>
-                        <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest mb-1">Banco</p>
-                        <p className="font-medium">{bankConfig.bank}</p>
-                      </div>
-                      <div>
-                        <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest mb-1">Beneficiário</p>
-                        <p className="font-medium">{bankConfig.accountName}</p>
-                      </div>
-                      <div className="md:col-span-2">
-                        <p className="text-muted-foreground uppercase text-[10px] font-bold tracking-widest mb-1">IBAN de Angola</p>
-                        <p className="font-mono font-bold bg-muted p-3 rounded-lg border border-border select-all text-base">{bankConfig.iban}</p>
-                      </div>
-                      <div className="md:col-span-2 flex items-center justify-between p-4 bg-primary/5 rounded-lg border border-primary/20">
-                        <div>
-                          <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">Sua Referência Única</p>
-                          <p className="font-mono font-black text-foreground text-lg">{reference}</p>
+                    {loadingConfig ? (
+                       <div className="flex items-center justify-center py-4"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                           <div><p className="text-[9px] uppercase font-bold text-muted-foreground">Banco</p><p className="text-[11px] font-bold text-foreground">{bankConfig.bank}</p></div>
+                           <div><p className="text-[9px] uppercase font-bold text-muted-foreground">Titular</p><p className="text-[11px] font-bold text-foreground line-clamp-1">{bankConfig.accountName}</p></div>
                         </div>
-                        <p className="text-xs text-muted-foreground text-right max-w-[150px]">Coloque esta referência no descritivo da transferência.</p>
+                        <div className="bg-background/50 p-3 rounded-xl border border-border/50 text-center">
+                          <p className="text-[9px] uppercase font-black text-primary mb-1 tracking-widest">IBAN</p>
+                          <p className="text-[12px] font-mono font-black text-foreground break-all">{bankConfig.iban}</p>
+                        </div>
+                        <div className="bg-primary/10 p-2 rounded-xl text-center">
+                           <p className="text-[10px] font-bold text-primary">REF: <span className="font-black select-all">{reference}</span></p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Anexar Comprovativo (PDF)</label>
+                    <div className="relative group">
+                      <input 
+                        type="file" 
+                        accept=".pdf,image/*" 
+                        onChange={handleFileUpload} 
+                        className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                      />
+                      <div className={`w-full py-6 rounded-3xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-2 ${uploadFile ? 'border-primary bg-primary/5' : 'border-border/60 group-hover:border-primary/40'}`}>
+                        {uploadFile ? (
+                           uploadFile.type === 'application/pdf' ? <FileText className="w-6 h-6 text-primary" /> : <Upload className="w-6 h-6 text-primary" />
+                        ) : (
+                           <Upload className="w-6 h-6 text-muted-foreground" />
+                        )}
+                        <p className="text-[11px] font-bold text-foreground text-center px-4 line-clamp-1">
+                          {uploadFile ? uploadFile.name : 'Clique ou arraste o PDF aqui'}
+                        </p>
                       </div>
                     </div>
                   </div>
 
-                  <button
-                    onClick={handleConfirmTransfer}
-                    className="w-full flex justify-center items-center gap-3 py-4 rounded-xl bg-primary text-white font-black text-sm uppercase tracking-widest shadow-glow hover:scale-[1.01] transition-all mt-4"
+                  <motion.button
+                    whileTap={{ scale: 0.98 }}
+                    onClick={handleSubmitPayment}
+                    disabled={!uploadFile || isUploading || uploadComplete}
+                    className={`w-full py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-glow transition-all flex items-center justify-center gap-2 ${uploadComplete ? 'bg-emerald-500 text-white' : 'bg-primary text-white disabled:opacity-50'}`}
                   >
-                    Já transferi, enviar comprovativo <Send className="w-4 h-4 inline-block" />
-                  </button>
+                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : uploadComplete ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+                    {uploadComplete ? 'ENVIADO COM SUCESSO' : 'FINALIZAR UPGRADE'}
+                  </motion.button>
                 </motion.div>
               )}
             </div>
