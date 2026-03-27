@@ -149,24 +149,37 @@ export default function SuperAdminPanel() {
   const handleStoreAction = async (id: string, action: 'aprovar' | 'suspend') => {
     setProcessingId(id);
     try {
-      // 1. Update the store status AND plan
-      const planoSelecionado = selectedPlans[id] || 'iniciante';
+      const planoSelecionado = selectedPlans[id] || 'starter';
+      
+      // 1. Update store
       await (supabase as any).from('lojas').update({
         status_aprovacao: action === 'aprovar' ? 'ativo' : 'suspenso',
         aprovado_em: action === 'aprovar' ? new Date().toISOString() : null,
-        ...(action === 'aprovar' ? { plano: planoSelecionado.toLowerCase() } : {})
+        plano: planoSelecionado.toLowerCase()
       }).eq('id', id);
 
-      // 2. CRITICAL FIX: Also update usuarios_loja.status so get_my_membership
-      //    returns 'aprovado' and the user can actually log in after approval.
-      await (supabase as any).from('usuarios_loja').update({
-        status: action === 'aprovar' ? 'aprovado' : 'rejeitado'
-      }).eq('loja_id', id);
+      // 2. Auto-create subscription on approval
+      if (action === 'aprovar') {
+        const { data: pData } = await (supabase as any).from('planos').select('id').ilike('nome', planoSelecionado).single();
+        
+        await (supabase as any).from('assinaturas').insert({
+          loja_id: id,
+          plano_id: pData?.id,
+          status: 'ativo',
+          data_inicio: new Date().toISOString(),
+          data_fim: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          notas: 'Ativação automática via Super Admin'
+        });
 
-      toast(action === 'aprovar' ? `✅ Loja Ativada! Plano: ${planoSelecionado}` : '⚠️ Loja Suspensa');
+        await (supabase as any).from('usuarios_loja').update({
+          status: 'aprovado'
+        }).eq('loja_id', id);
+      }
+
+      toast.success(action === 'aprovar' ? `✅ Loja Ativada: ${planoSelecionado.toUpperCase()}` : '⚠️ Loja Suspensa');
       fetchAll();
     } catch (err: any) {
-      toast("Erro", { description: err.message });
+      toast.error("Erro", { description: err.message });
     } finally {
       setProcessingId(null);
     }
@@ -233,7 +246,7 @@ export default function SuperAdminPanel() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full flex overflow-x-auto no-scrollbar justify-start border-b border-white/5 bg-white/5 backdrop-blur-xl rounded-2xl h-14 p-1">
             <TabsTrigger value="stores_pending" className="relative shrink-0 font-display font-semibold transition-all data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-5">
-              Lojas
+              Novas Lojas
               {pendingStores.length > 0 && (
                 <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-orange-500 text-[10px] text-white flex items-center justify-center font-bold shadow-glow-orange border-2 border-background">
                   {pendingStores.length}
@@ -256,228 +269,223 @@ export default function SuperAdminPanel() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="stores" className="shrink-0 font-display font-semibold transition-all data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-5 text-sm">Todas</TabsTrigger>
+            <TabsTrigger value="stores" className="shrink-0 font-display font-semibold transition-all data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-5 text-sm">Todas Lojas</TabsTrigger>
             <TabsTrigger value="subscriptions" className="shrink-0 font-display font-semibold transition-all data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-5 text-sm">Faturas</TabsTrigger>
-            <TabsTrigger value="billing_config" className="shrink-0 font-display font-semibold transition-all data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-5 text-sm">Configuração</TabsTrigger>
+            <TabsTrigger value="billing_config" className="shrink-0 font-display font-semibold transition-all data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-5 text-sm">IBAN</TabsTrigger>
           </TabsList>
 
           {/* New Stores Approval */}
           <TabsContent value="stores_pending" className="space-y-3 mt-4">
             {pendingStores.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground text-sm">
+              <div className="text-center py-12 text-muted-foreground text-sm glassmorphism rounded-3xl">
                 <CheckCircle className="w-8 h-8 mx-auto mb-2 text-primary/30" />
                 Nenhuma loja aguardando aprovação
               </div>
             ) : (
               pendingStores.map(l => (
                 <motion.div key={l.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                  className="bg-card p-4 rounded-2xl shadow-card ring-2 ring-orange-500/20 space-y-3"
+                  className="bg-card p-4 rounded-3xl shadow-card ring-2 ring-primary/5 space-y-4"
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="font-semibold text-foreground">{l.nome}</h3>
-                      <p className="text-xs text-muted-foreground">Plano solicitado: <strong>{l.plano}</strong></p>
+                      <h3 className="font-bold text-foreground text-lg">{l.nome}</h3>
                       <p className="text-[10px] text-muted-foreground mt-1">
-                        Criada em: {new Date(l.criado_em).toLocaleDateString('pt-AO')}
+                        REGISTADA EM: {new Date(l.criado_em).toLocaleDateString('pt-AO')}
                       </p>
                     </div>
-                    <Badge variant="outline" className="text-orange-600 border-orange-400/30">
-                      <Clock className="w-3 h-3 mr-1" /> Aguardando Ativação
+                    <Badge className="bg-orange-500/10 text-orange-600 border-orange-400/30">
+                      <Clock className="w-3 h-3 mr-1" /> PENDENTE
                     </Badge>
                   </div>
 
                   {/* Admin Info */}
-                  <div className="bg-secondary/50 p-2.5 rounded-xl space-y-1">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1 flex items-center gap-1">
-                      <UserCheck className="w-3 h-3" /> Responsável
-                    </p>
-                    {allAdmins.filter(a => a.loja_id === l.id).map(admin => (
-                      <div key={admin.id} className="space-y-0.5">
-                        <p className="text-sm font-semibold text-foreground">{admin.nome}</p>
-                        <div className="flex flex-wrap gap-x-3 gap-y-1">
-                          <p className="text-[11px] text-primary font-medium">{(admin as any).email || (admin as any).user_id || 'Sem email'}</p>
-                          {(admin as any).telefone && <p className="text-[11px] text-emerald-500 font-mono italic">{(admin as any).telefone}</p>}
+                  <div className="bg-secondary/30 p-3 rounded-2xl flex items-center gap-3 border border-border/50">
+                    <UserCheck className="w-4 h-4 text-primary" />
+                    <div>
+                      {allAdmins.filter(a => a.loja_id === l.id).map(admin => (
+                        <div key={admin.id}>
+                          <p className="text-xs font-bold text-foreground">{admin.nome}</p>
+                          <p className="text-[10px] text-muted-foreground">{(admin as any).telefone || admin.user_id}</p>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
 
                   {/* Plan assignment dropdown */}
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Atribuir Plano</label>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-primary/60 ml-1">Plano Inicial</label>
                     <select
                       value={selectedPlans[l.id] || l.plano || 'starter'}
                       onChange={(e) => setSelectedPlans(prev => ({ ...prev, [l.id]: e.target.value }))}
-                      className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                      className="w-full px-4 py-3 text-sm rounded-2xl border border-border bg-background font-bold focus:ring-2 focus:ring-primary/20 outline-none h-12"
                     >
-                      <option value="starter">Starter — 25.000 Kz/mês</option>
-                      <option value="profissional">Profissional — 50.000 Kz/mês</option>
-                      <option value="enterprise">Enterprise — 100.000 Kz/mês</option>
+                      <option value="starter">Starter — 25.000 Kz</option>
+                      <option value="profissional">Profissional — 50.000 Kz</option>
+                      <option value="enterprise">Enterprise — 100.000 Kz</option>
                     </select>
                   </div>
 
-                  <div className="flex gap-2">
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleStoreAction(l.id, 'aprovar')}
-                      disabled={processingId === l.id}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-orange-500 text-white text-sm font-medium disabled:opacity-50"
-                    >
-                      {processingId === l.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Store className="w-4 h-4" />}
-                      Ativar Empresa
-                    </motion.button>
-                  </div>
+                  <motion.button
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleStoreAction(l.id, 'aprovar')}
+                    disabled={processingId === l.id}
+                    className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-2xl bg-primary text-white text-xs font-black uppercase tracking-[0.2em] shadow-glow"
+                  >
+                    {processingId === l.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Ativar Agora'}
+                  </motion.button>
                 </motion.div>
               ))
             )}
           </TabsContent>
 
-          {/* Pending Payments */}
-          <TabsContent value="payments" className="space-y-3 mt-4">
-            {pendingAssinaturas.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground text-sm">
-                <CheckCircle className="w-8 h-8 mx-auto mb-2 text-primary/30" />
-                Nenhum pagamento pendente
+          {/* Administrators - Full List */}
+          <TabsContent value="users" className="space-y-3 mt-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-2 mb-2">Gestores Registados ({allAdmins.length})</p>
+            {allAdmins.map(admin => (
+              <div key={admin.id} className="bg-card p-4 rounded-3xl shadow-sm border border-border/40 flex items-center justify-between">
+                <div>
+                  <h4 className="font-bold text-sm">{admin.nome}</h4>
+                  <p className="text-[11px] text-primary">{(admin as any).lojas?.nome || 'Admin do Sistema'}</p>
+                  <p className="text-[10px] text-muted-foreground">{(admin as any).email}</p>
+                </div>
+                <Badge className={admin.status === 'aprovado' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-orange-500/10 text-orange-600'}>
+                  {admin.status.toUpperCase()}
+                </Badge>
               </div>
+            ))}
+          </TabsContent>
+
+          {/* Payments - Historical View */}
+          <TabsContent value="payments" className="space-y-3 mt-4">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-2 mb-2">Fluxo de Pagamentos</p>
+            {assinaturas.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground text-sm glassmorphism rounded-3xl">Nenhum registo de pagamento</div>
             ) : (
-              pendingAssinaturas.map(a => (
-                <motion.div key={a.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-                  className="bg-card p-4 rounded-2xl shadow-card ring-2 ring-amber-400/50 space-y-3"
-                >
-                  <div className="flex items-start justify-between">
+              assinaturas.map(a => (
+                <div key={a.id} className={`bg-card p-4 rounded-3xl shadow-sm border ${a.status === 'aguardando_pagamento' ? 'ring-2 ring-orange-500/30' : 'border-border/40'} space-y-3`}>
+                  <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-semibold text-foreground">{(a as any).lojas?.nome || 'Loja'}</h3>
-                      <p className="text-xs text-muted-foreground">
-                        Plano: <strong className="text-foreground">{(a as any).planos?.nome}</strong> — {formatKz((a as any).planos?.preco || 0)}/mês
-                      </p>
-                      <p className="text-[10px] text-muted-foreground mt-1">
-                        {new Date(a.criado_em).toLocaleDateString('pt-AO')}
-                      </p>
+                      <h4 className="font-bold text-sm">{(a as any).lojas?.nome}</h4>
+                      <p className="text-xs font-black text-primary">{formatKz((a as any).planos?.preco || 0)}</p>
                     </div>
-                    <Badge variant="outline" className="text-amber-600 border-amber-400">
-                      <Clock className="w-3 h-3 mr-1" /> Pendente
+                    <Badge className={
+                      a.status === 'ativo' ? 'bg-emerald-500/10 text-emerald-600' :
+                      a.status === 'aguardando_pagamento' ? 'bg-orange-500/10 text-orange-600' : 
+                      'bg-muted-foreground/10 text-muted-foreground'
+                    }>
+                      {a.status.toUpperCase().replace('_', ' ')}
                     </Badge>
                   </div>
-
-                  {a.comprovativo_url && (
-                    <button
-                      onClick={() => setViewingImage(a.comprovativo_url)}
-                      className="flex items-center gap-2 text-xs text-primary hover:underline"
-                    >
-                      <Eye className="w-3.5 h-3.5" /> Ver comprovativo
-                    </button>
+                  
+                  {a.status === 'aguardando_pagamento' && (
+                    <div className="flex gap-2 pt-2">
+                       <button 
+                        onClick={() => handlePaymentAction(a.id, 'aprovar')}
+                        className="flex-1 bg-emerald-500 text-white text-[10px] font-black py-2 rounded-xl transition-all hover:bg-emerald-600"
+                       >
+                         APROVAR
+                       </button>
+                       <button 
+                        onClick={() => handlePaymentAction(a.id, 'rejeitar')}
+                        className="flex-1 bg-destructive/10 text-destructive text-[10px] font-black py-2 rounded-xl"
+                       >
+                         REJEITAR
+                       </button>
+                       {a.comprovativo_url && (
+                        <button onClick={() => setViewingImage(a.comprovativo_url)} className="p-2 rounded-xl bg-secondary"><Eye className="w-4 h-4" /></button>
+                       )}
+                    </div>
                   )}
-
-                  {a.notas && (
-                    <p className="text-xs text-muted-foreground bg-secondary/50 p-2 rounded-lg">{a.notas}</p>
-                  )}
-
-                  <div className="flex gap-2">
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handlePaymentAction(a.id, 'aprovar')}
-                      disabled={processingId === a.id}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium disabled:opacity-50"
-                    >
-                      {processingId === a.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                      Aprovar
-                    </motion.button>
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handlePaymentAction(a.id, 'rejeitar')}
-                      disabled={processingId === a.id}
-                      className="flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-destructive/10 text-destructive text-sm font-medium disabled:opacity-50"
-                    >
-                      <XCircle className="w-4 h-4" /> Rejeitar
-                    </motion.button>
-                  </div>
-                </motion.div>
+                </div>
               ))
             )}
           </TabsContent>
 
-          {/* All Stores */}
-          <TabsContent value="stores" className="space-y-3 mt-4">
-            <p className="text-xs text-muted-foreground">{lojas.length} loja(s) registada(s)</p>
+          {/* All Stores List */}
+          <TabsContent value="stores" className="space-y-4 mt-4">
             {lojas.map(loja => {
               const sub = assinaturas.find(a => a.loja_id === loja.id && a.status === 'ativo');
               return (
-                <div key={loja.id} className="bg-card p-4 rounded-2xl shadow-card space-y-3">
+                <div key={loja.id} className="bg-card p-5 rounded-3xl shadow-card border border-border/30 space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold text-foreground">{loja.nome}</h3>
-                      <p className="text-[10px] text-primary font-medium">/loja/{(loja as any).slug || loja.codigo_unico}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                       <span className={`w-2 h-2 rounded-full ${loja.instance_status === 'connected' ? 'bg-emerald-500' : 'bg-muted-foreground/30'}`} />
-                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                        loja.status_aprovacao === 'ativo' ? 'bg-emerald-100 text-emerald-700' :
-                        loja.status_aprovacao === 'suspenso' ? 'bg-red-100 text-red-700' :
-                        'bg-orange-100 text-orange-700'
-                      }`}>{loja.status_aprovacao}</span>
-                    </div>
-                  </div>
-
-                  {/* Admin Info */}
-                  <div className="flex flex-wrap gap-4 pt-1">
-                    {allAdmins.filter(a => a.loja_id === loja.id).map(admin => (
-                      <div key={admin.id} className="space-y-0.5 border-l-2 border-primary/20 pl-3">
-                        <p className="text-xs font-bold text-foreground">{(admin as any).nome}</p>
-                        <p className="text-[10px] text-muted-foreground">{(admin as any).email}</p>
-                        <p className="text-[10px] text-emerald-500 font-mono">{(admin as any).telefone}</p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Badge className="bg-primary/20 text-primary uppercase text-[9px] font-black tracking-widest px-2 py-0.5 border-0">
+                          {getPlanDisplayName(loja.plano)}
+                        </Badge>
+                        <span className={`w-2 h-2 rounded-full ${loja.instance_status === 'connected' ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground/30'}`} />
                       </div>
-                    ))}
+                      <h3 className="font-bold text-lg text-foreground">{loja.nome}</h3>
+                      <p className="text-[10px] text-muted-foreground font-mono">ID: {loja.codigo_unico}</p>
+                    </div>
+                    <Badge className={`px-3 py-1 rounded-full text-[10px] font-black border-0 ${
+                      loja.status_aprovacao === 'ativo' ? 'bg-emerald-500/10 text-emerald-600' :
+                      loja.status_aprovacao === 'suspenso' ? 'bg-destructive/10 text-destructive' :
+                      'bg-orange-500/10 text-orange-600'
+                    }`}>
+                      {loja.status_aprovacao.toUpperCase()}
+                    </Badge>
                   </div>
-                  {loja.telefone && <p className="text-xs text-muted-foreground">{loja.telefone}</p>}
 
                   {/* Expiration Banner - Centralized Management */}
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-primary/5 border border-primary/10 rounded-2xl">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                        <Clock className="w-4 h-4 text-primary" />
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-primary/5 border border-primary/10 rounded-2xl relative overflow-hidden">
+                    <div className="flex items-center gap-4 relative z-10">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                        <Clock className="w-5 h-5 text-primary" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Estado da Assinatura</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Ciclo de Faturamento</p>
                         {sub ? (
                           <div className="flex items-center gap-2">
-                             <span className={`text-xs font-bold ${getDaysLeft(sub.data_fim)! < 5 ? 'text-red-500 underline decoration-wavy' : 'text-foreground'}`}>
+                             <span className={`text-sm font-black ${getDaysLeft(sub.data_fim)! < 5 ? 'text-destructive underline decoration-wavy' : 'text-foreground'}`}>
                               {getDaysLeft(sub.data_fim)! > 0 
-                                ? `${getDaysLeft(sub.data_fim)} dias restantes` 
-                                : 'Acesso Expirado'}
+                                ? `${getDaysLeft(sub.data_fim)} DIAS` 
+                                : 'EXPIRADO'}
                             </span>
-                            <span className="text-[10px] text-muted-foreground">({new Date(sub.data_fim).toLocaleDateString()})</span>
+                            <span className="text-[11px] text-muted-foreground font-bold">({new Date(sub.data_fim).toLocaleDateString()})</span>
                           </div>
                         ) : (
-                          <span className="text-xs text-muted-foreground italic">Nenhuma subscrição ativa</span>
+                          <div className="flex flex-col">
+                            <span className="text-xs text-destructive font-black">SEM VENCIMENTO DEFINIDO</span>
+                            <span className="text-[9px] text-muted-foreground italic">Use o botão ao lado para fixar +30 dias</span>
+                          </div>
                         )}
                       </div>
                     </div>
-                    {sub && (
-                      <button 
-                        onClick={async () => {
-                          const novaData = new Date(sub.data_fim);
-                          novaData.setDate(novaData.getDate() + 30);
-                          const { error } = await supabase.from('assinaturas').update({ data_fim: novaData.toISOString() }).eq('id', sub.id);
-                          if (!error) {
-                            toast.success("✅ Renovação Concluída", { description: `A loja ${loja.nome} recebeu +30 dias de acesso.` });
-                            fetchAll();
-                          } else {
-                            toast.error("Erro ao renovar");
-                          }
-                        }}
-                        className="px-4 py-1.5 rounded-lg bg-primary/10 text-primary text-[11px] font-black uppercase tracking-widest hover:bg-primary hover:text-white transition-all shadow-sm"
-                      >
-                        +30 dias
-                      </button>
-                    )}
+                    <button 
+                      onClick={async () => {
+                        const novaData = sub ? new Date(sub.data_fim) : new Date();
+                        novaData.setDate(novaData.getDate() + 30);
+                        
+                        // Upsert logic for manual renewal
+                        if (sub) {
+                           await supabase.from('assinaturas').update({ data_fim: novaData.toISOString() }).eq('id', sub.id);
+                        } else {
+                           const { data: pData } = await (supabase as any).from('planos').select('id').ilike('nome', loja.plano || 'starter').single();
+                           await supabase.from('assinaturas').insert({ 
+                             loja_id: loja.id, 
+                             plano_id: pData?.id,
+                             status: 'ativo',
+                             data_inicio: new Date().toISOString(),
+                             data_fim: novaData.toISOString() 
+                           });
+                        }
+                        
+                        toast.success("✅ Acesso Renovado", { description: `A loja ${loja.nome} recebeu +30 dias.` });
+                        fetchAll();
+                      }}
+                      className="px-6 py-2 rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-[0.15em] hover:shadow-glow transition-all active:scale-95"
+                    >
+                      +{sub ? '30 DIAS' : 'INICIAR CICLO'}
+                    </button>
                   </div>
 
                   {/* Plan changer */}
-                  <div className="flex gap-2 items-center pt-2 border-t border-border/50">
+                  <div className="flex gap-2 items-center pt-2">
                     <select
                       value={selectedPlans[loja.id] ?? loja.plano ?? 'starter'}
                       onChange={(e) => setSelectedPlans(prev => ({ ...prev, [loja.id]: e.target.value }))}
-                      className="flex-1 px-3 py-2 text-xs rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 h-10"
+                      className="flex-1 px-3 py-2 text-xs rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/20 outline-none h-11 font-bold"
                     >
                       <option value="starter">Starter — 25.000 Kz</option>
                       <option value="profissional">Profissional — 50.000 Kz</option>
@@ -490,26 +498,18 @@ export default function SuperAdminPanel() {
                         setProcessingId(loja.id);
                         try {
                           const novoPlano = (selectedPlans[loja.id] ?? loja.plano ?? 'starter').toLowerCase();
-                          await (supabase as any).from('lojas').update({ 
-                            plano: novoPlano,
-                            status_aprovacao: 'ativo'
-                          }).eq('id', loja.id);
-                          
-                          await (supabase as any).from('usuarios_loja').update({
-                            status: 'aprovado'
-                          }).eq('loja_id', loja.id);
-                          
-                          toast.success("✅ Plano Atualizado", { description: `Loja ${loja.nome} agora é ${novoPlano.toUpperCase()}` });
+                          await (supabase as any).from('lojas').update({ plano: novoPlano, status_aprovacao: 'ativo' }).eq('id', loja.id);
+                          toast.success("Plano Sincronizado");
                           fetchAll();
                         } catch (err: any) {
-                          toast.error("Erro", { description: err.message });
+                          toast.error(err.message);
                         } finally {
                           setProcessingId(null);
                         }
                       }}
-                      className="h-10 px-4 rounded-xl bg-primary text-white text-[11px] font-black uppercase tracking-widest shadow-sm disabled:opacity-50"
+                      className="h-11 px-6 rounded-xl bg-secondary text-foreground text-[10px] font-black uppercase tracking-widest border border-border/60 hover:bg-secondary/80"
                     >
-                      {processingId === loja.id ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Atualizar'}
+                      {processingId === loja.id ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Sincronizar'}
                     </motion.button>
                   </div>
                 </div>
@@ -517,33 +517,17 @@ export default function SuperAdminPanel() {
             })}
           </TabsContent>
 
-
-          {/* Active Subscriptions */}
-          <TabsContent value="subscriptions" className="space-y-3 mt-4">
-            <p className="text-xs text-muted-foreground">{activeAssinaturas.length} assinatura(s) ativa(s)</p>
-            {activeAssinaturas.map(a => (
-              <div key={a.id} className="bg-card p-4 rounded-2xl shadow-card">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-semibold text-foreground">{(a as any).lojas?.nome || 'Loja'}</h3>
-                    <p className="text-xs text-muted-foreground">
-                      {(a as any).planos?.nome} — {formatKz((a as any).planos?.preco || 0)}/mês
-                    </p>
-                  </div>
-                  <Badge className="bg-primary/10 text-primary border-0">
-                    <CheckCircle className="w-3 h-3 mr-1" /> Ativo
-                  </Badge>
-                </div>
-                {a.data_fim && (
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    Expira: {new Date(a.data_fim).toLocaleDateString('pt-AO')}
-                  </p>
-                )}
-              </div>
-            ))}
-            {activeAssinaturas.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground text-sm">Nenhuma assinatura ativa</div>
-            )}
+          <TabsContent value="subscriptions" className="space-y-4 mt-4">
+             {/* Full Invoices List */}
+             {assinaturas.filter(a => a.status === 'ativo' || a.status === 'finalizada').map(f => (
+               <div key={f.id} className="bg-card p-4 rounded-3xl shadow-sm border border-border/30 flex items-center justify-between">
+                 <div>
+                    <h4 className="font-bold text-sm">{(f as any).lojas?.nome}</h4>
+                    <p className="text-[10px] text-muted-foreground uppercase">{new Date(f.criado_em).toLocaleDateString()} — {(f as any).planos?.nome}</p>
+                 </div>
+                 <p className="font-black text-primary text-xs">{formatKz((f as any).planos?.preco || 0)}</p>
+               </div>
+             ))}
           </TabsContent>
 
           <TabsContent value="billing_config" className="space-y-4 mt-6">
@@ -560,7 +544,7 @@ export default function SuperAdminPanel() {
             animate={{ scale: 1, opacity: 1 }}
             src={viewingImage}
             alt="Comprovativo"
-            className="max-w-full max-h-[85vh] rounded-xl object-contain"
+            className="max-w-full max-h-[85vh] rounded-3xl object-contain shadow-2xl"
           />
         </div>
       )}
