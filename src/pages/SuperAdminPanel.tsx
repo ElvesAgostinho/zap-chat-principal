@@ -138,7 +138,7 @@ export default function SuperAdminPanel() {
       await (supabase as any).from('lojas').update({
         status_aprovacao: action === 'aprovar' ? 'ativo' : 'suspenso',
         aprovado_em: action === 'aprovar' ? new Date().toISOString() : null,
-        ...(action === 'aprovar' ? { plano: planoSelecionado } : {})
+        ...(action === 'aprovar' ? { plano: planoSelecionado.toLowerCase() } : {})
       }).eq('id', id);
 
       // 2. CRITICAL FIX: Also update usuarios_loja.status so get_my_membership
@@ -279,8 +279,8 @@ export default function SuperAdminPanel() {
                       <div key={admin.id} className="space-y-0.5">
                         <p className="text-sm font-semibold text-foreground">{admin.nome}</p>
                         <div className="flex flex-wrap gap-x-3 gap-y-1">
-                          <p className="text-[11px] text-primary font-medium">{admin.email || 'Sem email'}</p>
-                          <p className="text-[11px] text-emerald-500 font-mono">{admin.telefone || 'Sem telefone'}</p>
+                          <p className="text-[11px] text-primary font-medium">{admin.email || admin.user_id || 'Sem email'}</p>
+                          {admin.telefone && <p className="text-[11px] text-emerald-500 font-mono italic">{admin.telefone}</p>}
                         </div>
                       </div>
                     ))}
@@ -294,7 +294,6 @@ export default function SuperAdminPanel() {
                       onChange={(e) => setSelectedPlans(prev => ({ ...prev, [l.id]: e.target.value }))}
                       className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
                     >
-                      <option value="iniciante">Iniciante (Grátis)</option>
                       <option value="starter">Starter — 25.000 Kz/mês</option>
                       <option value="profissional">Profissional — 50.000 Kz/mês</option>
                       <option value="enterprise">Enterprise — 100.000 Kz/mês</option>

@@ -46,7 +46,7 @@ const getNavGroups = (
   const p = plano?.toLowerCase() || '';
   
   // High-tier plans: Profissional or Enterprise
-  const isPro = ['profissional', 'enterprise'].includes(p) || showAdmin; // Assuming showAdmin implies isSuperAdmin for this context
+  const isHighTier = ['profissional', 'enterprise'].includes(p) || showAdmin;
   
   // Basic entry plans: Starter or better
   const isStarterPlus = ['starter', 'profissional', 'enterprise'].includes(p) || showAdmin;

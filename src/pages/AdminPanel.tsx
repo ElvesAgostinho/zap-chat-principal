@@ -39,7 +39,7 @@ export default function AdminPanel() {
   const [connectionError, setConnectionError] = useState<string | null>(null);
   
   const p = plano?.toLowerCase() || '';
-  const isPro = ['profissional', 'pro', 'enterprise', 'premium', 'platinum'].includes(p) || isSuperAdmin;
+  const isPro = ['profissional', 'enterprise'].includes(p) || isSuperAdmin;
 
   const fetchData = async () => {
     setLoading(true);
@@ -70,8 +70,8 @@ export default function AdminPanel() {
 
   const GET_MAX_EMPLOYEES = (planoStr: string | null) => {
     const p = planoStr?.toLowerCase() || '';
-    if (['enterprise', 'premium', 'platinum'].includes(p)) return 999;
-    if (['profissional', 'pro'].includes(p)) return 5;
+    if (p === 'enterprise') return 999;
+    if (p === 'profissional') return 5;
     return 2; // Starter = 2 accounts total
   };
 
