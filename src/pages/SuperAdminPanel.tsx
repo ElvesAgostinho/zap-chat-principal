@@ -21,7 +21,7 @@ const getDaysLeft = (date: string | null) => {
 };
 import {
   Store, Users, ShoppingBag, CheckCircle, XCircle, Clock, LogOut,
-  CreditCard, Eye, FileText, Loader2, BarChart3, Package, UserCheck
+  CreditCard, Eye, FileText, Loader2, BarChart3, Package, UserCheck, Trash2, AlertTriangle
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -38,7 +38,7 @@ interface LojaInfo {
   instance_status: string | null;
   criado_em: string;
   owner_user_id: string | null;
-  status_aprovacao: 'pendente_aprovacao' | 'ativo' | 'suspenso' | 'cancelado';
+  status_aprovacao: 'pendente_aprovacao' | 'ativo' | 'suspenso' | 'cancelado' | 'eliminado';
   plano: string;
 }
 
@@ -77,6 +77,7 @@ export default function SuperAdminPanel() {
   const [viewingImage, setViewingImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('stores_pending');
   const [selectedPlans, setSelectedPlans] = useState<Record<string, string>>({});
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const fetchAll = async () => {
     setLoading(true);
@@ -180,6 +181,21 @@ export default function SuperAdminPanel() {
       fetchAll();
     } catch (err: any) {
       toast.error("Erro", { description: err.message });
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleDeleteStore = async (id: string) => {
+    setProcessingId(id);
+    try {
+      await (supabase as any).from('lojas').update({ status_aprovacao: 'eliminado' }).eq('id', id);
+      await (supabase as any).from('usuarios_loja').update({ status: 'eliminado' }).eq('loja_id', id);
+      toast.success('🗑️ Conta eliminada', { description: 'A loja foi permanentemente desativada.' });
+      setConfirmDelete(null);
+      fetchAll();
+    } catch (err: any) {
+      toast.error('Erro ao eliminar', { description: err.message });
     } finally {
       setProcessingId(null);
     }
@@ -475,12 +491,12 @@ export default function SuperAdminPanel() {
                         fetchAll();
                       }}
                       className="px-6 py-2 rounded-xl bg-primary text-white text-[10px] font-black uppercase tracking-[0.15em] hover:shadow-glow transition-all active:scale-95"
-                    >
-                      +{sub ? '30 DIAS' : 'INICIAR CICLO'}
-                    </button>
-                  </div>
+                     >
+                       +{sub ? '30 DIAS' : 'INICIAR CICLO'}
+                     </button>
+                   </div>
 
-                  {/* Plan changer */}
+                   {/* Plan changer */}
                   <div className="flex gap-2 items-center pt-2">
                     <select
                       value={selectedPlans[loja.id] ?? loja.plano ?? 'starter'}
@@ -512,6 +528,15 @@ export default function SuperAdminPanel() {
                       {processingId === loja.id ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Sincronizar'}
                     </motion.button>
                   </div>
+
+                   {/* Danger Zone */}
+                   <button
+                     onClick={() => setConfirmDelete(loja.id)}
+                     className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-destructive/5 text-destructive text-[10px] font-black uppercase tracking-widest border border-destructive/20 hover:bg-destructive/10 transition-all mt-1"
+                   >
+                     <Trash2 className="w-3.5 h-3.5" />
+                     Eliminar Conta
+                   </button>
                 </div>
               );
             })}
@@ -535,6 +560,41 @@ export default function SuperAdminPanel() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Confirm Delete Modal */}
+      {confirmDelete && (() => {
+        const loja = lojas.find(l => l.id === confirmDelete);
+        return (
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setConfirmDelete(null)}>
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-card rounded-3xl p-8 max-w-sm w-full shadow-2xl border border-destructive/20 space-y-6 text-center"
+            >
+              <div className="w-16 h-16 bg-destructive/10 rounded-2xl flex items-center justify-center mx-auto">
+                <AlertTriangle className="w-8 h-8 text-destructive" />
+              </div>
+              <div>
+                <h3 className="text-xl font-black text-foreground">Eliminar Conta?</h3>
+                <p className="text-sm text-muted-foreground mt-2">
+                  A conta de <span className="font-bold text-foreground">{loja?.nome}</span> será permanentemente desativada. O utilizador não conseguirá mais aceder ao CRM.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={() => setConfirmDelete(null)} className="flex-1 py-3 rounded-2xl bg-secondary text-foreground font-bold text-sm">Cancelar</button>
+                <button
+                  onClick={() => handleDeleteStore(confirmDelete)}
+                  disabled={processingId === confirmDelete}
+                  className="flex-1 py-3 rounded-2xl bg-destructive text-white font-black text-sm flex items-center justify-center gap-2"
+                >
+                  {processingId === confirmDelete ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Trash2 className="w-4 h-4" /> Eliminar</>}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        );
+      })()}
 
       {/* Image Lightbox */}
       {viewingImage && (

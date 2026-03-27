@@ -18,6 +18,7 @@ import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import PendingApprovalScreen from "./components/PendingApprovalScreen";
 import SuspendedScreen from "./components/SuspendedScreen";
+import DeletedAccountScreen from "./components/DeletedAccountScreen";
 import CookieConsent from "./components/CookieConsent";
 import FloatingSupportBot from "./components/FloatingSupportBot";
 
@@ -37,6 +38,11 @@ function ProtectedRoute({ children, adminOnly = false, superAdminOnly = false }:
   if (!user) return <Navigate to="/login" replace />;
   if (superAdminOnly && !isSuperAdmin) return <Navigate to="/" replace />;
   
+  // If store account was deleted by admin
+  if (!isSuperAdmin && statusLoja === 'eliminado') {
+    return <DeletedAccountScreen />;
+  }
+
   // If store is pending approval
   if (!isSuperAdmin && statusLoja === 'pendente_aprovacao') {
     return <PendingApprovalScreen />;
@@ -74,6 +80,8 @@ function AppRoutes() {
             <ProtectedRoute>
               {isSuperAdmin ? (
                 <SuperAdminPanel />
+              ) : statusLoja === 'eliminado' ? (
+                <DeletedAccountScreen />
               ) : statusLoja === 'pendente_aprovacao' ? (
                 <PendingApprovalScreen />
               ) : (statusLoja === 'suspenso' || isExpired) ? (

@@ -146,23 +146,25 @@ const LandingPage = () => {
               <PricingCard 
                 name="Starter"
                 price="25.000 Kz"
-                features={['1 Usuário', '500 Leads/mês', 'Automação WhatsApp Base', 'Acesso ao CRM', 'Suporte Via Email']}
-                cta="Escolher Starter"
+                planId="starter"
+                features={['Até 200 Leads ativos', 'Vitrine Personalizada', 'Gestão de Pedidos', '2 Atendentes', 'Relatórios Básicos']}
+                cta="Começar no Starter"
               />
               <PricingCard 
                 name="Profissional"
                 price="50.000 Kz"
+                planId="profissional"
                 popular={true}
                 highlight={true}
-                features={['5 Usuários', '2.000 Leads/mês', 'Agendamento Automático', 'IA Treinada', 'Suporte Prioritário']}
+                features={['Leads Ilimitados', 'BI & Relatórios de Lucro', 'Exportação de Dados', 'Até 5 Atendentes', 'Automações de Pós-Venda']}
                 cta="Turbinar agora"
               />
               <PricingCard 
-                name="Expert"
+                name="Enterprise"
                 price="100.000 Kz"
-                isWhatsApp={true}
-                features={['Usuários Ilimitados', 'Leads Ilimitados', 'Consultoria Dedicada', 'IA Totalmente Customizada', 'Estratégia de Escala']}
-                cta="Falar com especialista"
+                planId="enterprise"
+                features={['Tudo do Profissional', 'Atendentes Ilimitados', 'Domínio Customizado', 'API de Integração', 'Gerente Dedicado']}
+                cta="Escolher Enterprise"
               />
             </div>
         </div>

@@ -18,7 +18,7 @@ interface AuthState {
   membershipState: MembershipState;
   isSuperAdmin: boolean;
   plano: 'starter' | 'profissional' | 'enterprise' | null;
-  statusLoja: 'pendente_aprovacao' | 'ativo' | 'suspenso' | 'cancelado' | null;
+  statusLoja: 'pendente_aprovacao' | 'ativo' | 'suspenso' | 'cancelado' | 'eliminado' | null;
   storeProfilePic: string | null;
   storePhone: string | null;
   dataFim: string | null;
@@ -82,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [membershipState, setMembershipState] = useState<MembershipState>('loading');
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [plano, setPlano] = useState<'starter' | 'profissional' | 'enterprise' | null>(null);
-  const [statusLoja, setStatusLoja] = useState<'pendente_aprovacao' | 'ativo' | 'suspenso' | 'cancelado' | null>(null);
+  const [statusLoja, setStatusLoja] = useState<'pendente_aprovacao' | 'ativo' | 'suspenso' | 'cancelado' | 'eliminado' | null>(null);
   const [storeProfilePic, setStoreProfilePic] = useState<string | null>(null);
   const [storePhone, setStorePhone] = useState<string | null>(null);
   const [dataFim, setDataFim] = useState<string | null>(null);
