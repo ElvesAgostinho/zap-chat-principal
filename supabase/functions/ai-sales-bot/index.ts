@@ -30,7 +30,13 @@ REGRAS DE CONSERVAÇÃO:
 
 ESTRATÉGIA ANTI-BLOQUEIO:
 - Varie as saudações: Olá, Tudo bem, Boas, Salve, etc.
-- Mensagens curtas e directas.`;
+- Mensagens curtas e directas.
+
+REGRAS CRÍTICAS DE GROUNDING:
+1. SÓ FALE DO QUE EXISTE: Responda APENAS com base nos produtos e horários listados abaixo. Se o cliente pedir algo que não está na lista (ex: "Nike" se não houver Nike na lista de produtos DISPONÍVEIS), diga educadamente que não temos no momento.
+2. SEM FALSAS ESPERAS: NUNCA diga que está "procurando", "verificando" ou "aguardando". Dê a resposta final agora com o que você já vê no catálogo.
+3. MARCADORES OBRIGATÓRIOS: Ao confirmar agendamento, você DEVE dizer algo como "Um momento enquanto reservo aqui...", "Só um segundo enquanto vejo na agenda..." para parecer humano. O sistema enviará a confirmação definitiva automaticamente, então FOQUE na mensagem de espera e inclua [AGENDAR:servico|YYYY-MM-DDTHH:MM] no final.
+4. HORÁRIOS FUTUROS: NUNCA sugira ou aceite horários que já passaram em relação à "DATA E HORA ATUAL" fornecida.`;
 
 const FIRST_CONTACT_INSTRUCTION = `
 INSTRUÇÃO ESPECIAL - PRIMEIRO CONTACTO:
@@ -96,23 +102,24 @@ Deno.serve(async (req) => {
              p_loja_id: store_id
            });
 
-           if (!rpcError && ragProducts !== null) {
+           if (!rpcError && ragProducts !== null && ragProducts.length > 0) {
              console.log('RAG returned', ragProducts.length, 'products');
              allProducts = ragProducts;
            } else {
-             throw new Error(rpcError?.message || 'RPC returned null');
+             // If RAG returns zero products (maybe no embeddings yet), trigger fallback
+             throw new Error('RAG_NO_RESULTS_OR_ERROR');
            }
         } else {
           throw new Error('Embedding API failed');
         }
       } catch (e: any) {
-        console.log('RAG Fallback Ativo - buscando catálogo tradicional:', e.message);
+        console.log('Fallback Ativo - buscando catálogo tradicional:', e.message);
         // Fallback to old method (Full Catalogue) - Include out of stock for intelligence
         const { data: products } = await supabase
           .from('produtos')
           .select('nome, preco, descricao, estoque, imagem')
           .eq('loja_id', store_id)
-          .limit(100);
+          .limit(20);
         allProducts = products || [];
       }
       if (allProducts.length > 0) {
@@ -123,6 +130,8 @@ Deno.serve(async (req) => {
           }).join('\n');
         productContext += '\n\nMARCADOR DE FOTO: Use [ENVIAR_PRODUTO:nome_exacto_do_produto] SOMENTE se o cliente pedir para ver o produto ou detalhes visuais.';
         productContext += '\nUse os "Detalhes" para responder perguntas sobre tamanhos, cores ou especificações.';
+      } else {
+        productContext = '\n\nATENÇÃO: Não existem produtos cadastrados ou em stock nesta loja no momento. Informe o cliente educadamente.';
       }
     }
 
@@ -188,7 +197,12 @@ Deno.serve(async (req) => {
 
     // 4. Build messages with language instruction
     const langInstruction = LANGUAGE_INSTRUCTIONS[storeIdioma] || LANGUAGE_INSTRUCTIONS['pt-AO'];
-    let systemContent = SYSTEM_PROMPT + `\n\nIDIOMA OBRIGATÓRIO:\n${langInstruction}` + productContext + storeContext + scheduleContext;
+    const now = new Date();
+    // Adjust to Angola/Portugal time if needed (assuming server is UTC, adding +1)
+    const localNow = new Date(now.getTime() + (1 * 60 * 60 * 1000));
+    const timeContext = `\n\nDATA E HORA ATUAL: ${localNow.toISOString().replace('T', ' ').split('.')[0]} (Use isto para evitar horários passados)`;
+    
+    let systemContent = SYSTEM_PROMPT + timeContext + `\n\nIDIOMA OBRIGATÓRIO:\n${langInstruction}` + productContext + storeContext + scheduleContext;
     if (isFirstContact) systemContent += FIRST_CONTACT_INSTRUCTION;
 
     const messages: any[] = [
@@ -304,20 +318,15 @@ Deno.serve(async (req) => {
     let finalReply = cleanReply;
     if (!finalReply && !productsToSend.length && !orderData && !scheduleData && !paymentMatch && !locationMatch) {
       finalReply = "Como posso ajudar você hoje?";
-    } else if (!finalReply && (productsToSend.length || orderData || scheduleData || paymentMatch || locationMatch)) {
-       // If we have markers but no text, we can leave it empty or add a tiny transition
-       // finalReply = ""; // Webhook will handle markers
     }
 
     // 7. Match products
-    // (Declaration moved up to fix scoping in fallback)
-
     const addProduct = async (found: any) => {
       if (addedNames.has(found.nome)) return;
       addedNames.add(found.nome);
       let imageUrl = found.imagem;
 
-      if (imageUrl.startsWith('data:')) {
+      if (imageUrl && imageUrl.startsWith('data:')) {
         try {
           const base64Match = imageUrl.match(/^data:image\/(\w+);base64,(.+)$/);
           if (base64Match) {
@@ -341,7 +350,6 @@ Deno.serve(async (req) => {
     for (const requested of requestedProducts.slice(0, 3)) {
       const reqLower = requested.toLowerCase();
       const found = allProducts.find(p => {
-        if (!p.imagem) return false;
         const nameLower = p.nome.toLowerCase();
         return nameLower === reqLower || nameLower.includes(reqLower) || reqLower.includes(nameLower);
       });
@@ -351,7 +359,7 @@ Deno.serve(async (req) => {
     if (productsToSend.length === 0 && allProducts.length > 0) {
       const replyLower = cleanReply.toLowerCase();
       for (const p of allProducts) {
-        if (!p.imagem || !p.nome) continue;
+        if (!p.nome) continue;
         if (p.nome.length >= 3 && replyLower.includes(p.nome.toLowerCase())) {
           await addProduct(p);
           if (productsToSend.length >= 3) break;

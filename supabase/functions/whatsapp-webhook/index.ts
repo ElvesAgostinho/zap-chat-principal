@@ -727,29 +727,40 @@ Deno.serve(async (req) => {
                   const sd = botData.schedule_data;
                   try {
                     if (sd.action === 'create' || sd.action === 'reschedule') {
-                      const { data: appointment, error: schedErr } = await supabase.from('agendamentos').upsert({
+                      const { data: appointment, error: schedErr } = await supabase.from('agendamentos').insert({
                         loja_id: storeId,
                         lead_id: leadId,
                         cliente_nome: leadName,
                         cliente_telefone: phone,
                         servico: sd.servico || 'Consulta/Serviço',
                         data_hora: sd.data_hora,
-                        status: 'pendente', // Wait for human confirmation
+                        status: 'pendente',
                         duracao_min: 60,
-                      }, { onConflict: 'loja_id,lead_id,status', ignoreDuplicates: false }).select().single();
+                      }).select().single();
 
-                      if (!schedErr) {
-                        console.log(`[webhook] ✅ Appointment ${sd.action}d for ${leadName}: ${sd.data_hora}`);
+                      if (!schedErr || (schedErr.code === '23505')) { // Success or already exists
+                        console.log(`[webhook] ✅ Appointment registered for ${leadName}: ${sd.data_hora}`);
+                        
+                        // Send second HUMAN confirmation message
+                        const confirmMsg = `✅ *Confirmado!* Já reservei aqui na agenda o seu horário de *${sd.servico || 'atendimento'}* para o dia *${new Date(sd.data_hora).toLocaleDateString('pt-PT')}* às *${new Date(sd.data_hora).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}*. Atá lá! 😊`;
+                        
+                        await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
+                          body: JSON.stringify({ number: phone, text: confirmMsg }),
+                        });
+
                         // Create Notification
                         await supabase.from('notificacoes').insert({
                           loja_id: storeId,
                           lead_id: leadId,
                           tipo: 'agendamento',
-                          titulo: sd.action === 'create' ? 'Novo Agendamento' : 'Agendamento Remarcado',
-                          mensagem: `${leadName} ${sd.action === 'create' ? 'marcou' : 'remarcou'} ${sd.servico || 'um serviço'} para ${new Date(sd.data_hora).toLocaleString('pt-AO')}`,
+                          titulo: 'Novo Agendamento',
+                          mensagem: `${leadName} marcou ${sd.servico || 'um serviço'} para ${new Date(sd.data_hora).toLocaleString('pt-AO')}`,
                           link: '/scheduling'
                         });
                       } else {
+                        console.error('[webhook] Scheduling Error:', schedErr);
                         throw schedErr;
                       }
                     } else if (sd.action === 'cancel') {
