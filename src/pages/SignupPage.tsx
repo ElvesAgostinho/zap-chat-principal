@@ -232,6 +232,10 @@ export default function SignupPage() {
                   <Input type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="Mínimo 6 caracteres" minLength={6} className="mt-1" />
                 </div>
 
+                <p className="text-[10px] text-center text-muted-foreground px-2">
+                  Ao clicar em criar conta, concorda com os nossos <Link to="/terms" className="text-primary hover:underline">Termos</Link> e <Link to="/privacy" className="text-primary hover:underline">Política de Privacidade</Link>.
+                </p>
+
                 <div className="flex gap-3 pt-1">
                   <motion.button whileTap={{ scale: 0.97 }} type="button" onClick={handleBack} className="flex items-center justify-center gap-1 px-4 py-3 rounded-xl bg-secondary text-foreground font-medium text-sm"><ChevronLeft className="w-4 h-4" /></motion.button>
                   <motion.button whileTap={{ scale: 0.97 }} type="submit" disabled={loading} className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm disabled:opacity-50 shadow-md shadow-primary/20">

@@ -15,6 +15,8 @@ import SuperAdminPanel from "./pages/SuperAdminPanel";
 import SignupPage from "./pages/SignupPage";
 import CatalogPage from "./pages/CatalogPage";
 import LandingPage from "./pages/LandingPage";
+import TermsPage from "./pages/TermsPage";
+import PrivacyPage from "./pages/PrivacyPage";
 import NotFound from "./pages/NotFound";
 import PendingApprovalScreen from "./components/PendingApprovalScreen";
 import SuspendedScreen from "./components/SuspendedScreen";
@@ -101,6 +103,8 @@ function AppRoutes() {
       <Route path="/super-admin" element={<ProtectedRoute superAdminOnly><SuperAdminPanel /></ProtectedRoute>} />
       <Route path="/loja/:storeSlug" element={<CatalogPage />} />
       <Route path="/catalogo/:storeSlug" element={<CatalogPage />} />
+      <Route path="/terms" element={<TermsPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

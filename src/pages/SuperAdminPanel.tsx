@@ -161,11 +161,21 @@ export default function SuperAdminPanel() {
 
       // 2. Auto-create subscription on approval
       if (action === 'aprovar') {
-        const { data: pData } = await (supabase as any).from('planos').select('id').ilike('nome', planoSelecionado).single();
-        
+        const { data: pData } = await (supabase as any)
+          .from('planos')
+          .select('id')
+          .ilike('nome', planoSelecionado)
+          .maybeSingle();
+
+        if (!pData?.id) {
+          toast.error('Plano não encontrado na BD. Verifique a tabela planos.');
+          setProcessingId(null);
+          return;
+        }
+
         await (supabase as any).from('assinaturas').insert({
           loja_id: id,
-          plano_id: pData?.id,
+          plano_id: pData.id,
           status: 'ativo',
           data_inicio: new Date().toISOString(),
           data_fim: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
@@ -437,6 +447,7 @@ export default function SuperAdminPanel() {
                     <Badge className={`px-3 py-1 rounded-full text-[10px] font-black border-0 ${
                       loja.status_aprovacao === 'ativo' ? 'bg-emerald-500/10 text-emerald-600' :
                       loja.status_aprovacao === 'suspenso' ? 'bg-destructive/10 text-destructive' :
+                      loja.status_aprovacao === 'eliminado' ? 'bg-red-900/30 text-red-400 line-through' :
                       'bg-orange-500/10 text-orange-600'
                     }`}>
                       {loja.status_aprovacao.toUpperCase()}

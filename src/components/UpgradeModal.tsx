@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Check, Rocket, Diamond, Zap, Building2, ArrowLeft, Send, Loader2, FileText, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { MessageSquare } from 'lucide-react';
 
 interface Plan {
   id: string;
@@ -49,6 +51,7 @@ function getOrCreateReference(): string {
 }
 
 export default function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const { user } = useAuth();
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
   const [loadingConfig, setLoadingConfig] = useState(false);
   const [reference] = useState(() => getOrCreateReference());
@@ -85,8 +88,8 @@ export default function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onC
     }
   }, [isOpen]);
 
-  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) setUploadFile(file);
   };
 
@@ -95,10 +98,10 @@ export default function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onC
 
     setIsUploading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("Não autenticado");
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error("Não autenticado");
 
-      const { data: member } = await (supabase as any).from('usuarios_loja').select('loja_id').eq('user_id', user.id).single();
+      const { data: member } = await (supabase as any).from('usuarios_loja').select('loja_id').eq('user_id', authUser.id).single();
       if (!member) throw new Error("Loja não encontrada");
 
       const fileExt = uploadFile.name.split('.').pop();
@@ -118,8 +121,8 @@ export default function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onC
       const { data: pData } = await (supabase as any)
         .from('planos')
         .select('id')
-        .ilike('name', selectedPlan.id)
-        .single();
+        .ilike('nome', selectedPlan.id)
+        .maybeSingle();
 
       await (supabase as any).from('assinaturas').insert({
         loja_id: member.loja_id,
@@ -162,15 +165,15 @@ export default function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onC
             {/* Header */}
             <div className="p-6 pb-0 flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-display font-bold text-foreground">Explorar Planos</h2>
-                <p className="text-xs text-muted-foreground mt-1">Upgrade imediato para o seu negócio</p>
+                <h2 className="text-2xl font-display font-bold text-foreground">Planos & Upgrade</h2>
+                <p className="text-xs text-muted-foreground mt-1">Escolha o melhor plano para o seu negócio</p>
               </div>
               <button onClick={handleClose} className="p-2 rounded-xl bg-secondary text-muted-foreground hover:bg-secondary/80 transition-colors"><X className="w-5 h-5" /></button>
             </div>
 
             <div className="p-6">
               {!selectedPlan ? (
-                <div className="grid gap-3 max-h-[60vh] overflow-y-auto pr-1 custom-scrollbar">
+                <div className="grid gap-3 max-h-[60vh] overflow-y-auto pr-1">
                   {plans.map((plan) => (
                     <motion.button 
                       key={plan.id} 
@@ -190,7 +193,7 @@ export default function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onC
                       </div>
                       <div className="text-right">
                         <p className="font-black text-foreground">{plan.price}</p>
-                        <p className="text-[10px] text-muted-foreground uppercase font-bold">por mês</p>
+                        <p className="text-[10px] text-muted-foreground uppercase font-bold">mês</p>
                       </div>
                     </motion.button>
                   ))}
@@ -205,61 +208,76 @@ export default function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onC
                     </div>
                   </div>
 
-                  <div className="glassmorphism p-5 rounded-3xl border-primary/20 space-y-4">
+                  <div className="bg-secondary/50 p-5 rounded-3xl border border-border/50 space-y-4">
                     <div className="flex items-center gap-3 text-primary">
                       <Building2 className="w-5 h-5" />
-                      <p className="text-xs font-bold uppercase tracking-widest">Coordenadas Bancárias</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest">Coordenadas Bancárias</p>
                     </div>
                     {loadingConfig ? (
                        <div className="flex items-center justify-center py-4"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
                     ) : (
-                      <div className="space-y-2">
-                        <div className="grid grid-cols-2 gap-2">
-                           <div><p className="text-[9px] uppercase font-bold text-muted-foreground">Banco</p><p className="text-[11px] font-bold text-foreground">{bankConfig.bank}</p></div>
-                           <div><p className="text-[9px] uppercase font-bold text-muted-foreground">Titular</p><p className="text-[11px] font-bold text-foreground line-clamp-1">{bankConfig.accountName}</p></div>
-                        </div>
-                        <div className="bg-background/50 p-3 rounded-xl border border-border/50 text-center">
-                          <p className="text-[9px] uppercase font-black text-primary mb-1 tracking-widest">IBAN</p>
-                          <p className="text-[12px] font-mono font-black text-foreground break-all">{bankConfig.iban}</p>
-                        </div>
-                        <div className="bg-primary/10 p-2 rounded-xl text-center">
-                           <p className="text-[10px] font-bold text-primary">REF: <span className="font-black select-all">{reference}</span></p>
-                        </div>
+                      <div className="space-y-3">
+                         <div className="grid grid-cols-2 gap-4">
+                            <div><p className="text-[9px] uppercase font-bold text-muted-foreground">Banco</p><p className="text-[11px] font-bold text-foreground">{bankConfig.bank}</p></div>
+                            <div><p className="text-[9px] uppercase font-bold text-muted-foreground">Titular</p><p className="text-[11px] font-bold text-foreground line-clamp-1">{bankConfig.accountName}</p></div>
+                         </div>
+                         <div className="bg-background/50 p-3 rounded-xl border border-border/50 text-center">
+                            <p className="text-[9px] uppercase font-black text-primary mb-1 tracking-widest">IBAN</p>
+                            <p className="text-[12px] font-mono font-black text-foreground break-all">{bankConfig.iban}</p>
+                         </div>
+                         <div className="bg-primary/10 p-2 rounded-xl text-center">
+                            <p className="text-[10px] font-bold text-primary">REF: <span className="font-black select-all">{reference}</span></p>
+                         </div>
                       </div>
                     )}
                   </div>
 
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Anexar Comprovativo (PDF)</label>
-                    <div className="relative group">
-                      <input 
-                        type="file" 
-                        accept=".pdf,image/*" 
-                        onChange={handleFileUpload} 
-                        className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                      />
-                      <div className={`w-full py-6 rounded-3xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-2 ${uploadFile ? 'border-primary bg-primary/5' : 'border-border/60 group-hover:border-primary/40'}`}>
-                        {uploadFile ? (
-                           uploadFile.type === 'application/pdf' ? <FileText className="w-6 h-6 text-primary" /> : <Upload className="w-6 h-6 text-primary" />
-                        ) : (
-                           <Upload className="w-6 h-6 text-muted-foreground" />
-                        )}
-                        <p className="text-[11px] font-bold text-foreground text-center px-4 line-clamp-1">
-                          {uploadFile ? uploadFile.name : 'Clique ou arraste o PDF aqui'}
+                  {user ? (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Anexar Comprovativo (PDF/Imagem)</label>
+                        <div className="relative group">
+                          <input 
+                            type="file" 
+                            accept=".pdf,image/*" 
+                            onChange={handleFileChange} 
+                            className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                          />
+                          <div className={`w-full py-6 rounded-3xl border-2 border-dashed transition-all flex flex-col items-center justify-center gap-2 ${uploadFile ? 'border-primary bg-primary/5' : 'border-border/60 group-hover:border-primary/40'}`}>
+                            {uploadFile ? <FileText className="w-6 h-6 text-primary" /> : <Upload className="w-6 h-6 text-muted-foreground" />}
+                            <p className="text-[11px] font-bold text-foreground text-center px-4 line-clamp-1">
+                              {uploadFile ? uploadFile.name : 'Clique ou arraste o ficheiro'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <motion.button
+                        whileTap={{ scale: 0.98 }}
+                        onClick={handleSubmitPayment}
+                        disabled={!uploadFile || isUploading || uploadComplete}
+                        className={`w-full py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-glow transition-all flex items-center justify-center gap-2 ${uploadComplete ? 'bg-emerald-500 text-white' : 'bg-primary text-white disabled:opacity-50'}`}
+                      >
+                        {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : uploadComplete ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
+                        {uploadComplete ? 'ENVIADO COM SUCESSO' : 'FINALIZAR UPGRADE'}
+                      </motion.button>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20 text-center">
+                        <p className="text-xs text-foreground font-medium leading-relaxed">
+                          Aceda ao seu painel para ativar o plano automaticamente através do comprovativo.
                         </p>
                       </div>
+                      <button
+                        onClick={() => window.open(`https://wa.me/351936179188?text=${encodeURIComponent(`Olá! Gostaria de ativar o plano ${selectedPlan.name}. Ref: ${reference}`)}`, '_blank')}
+                        className="w-full h-14 rounded-2xl bg-[#25D366] text-white font-black text-sm shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-3 uppercase tracking-wider"
+                      >
+                        <MessageSquare className="w-5 h-5 fill-white" />
+                        Falar com Especialista
+                      </button>
                     </div>
-                  </div>
-
-                  <motion.button
-                    whileTap={{ scale: 0.98 }}
-                    onClick={handleSubmitPayment}
-                    disabled={!uploadFile || isUploading || uploadComplete}
-                    className={`w-full py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-glow transition-all flex items-center justify-center gap-2 ${uploadComplete ? 'bg-emerald-500 text-white' : 'bg-primary text-white disabled:opacity-50'}`}
-                  >
-                    {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : uploadComplete ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
-                    {uploadComplete ? 'ENVIADO COM SUCESSO' : 'FINALIZAR UPGRADE'}
-                  </motion.button>
+                  )}
                 </motion.div>
               )}
             </div>

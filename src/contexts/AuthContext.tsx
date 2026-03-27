@@ -223,7 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const { data: sub } = await supabase
               .from('assinaturas')
               .select('data_fim')
-              .eq('loja_id', storeData.id)
+              .eq('loja_id', sId)
               .eq('status', 'ativo')
               .maybeSingle();
             

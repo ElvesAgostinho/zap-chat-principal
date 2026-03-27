@@ -200,7 +200,9 @@ const LandingPage = () => {
               <li><a href="#" className="hover:text-primary transition-colors">Início</a></li>
               <li><a href="#features" className="hover:text-primary transition-colors">Funcionalidades</a></li>
               <li><a href="#pricing" className="hover:text-primary transition-colors">Planos de Elite</a></li>
-              <li><Link to="/login" className="hover:text-primary transition-colors">Área Restrita</Link></li>
+              <li><Link to="/terms" className="hover:text-primary transition-colors">Termos de Serviço</Link></li>
+              <li><Link to="/privacy" className="hover:text-primary transition-colors">Privacidade</Link></li>
+              <li><Link to="/login" className="hover:text-primary transition-colors font-bold text-primary/80">Área Restrita</Link></li>
             </ul>
           </div>
 

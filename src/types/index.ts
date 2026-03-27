@@ -19,7 +19,7 @@ export interface Lead {
   nome: string;
   telefone: string | null;
   email: string | null;
-  status: string;
+  status: 'novo' | 'Aguardando' | 'Em Atendimento' | 'Fechado' | 'Perdido' | string;
   fonte: string;
   interesse: string | null;
   notas: string | null;
@@ -42,13 +42,13 @@ export interface Venda {
   produto_imagem: string | null;
   valor: number;
   quantidade: number;
-  status: string;
+  status: 'pendente' | 'pago' | 'cancelado' | 'enviado' | 'entregue' | string;
   cliente_nome: string | null;
   cliente_telefone: string | null;
   cliente_endereco: string | null;
   entregador: string | null;
-  pagamento_status: string;
-  status_entrega: string;
+  pagamento_status: 'pendente' | 'pago' | string;
+  status_entrega: 'pendente' | 'enviado' | 'entregue' | string;
   observacoes: string | null;
   criado_em: string;
 }
@@ -81,8 +81,8 @@ export interface UsuarioLoja {
   user_id: string;
   loja_id: string;
   nome: string | null;
-  role: string;
-  status: string;
+  role: 'admin' | 'funcionario' | 'super_admin' | string;
+  status: 'pendente' | 'aprovado' | 'rejeitado' | 'eliminado' | string;
   criado_em: string;
 }
 

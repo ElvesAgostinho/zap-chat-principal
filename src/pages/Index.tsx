@@ -122,10 +122,10 @@ export default function Index() {
     if (!storeId) return;
     fetchAll();
 
-    const ch1 = supabase.channel('produtos-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'produtos' }, () => fetchProducts()).subscribe();
-    const ch2 = supabase.channel('leads-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => fetchLeads()).subscribe();
-    const ch3 = supabase.channel('vendas-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'vendas' }, () => fetchVendas()).subscribe();
-    const ch4 = supabase.channel('mensagens-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'mensagens' }, (payload: any) => {
+    const ch1 = supabase.channel(`produtos-rt-${storeId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'produtos', filter: `loja_id=eq.${storeId}` }, () => fetchProducts()).subscribe();
+    const ch2 = supabase.channel(`leads-rt-${storeId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'leads', filter: `loja_id=eq.${storeId}` }, () => fetchLeads()).subscribe();
+    const ch3 = supabase.channel(`vendas-rt-${storeId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'vendas', filter: `loja_id=eq.${storeId}` }, () => fetchVendas()).subscribe();
+    const ch4 = supabase.channel(`mensagens-rt-${storeId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'mensagens', filter: `loja_id=eq.${storeId}` }, (payload: any) => {
       const newMsg = payload.new;
       if (newMsg && newMsg.loja_id === storeId) {
         if (role !== 'admin') {
@@ -151,7 +151,7 @@ export default function Index() {
       setAlertCount(count || 0);
     };
     fetchAlerts();
-    const ch = supabase.channel('alerts-rt').on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, () => fetchAlerts()).subscribe();
+    const ch = supabase.channel(`alerts-rt-${storeId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'leads', filter: `loja_id=eq.${storeId}` }, () => fetchAlerts()).subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [storeId]);
 
@@ -179,7 +179,15 @@ export default function Index() {
 
   const handleDeleteAccount = async () => {
     if (!user) return;
-    try { await (supabase as any).from('usuarios_loja').delete().eq('user_id', user.id); } catch {}
+    
+    const confirmed = window.confirm("TEM CERTEZA? Esta ação irá eliminar o seu vínculo com esta loja permanentemente e não pode ser desfeita.");
+    if (!confirmed) return;
+
+    try { 
+      await (supabase as any).from('usuarios_loja').delete().eq('user_id', user.id); 
+    } catch (err) {
+      console.error("Erro ao eliminar vínculo:", err);
+    }
     await signOut();
   };
 
