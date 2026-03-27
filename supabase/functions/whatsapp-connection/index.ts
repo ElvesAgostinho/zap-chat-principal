@@ -697,15 +697,17 @@ Deno.serve(async (req) => {
         for (const [phone, name] of contactNames.entries()) {
           const lead = leadMap.get(phone);
           if (lead && name && name !== lead.nome) {
-            const isNewNameNumeric = !/[a-zA-Z]/.test(name);
-            const isOldNameHuman = /[a-zA-Z]/.test(lead.nome || '');
-            if (isNewNameNumeric && isOldNameHuman) continue;
-
-            console.log(`[sync_names] Updating name for lead ${lead.id}: ${lead.nome} -> ${name}`);
-            const { error } = await sb.from('leads').update({ nome: name }).eq('id', lead.id);
-            if (!error) {
-              updatedCount++;
-              lead.nome = name; // Update local map for consistency
+            const isNewNameHuman = /[a-zA-Z]/.test(name) && name.length > 2;
+            const isOldNameHuman = /[a-zA-Z]/.test(lead.nome || '') && (lead.nome || '').length > 2;
+            
+            // Se o nome novo for "humano" e o antigo não for, ou se o novo for diferente, atualizamos.
+            if (isNewNameHuman || !isOldNameHuman) {
+              console.log(`[sync_names] Updating name for lead ${lead.id}: ${lead.nome} -> ${name}`);
+              const { error } = await sb.from('leads').update({ nome: name }).eq('id', lead.id);
+              if (!error) {
+                updatedCount++;
+                lead.nome = name; 
+              }
             }
           }
         }

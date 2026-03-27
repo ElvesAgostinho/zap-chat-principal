@@ -187,28 +187,43 @@ async function persistProfilePicture(supabase: any, storeId: string, leadId: str
   }
 }
 
-async function fetchProfilePicture(supabase: any, evolutionUrl: string, instanceName: string, apiKey: string, phone: string, leadId: string, storeId: string, logs: string[] = []) {
+async function fetchProfileInfo(supabase: any, evolutionUrl: string, instanceName: string, apiKey: string, phone: string, leadId: string, storeId: string, logs: string[] = []) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout per request
+  const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 second timeout
   
   try {
     const rawUrl = evolutionUrl.replace(/\/+$/, '');
     const baseUrl = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
-    const fetchUrl = `${baseUrl}/chat/fetchProfilePictureUrl/${instanceName}`;
     
-    logs.push(`[webhook] Fetching profile picture for ${phone}...`);
+    logs.push(`[webhook] Fetching profile info for ${phone}...`);
     
-    const res = await fetch(fetchUrl, {
+    // 1. Fetch Profile Name/Status
+    const profileRes = await fetch(`${baseUrl}/chat/fetchProfile/${instanceName}`, {
+      method: 'POST',
+      headers: { 'apikey': apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ number: phone }),
+      signal: controller.signal
+    });
+
+    if (profileRes.ok) {
+      const pData = await profileRes.json();
+      const pushName = pData?.pushName || pData?.name || pData?.data?.pushName;
+      if (pushName && !/^[\d\s\-+()]+$/.test(pushName)) {
+        logs.push(`[webhook] Found real name for ${phone}: ${pushName}`);
+        await supabase.from('leads').update({ nome: pushName }).eq('id', leadId);
+      }
+    }
+
+    // 2. Fetch Profile Picture
+    const picRes = await fetch(`${baseUrl}/chat/fetchProfilePictureUrl/${instanceName}`, {
       method: 'POST',
       headers: { 'apikey': apiKey, 'Content-Type': 'application/json' },
       body: JSON.stringify({ number: phone }),
       signal: controller.signal
     });
     
-    clearTimeout(timeoutId);
-    
-    if (res.ok) {
-      const data = await res.json();
+    if (picRes.ok) {
+      const data = await picRes.json();
       const transientUrl = data?.profilePictureUrl || data?.url || data?.data?.profilePictureUrl || data?.data?.url;
       
       if (transientUrl && transientUrl.startsWith('http')) {
@@ -218,11 +233,7 @@ async function fetchProfilePicture(supabase: any, evolutionUrl: string, instance
       }
     }
   } catch (e: any) {
-    if (e.name === 'AbortError') {
-      logs.push(`[webhook] Timeout fetching profile picture for ${phone}`);
-    } else {
-      logs.push(`[webhook] Error fetching profile picture for ${phone}: ${e?.message}`);
-    }
+    logs.push(`[webhook] Error fetching profile info for ${phone}: ${e?.message}`);
   } finally {
     clearTimeout(timeoutId);
   }
@@ -286,7 +297,7 @@ Deno.serve(async (req) => {
         try {
           const instance = lojaMap.get(lead.loja_id) || "Whats"; // Fallback to default
           if (lead.telefone && EVOLUTION_API_URL && EVOLUTION_API_KEY) {
-            await fetchProfilePicture(supabase, EVOLUTION_API_URL, instance, EVOLUTION_API_KEY, lead.telefone.replace(/\D/g, ''), lead.id, lead.loja_id, logs);
+            await fetchProfileInfo(supabase, EVOLUTION_API_URL, instance, EVOLUTION_API_KEY, lead.telefone.replace(/\D/g, ''), lead.id, lead.loja_id, logs);
             count++;
           }
         } catch (innerError: any) {
@@ -448,9 +459,9 @@ Deno.serve(async (req) => {
             leadId = newLead.id;
             leadControle = 'bot';
             console.log(`[webhook] New lead created for ${pushName || phone}`);
-            // Fetch profile picture for new lead
+            // Fetch profile info for new lead
             if (baseUrl && EVOLUTION_API_KEY) {
-              fetchProfilePicture(supabase, baseUrl, instanceName, EVOLUTION_API_KEY, phone, newLead.id, storeId);
+              fetchProfileInfo(supabase, baseUrl, instanceName, EVOLUTION_API_KEY, phone, newLead.id, storeId);
             }
           }
         }

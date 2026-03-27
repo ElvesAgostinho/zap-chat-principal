@@ -69,12 +69,22 @@ export default function ChatPanel() {
   const fileRef = useRef<HTMLInputElement>(null);
   const profileFileRef = useRef<HTMLInputElement>(null);
 
+  const isHumanName = (name: string | null) => {
+    if (!name) return false;
+    const clean = name.trim();
+    if (clean.length < 2) return false;
+    if (/^[\d\s\-+()]+$/.test(clean)) return false;
+    if (clean.toLowerCase() === 'lead' || clean.toLowerCase() === 'novo lead') return false;
+    return true;
+  };
+
   useEffect(() => {
     if (!leadId) return;
     (supabase as any).from('leads').select('nome, telefone, controle_conversa, precisa_humano, foto_url, atendente_id, fonte, status').eq('id', leadId).maybeSingle()
       .then(({ data }: any) => {
         if (data) { 
-          setLeadName(data.nome?.trim() || data.telefone || 'Lead'); 
+          const name = isHumanName(data.nome) ? data.nome : (data.telefone || `Lead #${leadId.slice(0, 6)}`);
+          setLeadName(name); 
           setLeadPhone(data.telefone || 'Sem número'); 
           setControleConversa(data.controle_conversa || 'bot'); 
           setPrecisaHumano(data.precisa_humano === true); 

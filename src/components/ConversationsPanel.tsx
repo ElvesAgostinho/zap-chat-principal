@@ -38,6 +38,17 @@ export default function ConversationsPanel({ initialLeads, initialAgents, messag
 
 
 
+  const isHumanName = (name: string | null) => {
+    if (!name) return false;
+    const clean = name.trim();
+    if (clean.length < 2) return false;
+    // Se contém apenas números e símbolos de telefone, não é "humano" no contexto de nome
+    if (/^[\d\s\-+()]+$/.test(clean)) return false;
+    // Se for genericamente "Lead", também não é o ideal se tivermos outro
+    if (clean.toLowerCase() === 'lead' || clean.toLowerCase() === 'novo lead') return false;
+    return true;
+  };
+
   const conversations = useMemo<Conversation[]>(() => {
     const grouped = new Map<string, MsgRow[]>();
     messages.forEach(msg => { if (!msg.lead_id) return; const existing = grouped.get(msg.lead_id) || []; existing.push(msg); grouped.set(msg.lead_id, existing); });
@@ -45,7 +56,29 @@ export default function ConversationsPanel({ initialLeads, initialAgents, messag
       const sorted = [...msgs].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       const last = sorted[0];
       const lead = leads.find(l => l.id === leadId);
-      return { leadId, leadName: last.lead_nome || lead?.nome || `Lead #${leadId.slice(0, 6)}`, phone: lead?.telefone || '', lastMessage: last.conteudo, lastMessageTime: last.created_at, lastDirection: last.tipo, isBot: last.is_bot || false, lastResponderName: last.respondido_por_nome || null, unreadCount: sorted.filter(m => m.tipo === 'recebida').length, controleConversa: lead?.controle_conversa || 'bot', precisaHumano: lead?.precisa_humano || false, atendenteId: lead?.atendente_id, fotoUrl: lead?.foto_url };
+      
+      // Prioridade: 1. Nome do Lead (tabela Leads) se for humano, 2. Nome da Mensagem se for humano, 3. Nome do Lead, 4. Fallback
+      let displayName = `Lead #${leadId.slice(0, 6)}`;
+      if (isHumanName(lead?.nome)) displayName = lead!.nome;
+      else if (isHumanName(last.lead_nome)) displayName = last.lead_nome!;
+      else if (lead?.nome) displayName = lead.nome;
+      else if (last.lead_nome) displayName = last.lead_nome;
+
+      return { 
+        leadId, 
+        leadName: displayName, 
+        phone: lead?.telefone || '', 
+        lastMessage: last.conteudo, 
+        lastMessageTime: last.created_at, 
+        lastDirection: last.tipo, 
+        isBot: last.is_bot || false, 
+        lastResponderName: last.respondido_por_nome || null, 
+        unreadCount: sorted.filter(m => m.tipo === 'recebida').length, 
+        controleConversa: lead?.controle_conversa || 'bot', 
+        precisaHumano: lead?.precisa_humano || false, 
+        atendenteId: lead?.atendente_id, 
+        fotoUrl: lead?.foto_url 
+      };
     }).sort((a, b) => new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime());
   }, [messages, leads]);
 

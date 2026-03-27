@@ -39,6 +39,7 @@ REGRAS DE CONSERVAÇÃO E FLUXO:
 TRANSFERÊNCIA PARA HUMANO:
 Use [TRANSFERIR_HUMANO:razão_breve] apenas se houver estresse extremo ou dúvida fora da sua capacidade.
 
+- NOME DO CLIENTE: Se o cliente disser o nome dele ou se apresentar, use o marcador [NOME_CLIENTE:nome_do_cliente] em qualquer parte da resposta para que o sistema salve o nome real dele.
 FOLLOW-UP INTELIGENTE:
 Foque em criar relacionamento. Se o cliente parar de responder, não insista no mesmo assunto. Tente algo novo e leve.`;
 
@@ -286,6 +287,13 @@ Deno.serve(async (req) => {
     const transferMatch = rawReply.match(/\[TRANSFERIR_HUMANO:([^\]]+)\]/i);
     const escalateToHuman = transferMatch ? transferMatch[1].trim() : null;
 
+    const nameMatch = rawReply.match(/\[NOME_CLIENTE:([^\]]+)\]/i);
+    const extractedName = nameMatch ? nameMatch[1].trim() : null;
+    if (extractedName && lead_id) {
+      console.log(`[ai-bot] Extracted customer name: ${extractedName}`);
+      await supabase.from('leads').update({ nome: extractedName }).eq('id', lead_id);
+    }
+
     const paymentMatch = rawReply.includes('[ENVIAR_PAGAMENTO]');
     const locationMatch = rawReply.includes('[ENVIAR_LOCALIZACAO]');
 
@@ -298,6 +306,7 @@ Deno.serve(async (req) => {
       .replace(/\s*\[CANCELAR_AGENDAMENTO\]\s*/gi, ' ')
       .replace(/\s*\[ENVIAR_PAGAMENTO\]\s*/gi, ' ')
       .replace(/\s*\[ENVIAR_LOCALIZACAO\]\s*/gi, ' ')
+      .replace(/\s*\[NOME_CLIENTE:[^\]]+\]\s*/gi, ' ')
       .replace(/\s{2,}/g, ' ')
       .trim();
 
