@@ -11,6 +11,7 @@ const LandingPage = () => {
   const whatsappNumber = "351936179188";
   const whatsappLink = `https://wa.me/${whatsappNumber}`;
   const companyEmail = "geral@topia.solutions";
+  const companyWebsite = "https://www.topia.solutions";
 
   return (
     <div className="force-dark min-h-screen bg-[#0B0F14] text-white selection:bg-primary/30 selection:text-white overflow-x-hidden pt-[80px]">
@@ -188,7 +189,7 @@ const LandingPage = () => {
                <a href={whatsappLink} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full glass-card flex items-center justify-center hover:bg-primary hover:text-black transition-all opacity-50 hover:opacity-100">
                   <MessageCircle className="w-5 h-5" />
                </a>
-               <a href="#" className="w-10 h-10 rounded-full glass-card flex items-center justify-center hover:bg-primary hover:text-black transition-all opacity-50 hover:opacity-100">
+               <a href={companyWebsite} target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-full glass-card flex items-center justify-center hover:bg-primary hover:text-black transition-all opacity-50 hover:opacity-100">
                   <Globe className="w-5 h-5" />
                </a>
             </div>
@@ -241,7 +242,7 @@ const LandingPage = () => {
         </div>
 
         <div className="max-w-7xl mx-auto border-t border-white/5 pt-12 text-center text-[10px] font-black uppercase tracking-[0.4em] text-white/20">
-            © 2026 TOP IA SOLUTIONS • PORTUGAL & ANGOLA • TODOS OS DIREITOS RESERVADOS
+            © 2026 <a href={companyWebsite} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">TOP IA SOLUTIONS</a> • PORTUGAL & ANGOLA • TODOS OS DIREITOS RESERVADOS
         </div>
       </footer>
     </div>

@@ -23,6 +23,7 @@ import SuspendedScreen from "./components/SuspendedScreen";
 import DeletedAccountScreen from "./components/DeletedAccountScreen";
 import CookieConsent from "./components/CookieConsent";
 import FloatingSupportBot from "./components/FloatingSupportBot";
+import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
 
@@ -136,6 +137,7 @@ const App = () => (
       <Sonner />
       <CookieConsent />
       <BrowserRouter>
+        <ScrollToTop />
         <AuthProvider>
           <AppRoutes />
         </AuthProvider>

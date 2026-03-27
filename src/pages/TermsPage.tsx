@@ -86,11 +86,16 @@ const TermsPage = () => {
           <Zap className="w-10 h-10 text-primary mx-auto mb-6 shadow-glow" />
           <h3 className="text-lg font-bold mb-2 uppercase tracking-tighter text-white">Dúvidas Jurídicas?</h3>
           <p className="text-slate-300 text-sm mb-6 max-w-md mx-auto">
-            Se tiver qualquer questão sobre estes termos, por favor contacte o nosso suporte via WhatsApp ou e-mail corporativo.
+            Se tiver qualquer questão sobre estes termos, por favor contacte o nosso suporte via WhatsApp ou visite o nosso website oficial.
           </p>
-          <a href="mailto:geral@topia.solutions" className="inline-flex items-center gap-2 text-primary font-bold hover:underline">
-            geral@topia.solutions <CheckCircle2 className="w-4 h-4" />
-          </a>
+          <div className="flex flex-col items-center gap-4">
+            <a href="mailto:geral@topia.solutions" className="inline-flex items-center gap-2 text-primary font-bold hover:underline">
+              geral@topia.solutions <CheckCircle2 className="w-4 h-4" />
+            </a>
+            <a href="https://www.topia.solutions" target="_blank" rel="noopener noreferrer" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
+              www.topia.solutions
+            </a>
+          </div>
         </motion.div>
       </div>
     </div>
