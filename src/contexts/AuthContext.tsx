@@ -19,6 +19,8 @@ interface AuthState {
   isSuperAdmin: boolean;
   plano: 'iniciante' | 'starter' | 'profissional' | 'enterprise' | null;
   statusLoja: 'pendente_aprovacao' | 'ativo' | 'suspenso' | 'cancelado' | null;
+  storeProfilePic: string | null;
+  storePhone: string | null;
   signOut: () => Promise<void>;
 }
 
@@ -37,6 +39,8 @@ const AuthContext = createContext<AuthState>({
   isSuperAdmin: false,
   plano: null,
   statusLoja: null,
+  storeProfilePic: null,
+  storePhone: null,
   signOut: async () => {},
 });
 
@@ -75,6 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [plano, setPlano] = useState<'iniciante' | 'starter' | 'profissional' | 'enterprise' | null>(null);
   const [statusLoja, setStatusLoja] = useState<'pendente_aprovacao' | 'ativo' | 'suspenso' | 'cancelado' | null>(null);
+  const [storeProfilePic, setStoreProfilePic] = useState<string | null>(null);
+  const [storePhone, setStorePhone] = useState<string | null>(null);
   const versionRef = useRef(0);
 
   const clearMembership = () => {
@@ -88,6 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsSuperAdmin(false);
     setPlano(null);
     setStatusLoja(null);
+    setStoreProfilePic(null);
+    setStorePhone(null);
   };
 
   const checkSuperAdmin = async (userId: string): Promise<boolean> => {
@@ -189,7 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (sId) {
           const { data: storeData } = await (supabase as any)
             .from('lojas')
-            .select(`plano, status_aprovacao, slug, nome${membership.role === 'admin' ? ', codigo_unico' : ''}`)
+            .select(`plano, status_aprovacao, slug, nome, profile_picture_url, phone${membership.role === 'admin' ? ', codigo_unico' : ''}`)
             .eq('id', sId)
             .maybeSingle();
             
@@ -199,6 +207,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setStoreSlug(storeData.slug);
             setStoreCode(membership.role === 'admin' ? storeData.codigo_unico : null);
             setStoreName(storeData.nome);
+            setStoreProfilePic(storeData.profile_picture_url || null);
+            setStorePhone(storeData.phone || null);
           }
         }
         
@@ -343,7 +353,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{ 
         user, session, role, storeId, storeSlug, storeCode, storeName, status, userName, 
         loading, membershipState, isSuperAdmin, 
-        plano, statusLoja, signOut 
+        plano, statusLoja, storeProfilePic, storePhone, signOut 
       }}
     >
       {children}

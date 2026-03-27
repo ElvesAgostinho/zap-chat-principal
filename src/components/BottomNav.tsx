@@ -16,15 +16,15 @@ interface BottomNavProps {
 }
 
 const baseTabs: { id: Tab; icon: typeof Package; label: string; hasBadge?: boolean }[] = [
-  { id: 'dashboard', icon: LayoutDashboard, label: 'Painel' },
+  { id: 'dashboard', icon: LayoutDashboard, label: 'Painel Hub' },
   { id: 'orders', icon: ShoppingBag, label: 'Pedidos', hasBadge: true },
-  { id: 'chat', icon: MessageSquare, label: 'Chat', hasBadge: true },
+  { id: 'chat', icon: MessageSquare, label: 'Conversas', hasBadge: true },
   { id: 'schedule', icon: Calendar, label: 'Agenda', hasBadge: true },
   { id: 'pipeline', icon: BarChart3, label: 'Pipeline', hasBadge: true },
-  { id: 'campaigns', icon: Megaphone, label: 'Promoções', hasBadge: true },
+  { id: 'campaigns', icon: Megaphone, label: 'Campanhas', hasBadge: true },
   { id: 'alerts', icon: AlertTriangle, label: 'Alertas', hasBadge: true },
   { id: 'stock', icon: Package, label: 'Estoque' },
-  { id: 'clients', icon: Users, label: 'Clientes' },
+  { id: 'clients', icon: Users, label: 'Potenciais Clientes' },
   { id: 'products', icon: Package, label: 'Produtos' },
   { id: 'settings', icon: Settings, label: 'Config' },
 ];

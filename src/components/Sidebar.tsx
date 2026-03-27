@@ -51,17 +51,17 @@ const getNavGroups = (
     {
       label: 'Principal',
       items: [
-        { id: 'dashboard', icon: LayoutDashboard, label: 'Painel' },
+        { id: 'dashboard', icon: LayoutDashboard, label: 'Painel Hub' },
         { id: 'orders', icon: ShoppingBag, label: 'Pedidos', badge: orderCount },
         { id: 'chat', icon: MessageSquare, label: 'Conversas', badge: chatCount },
-        { id: 'delivery', icon: Truck, label: 'Entregas' },
+        { id: 'delivery', icon: Truck, label: 'Logística' },
       ],
     },
     {
-      label: 'CRM',
+      label: 'CRM & Operações',
       items: [
         { id: 'pipeline', icon: BarChart3, label: 'Pipeline', locked: !isPro },
-        { id: 'clients', icon: Users, label: 'Clientes', locked: !isPro },
+        { id: 'clients', icon: Users, label: 'Potenciais Clientes', locked: !isPro },
         { id: 'campaigns', icon: Megaphone, label: 'Campanhas', locked: !isPro },
         { id: 'automation', icon: Zap, label: 'Automação', locked: !isPro },
         { id: 'schedule', icon: Calendar, label: 'Agenda', locked: !isStarter },
