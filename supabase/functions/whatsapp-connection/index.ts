@@ -789,10 +789,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (action === 'sync_chat') {
-      const sync = await syncChatHistoryFromEvolution(store_id, instanceName, body.phone || null);
-      return json({ success: true, status: 'sync_chat_complete', instance: instanceName, sync });
-    }
 
     // ============================================================
     // ACTION: check_connection

@@ -507,6 +507,7 @@ Deno.serve(async (req) => {
 
       // AUTO-REPLY with AI bot (incoming messages with text OR media)
       const hasContent = messageText || media;
+      let botStatus = '';
       if (!fromMe && hasContent && leadId && storeId && EVOLUTION_API_KEY && EVOLUTION_API_URL) {
         let storeBotActive = true;
         const { data: storeData } = await supabase
@@ -594,6 +595,7 @@ Deno.serve(async (req) => {
               const sendResult = await sendResponse.json();
 
               if (sendResponse.ok) {
+                botStatus = 'success';
                 await supabase.from('mensagens').insert({
                   lead_id: leadId, lead_nome: leadName, conteudo: botData.reply,
                   tipo: 'enviada', is_bot: true, loja_id: storeId,
@@ -796,7 +798,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      return new Response(JSON.stringify({ ok: true, saved: true }), {
+      return new Response(JSON.stringify({ ok: true, saved: true, bot: botStatus }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

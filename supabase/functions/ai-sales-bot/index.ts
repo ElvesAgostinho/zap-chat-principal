@@ -13,49 +13,40 @@ const LANGUAGE_INSTRUCTIONS: Record<string, string> = {
   'pt-ST': 'Responda em Português de São Tomé e Príncipe. Use expressões santomenses. Moeda: Db (Dobra). Estilo amável e próximo.',
 };
 
-const SYSTEM_PROMPT = `Você é um "Facilitador de Negócios Enterprise" apaixonado e especialista em atendimento via WhatsApp. Seu tom deve ser 100% humano, natural, empático e adaptável ao tipo de negócio que você representa (Clínica, Advocacia, Salão, Consultoria ou Loja).
+const SYSTEM_PROMPT = `Você é um "Consultor de Atendimento Humanizado" e especialista em conversão gentil via WhatsApp. Seu tom deve ser 100% humano, natural, empático e extremamente educado.
 
-OBJETIVO:
-Facilitar toda a jornada do cliente, desde a primeira dúvida até o agendamento ou fechamento da venda, evitando erros humanos e garantindo fluidez.
+REGRAS DE OURO:
+1. COMPORTAMENTO HUMANO: Não pareça um robô. Use pausas naturais na escrita (vírgulas), varie o vocabulário e seja honesto. Se não souber algo, pergunte ou sugira falar com um humano.
+2. PERSUASÃO SUTIL: Seja persuasivo destacando os benefícios e a qualidade, mas NUNCA seja agressivo ou insistente demais. O cliente deve se sentir no controle.
+3. INTENÇÃO DO CLIENTE: Antes de agir, entenda profundamente o que o cliente deseja. Se a dúvida for vaga, peça gentilmente por mais detalhes.
 
-ESTRATÉGIA ANTI-BLOQUEIO META (CRÍTICO):
-1. STRICT VARIANCE: NUNCA responda da mesma forma para leads diferentes. Varie as saudações, o vocabulário e a estrutura das frases.
-2. TOM HUMANO: Use emojis moderadamente, vírgulas e expressões naturais (ex: "Olha só", "Pois é", "Com certeza").
-3. MENSAGENS CURTAS: Evite blocos de texto. Quebre as ideias em mensagens concisas (1-3 linhas).
+CONDIÇÕES DE ENVIO (MUITO IMPORTANTE):
+- FOTOS E PRODUTOS: NUNCA envie fotos ou o marcador [ENVIAR_PRODUTO:...] de forma espontânea. Você só deve usar esse marcador se o cliente PEDIR para ver o produto, perguntar "como é", quiser detalhes visuais ou demonstrar interesse claro em comprar aquele item específico.
+- AGENDAMENTO AUTOMÁTICO: As marcações devem ser automáticas para facilitar o trabalho. Quando o cliente concordar com um horário, use [AGENDAR:servico|data]. Seja proativo ao sugerir horários disponíveis se o cliente mostrar interesse em visitar ou agendar.
 
-CONDIÇÃO DE ATENDIMENTO HUMANIZADO:
-- Se o cliente transferir para você depois de falar com um humano, assuma o contexto com naturalidade.
+REGRAS DE CONSERVAÇÃO:
+- LOCALIZAÇÃO: Use [ENVIAR_LOCALIZACAO] se perguntarem onde fica.
+- PAGAMENTOS: Use [ENVIAR_PAGAMENTO] se perguntarem como pagar ou quiserem fechar.
 
-REGRAS DE CONSERVAÇÃO E FLUXO:
-- PAGAMENTOS: Se o cliente perguntar como pagar, ou estiver pronto para fechar, use: [ENVIAR_PAGAMENTO]. Fale antes com naturalidade sobre as opções (IBAN, etc).
-- LOCALIZAÇÃO: Se o cliente perguntar onde fica a empresa, use: [ENVIAR_LOCALIZACAO].
-- AGENDAMENTO ENTERPRISE (AUTO-GESTÃO): 
-    * Marcar: [AGENDAR:servico|AAAA-MM-DDTHH:MM]
-    * Remarcar: [REMARCAR_AGENDAMENTO:AAAA-MM-DDTHH:MM]
-    * Cancelar: [CANCELAR_AGENDAMENTO]
-    * Instrução: Se o cliente quiser mudar o horário, peça o novo horário e use o marcador de remarcar.
-- PRODUTOS: [ENVIAR_PRODUTO:nome_exacto_do_produto] (Máximo 2 por vez).
-
-TRANSFERÊNCIA PARA HUMANO:
-Use [TRANSFERIR_HUMANO:razão_breve] apenas se houver estresse extremo ou dúvida fora da sua capacidade.
-
-- NOME DO CLIENTE: Se o cliente disser o nome dele ou se apresentar, use o marcador [NOME_CLIENTE:nome_do_cliente] em qualquer parte da resposta para que o sistema salve o nome real dele.
-FOLLOW-UP INTELIGENTE:
-Foque em criar relacionamento. Se o cliente parar de responder, não insista no mesmo assunto. Tente algo novo e leve.`;
+ESTRATÉGIA ANTI-BLOQUEIO:
+- Varie as saudações: Olá, Tudo bem, Boas, Salve, etc.
+- Mensagens curtas e directas.`;
 
 const FIRST_CONTACT_INSTRUCTION = `
 INSTRUÇÃO ESPECIAL - PRIMEIRO CONTACTO:
-Este é o primeiro contacto com este cliente. Dê boas-vindas calorosas usando uma saudação natural. Não envie imagens ou listas longas de produto ainda. Apenas se apresente, diga de qual loja você é (se houver nome da loja no contexto) e pergunte de forma gentil como pode ajudar hoje. Pare por aí.`;
+Este é o primeiro contacto com este cliente. Comece com uma saudação calorosa e natural. Apresente-se, diga de qual loja você é e pergunte como pode ajudar hoje. NÃO envie produtos agora, a menos que o cliente já tenha perguntado algo específico na primeira mensagem.`;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-  const useGateway = !!LOVABLE_API_KEY;
-  const apiKey = LOVABLE_API_KEY || OPENAI_API_KEY;
+  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  
+  // Prioritize direct OpenAI for better reliability
+  const useGateway = !OPENAI_API_KEY && !!LOVABLE_API_KEY;
+  const apiKey = OPENAI_API_KEY || LOVABLE_API_KEY;
   
   if (!apiKey) {
     return new Response(JSON.stringify({ error: 'No AI API key configured' }), {
@@ -116,12 +107,11 @@ Deno.serve(async (req) => {
         }
       } catch (e: any) {
         console.log('RAG Fallback Ativo - buscando catálogo tradicional:', e.message);
-        // Fallback to old method (Full Catalogue)
+        // Fallback to old method (Full Catalogue) - Include out of stock for intelligence
         const { data: products } = await supabase
           .from('produtos')
           .select('nome, preco, descricao, estoque, imagem')
           .eq('loja_id', store_id)
-          .gt('estoque', 0)
           .limit(100);
         allProducts = products || [];
       }
@@ -131,8 +121,8 @@ Deno.serve(async (req) => {
             const hasStock = p.estoque > 0;
             return `- ${p.nome} | Preço: Kz ${p.formatted_preco || p.preco} | Estoque: ${hasStock ? 'Sim' : 'Não'} | Detalhes: ${p.descricao || 'Sem descrição'}`;
           }).join('\n');
-        productContext += '\n\nPara enviar foto USE SOMENTE SE O CLIENTE PEDIR: [ENVIAR_PRODUTO:nome_exacto_do_produto]';
-        productContext += '\nApenas use marcadores para produtos com [TEM FOTO]. Se o cliente perguntar por tamanhos, cores ou especificações, use os "Detalhes" fornecidos acima.';
+        productContext += '\n\nMARCADOR DE FOTO: Use [ENVIAR_PRODUTO:nome_exacto_do_produto] SOMENTE se o cliente pedir para ver o produto ou detalhes visuais.';
+        productContext += '\nUse os "Detalhes" para responder perguntas sobre tamanhos, cores ou especificações.';
       }
     }
 
@@ -223,7 +213,7 @@ Deno.serve(async (req) => {
 
     // 5. Call AI
     const aiUrl = useGateway ? 'https://ai.gateway.lovable.dev/v1/chat/completions' : 'https://api.openai.com/v1/chat/completions';
-    const model = useGateway ? 'google/gemini-2.0-flash-exp' : 'gpt-4o-mini';
+    const model = 'gpt-4o-mini';
 
     console.log(`[ai-bot] Calling AI (${model}) via ${useGateway ? 'Gateway' : 'Direct OpenAI'}. Key length: ${apiKey?.length || 0}`);
 
