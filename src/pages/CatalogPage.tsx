@@ -547,7 +547,9 @@ export default function CatalogPage() {
                       {/* Product Header */}
                       <div className="space-y-4">
                         <div className="flex items-center gap-2">
-                          <span className="text-[9px] font-black text-white bg-black px-2 py-0.5 rounded tracking-tighter uppercase">Original · Enterprise</span>
+                          <span className="text-[9px] font-black text-white bg-black px-2 py-0.5 rounded tracking-tighter uppercase">
+                            Original · {store?.plano || 'Starter'}
+                          </span>
                           <div className="flex text-yellow-400">
                             {[1,2,3,4,5].map(i => <Star key={i} className="w-3 h-3 fill-current" />)}
                           </div>

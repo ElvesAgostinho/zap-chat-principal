@@ -43,10 +43,13 @@ const getNavGroups = (
   showAdmin: boolean,
   plano: string | null
 ): NavGroup[] => {
-  const p = plano?.toLowerCase();
-  const isStarter = p === 'starter' || p === 'profissional' || p === 'enterprise';
-  const isPro = p === 'profissional' || p === 'enterprise';
-  const isEnterprise = p === 'enterprise';
+  const p = plano?.toLowerCase() || '';
+  
+  // High-tier plans: Profissional or Enterprise
+  const isPro = ['profissional', 'enterprise'].includes(p) || showAdmin; // Assuming showAdmin implies isSuperAdmin for this context
+  
+  // Basic entry plans: Starter or better
+  const isStarterPlus = ['starter', 'profissional', 'enterprise'].includes(p) || showAdmin;
 
   const groups: NavGroup[] = [
     {
@@ -61,11 +64,11 @@ const getNavGroups = (
     {
       label: 'CRM & Operações',
       items: [
-        { id: 'pipeline', icon: BarChart3, label: 'Pipeline', locked: !isPro },
-        { id: 'clients', icon: Users, label: 'Potenciais Clientes', locked: !isPro },
-        { id: 'campaigns', icon: Megaphone, label: 'Campanhas', locked: !isPro },
-        { id: 'automation', icon: Zap, label: 'Automação', locked: !isPro },
-        { id: 'schedule', icon: Calendar, label: 'Agenda', locked: !isStarter },
+        { id: 'pipeline', icon: BarChart3, label: 'Pipeline', locked: !isHighTier },
+        { id: 'clients', icon: Users, label: 'Potenciais Clientes', locked: !isHighTier },
+        { id: 'campaigns', icon: Megaphone, label: 'Campanhas', locked: !isHighTier },
+        { id: 'automation', icon: Zap, label: 'Automação', locked: !isHighTier },
+        { id: 'schedule', icon: Calendar, label: 'Agenda', locked: !isStarterPlus },
       ],
     },
     {
@@ -80,7 +83,7 @@ const getNavGroups = (
       label: 'Sistema',
       items: [
         { id: 'settings', icon: Settings, label: 'Configurações' },
-        ...(showAdmin ? [{ id: 'admin' as Tab, icon: Shield, label: 'Admin', locked: !isPro }] : []),
+        ...(showAdmin ? [{ id: 'admin' as Tab, icon: Shield, label: 'Admin', locked: false }] : []),
       ],
     },
   ];
@@ -129,6 +132,7 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
   };
 
   const initials = userName ? userName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : '?';
+  const p = (plano || '').toLowerCase();
 
   const sidebarContent = (
     <div className="flex flex-col h-full bg-sidebar-background/80 backdrop-blur-xl">
@@ -219,7 +223,8 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
       {/* Bottom section */}
       <div className="border-t border-white/5 px-4 py-6 space-y-4 flex-shrink-0">
         {/* Upgrade Call to Action */}
-        {plano !== 'enterprise' && !collapsed && (
+        {/* Upgrade Call to Action - Only show if not on Enterprise */}
+        {p !== 'enterprise' && !collapsed && (
           <button
             onClick={() => setUpgradeOpen(true)}
             className="w-full mb-2 p-3.5 rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-emerald-600 text-primary-foreground flex flex-col gap-1 hover:brightness-110 transition-all shadow-glow group border border-white/10"

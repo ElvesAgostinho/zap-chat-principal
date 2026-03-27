@@ -38,7 +38,8 @@ export default function AdminPanel() {
   const [connectingInProcess, setConnectingInProcess] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   
-  const isPro = plano === 'profissional' || plano === 'enterprise' || isSuperAdmin;
+  const p = plano?.toLowerCase() || '';
+  const isPro = ['profissional', 'pro', 'enterprise', 'premium', 'platinum'].includes(p) || isSuperAdmin;
 
   const fetchData = async () => {
     setLoading(true);
@@ -67,9 +68,10 @@ export default function AdminPanel() {
   const approvedEmployees = employees.filter(e => e.status === 'aprovado');
   const isConnected = loja?.instance_status === 'connected';
 
-  const GET_MAX_EMPLOYEES = (p: string | null) => {
-    if (p === 'enterprise') return 999;
-    if (p === 'profissional') return 5;
+  const GET_MAX_EMPLOYEES = (planoStr: string | null) => {
+    const p = planoStr?.toLowerCase() || '';
+    if (['enterprise', 'premium', 'platinum'].includes(p)) return 999;
+    if (['profissional', 'pro'].includes(p)) return 5;
     return 2; // Starter = 2 accounts total
   };
 
