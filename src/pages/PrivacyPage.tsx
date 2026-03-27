@@ -33,7 +33,7 @@ const PrivacyPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0B0F14] text-white selection:bg-primary/30 pt-24 pb-20 px-6">
+    <div className="force-dark min-h-screen bg-[#0B0F14] text-white selection:bg-primary/30 pt-24 pb-20 px-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-16">
