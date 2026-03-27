@@ -409,8 +409,8 @@ export default function SuperAdminPanel() {
                       <p className="text-[10px] text-primary font-medium">/loja/{(loja as any).slug || loja.codigo_unico}</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${loja.instance_status === 'connected' ? 'bg-emerald-500' : 'bg-muted-foreground/30'}`} />
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                       <span className={`w-2 h-2 rounded-full ${loja.instance_status === 'connected' ? 'bg-emerald-500' : 'bg-muted-foreground/30'}`} />
+                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
                         loja.status_aprovacao === 'ativo' ? 'bg-emerald-100 text-emerald-700' :
                         loja.status_aprovacao === 'suspenso' ? 'bg-red-100 text-red-700' :
                         'bg-orange-100 text-orange-700'
@@ -418,7 +418,7 @@ export default function SuperAdminPanel() {
                     </div>
                   </div>
 
-                  {/* Admin Info in All Stores List */}
+                  {/* Admin Info */}
                   <div className="flex flex-wrap gap-4 pt-1">
                     {allAdmins.filter(a => a.loja_id === loja.id).map(admin => (
                       <div key={admin.id} className="space-y-0.5 border-l-2 border-primary/20 pl-3">
@@ -429,22 +429,28 @@ export default function SuperAdminPanel() {
                     ))}
                   </div>
                   {loja.telefone && <p className="text-xs text-muted-foreground">{loja.telefone}</p>}
-                  
-                  {/* Expiration Banner */}
-                  <div className="flex items-center justify-between text-[11px] p-2 bg-muted/30 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-3.5 h-3.5 text-primary" />
-                      <span className="font-medium">Vencimento:</span>
-                      {sub ? (
-                        <span className={getDaysLeft(sub.data_fim)! < 5 ? 'text-red-500 font-bold' : 'text-foreground'}>
-                          {getDaysLeft(sub.data_fim)! > 0 
-                            ? `${getDaysLeft(sub.data_fim)} dias restantes` 
-                            : 'Expirado'} 
-                          ({new Date(sub.data_fim).toLocaleDateString()})
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground italic">Sem assinatura ativa</span>
-                      )}
+
+                  {/* Expiration Banner - Centralized Management */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-primary/5 border border-primary/10 rounded-2xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                        <Clock className="w-4 h-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Estado da Assinatura</p>
+                        {sub ? (
+                          <div className="flex items-center gap-2">
+                             <span className={`text-xs font-bold ${getDaysLeft(sub.data_fim)! < 5 ? 'text-red-500 underline decoration-wavy' : 'text-foreground'}`}>
+                              {getDaysLeft(sub.data_fim)! > 0 
+                                ? `${getDaysLeft(sub.data_fim)} dias restantes` 
+                                : 'Acesso Expirado'}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground">({new Date(sub.data_fim).toLocaleDateString()})</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground italic">Nenhuma subscrição ativa</span>
+                        )}
+                      </div>
                     </div>
                     {sub && (
                       <button 
@@ -453,11 +459,13 @@ export default function SuperAdminPanel() {
                           novaData.setDate(novaData.getDate() + 30);
                           const { error } = await supabase.from('assinaturas').update({ data_fim: novaData.toISOString() }).eq('id', sub.id);
                           if (!error) {
-                            toast("✅ Renovado!", { description: '+30 dias adicionados' });
+                            toast.success("✅ Renovação Concluída", { description: `A loja ${loja.nome} recebeu +30 dias de acesso.` });
                             fetchAll();
+                          } else {
+                            toast.error("Erro ao renovar");
                           }
                         }}
-                        className="text-primary hover:underline font-bold"
+                        className="px-4 py-1.5 rounded-lg bg-primary/10 text-primary text-[11px] font-black uppercase tracking-widest hover:bg-primary hover:text-white transition-all shadow-sm"
                       >
                         +30 dias
                       </button>
@@ -465,47 +473,45 @@ export default function SuperAdminPanel() {
                   </div>
 
                   {/* Plan changer */}
-                  {loja.status_aprovacao === 'ativo' && (
-                    <div className="flex gap-2 items-center pt-1 border-t border-border/50">
-                      <select
-                        value={selectedPlans[loja.id] ?? loja.plano ?? 'starter'}
-                        onChange={(e) => setSelectedPlans(prev => ({ ...prev, [loja.id]: e.target.value }))}
-                        className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-                      >
-                        <option value="starter">Starter — 25.000 Kz</option>
-                        <option value="profissional">Profissional — 50.000 Kz</option>
-                        <option value="enterprise">Enterprise — 100.000 Kz</option>
-                      </select>
-                      <motion.button
-                        whileTap={{ scale: 0.95 }}
-                        disabled={processingId === loja.id}
-                        onClick={async () => {
-                          setProcessingId(loja.id);
-                          try {
-                            const novoPlano = (selectedPlans[loja.id] ?? loja.plano ?? 'starter').toLowerCase();
-                            await (supabase as any).from('lojas').update({ 
-                              plano: novoPlano,
-                              status_aprovacao: 'ativo'
-                            }).eq('id', loja.id);
-                            
-                            await (supabase as any).from('usuarios_loja').update({
-                              status: 'aprovado'
-                            }).eq('loja_id', loja.id);
-                            
-                            toast("✅ Sucesso", { description: `Plano atualizado para ${novoPlano}` });
-                            fetchAll();
-                          } catch (err: any) {
-                            toast("Erro", { description: err.message });
-                          } finally {
-                            setProcessingId(null);
-                          }
-                        }}
-                        className="px-3 py-1.5 text-xs rounded-xl bg-primary text-white font-semibold disabled:opacity-50 whitespace-nowrap"
-                      >
-                        {processingId === loja.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Atualizar Plano'}
-                      </motion.button>
-                    </div>
-                  )}
+                  <div className="flex gap-2 items-center pt-2 border-t border-border/50">
+                    <select
+                      value={selectedPlans[loja.id] ?? loja.plano ?? 'starter'}
+                      onChange={(e) => setSelectedPlans(prev => ({ ...prev, [loja.id]: e.target.value }))}
+                      className="flex-1 px-3 py-2 text-xs rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 h-10"
+                    >
+                      <option value="starter">Starter — 25.000 Kz</option>
+                      <option value="profissional">Profissional — 50.000 Kz</option>
+                      <option value="enterprise">Enterprise — 100.000 Kz</option>
+                    </select>
+                    <motion.button
+                      whileTap={{ scale: 0.95 }}
+                      disabled={processingId === loja.id}
+                      onClick={async () => {
+                        setProcessingId(loja.id);
+                        try {
+                          const novoPlano = (selectedPlans[loja.id] ?? loja.plano ?? 'starter').toLowerCase();
+                          await (supabase as any).from('lojas').update({ 
+                            plano: novoPlano,
+                            status_aprovacao: 'ativo'
+                          }).eq('id', loja.id);
+                          
+                          await (supabase as any).from('usuarios_loja').update({
+                            status: 'aprovado'
+                          }).eq('loja_id', loja.id);
+                          
+                          toast.success("✅ Plano Atualizado", { description: `Loja ${loja.nome} agora é ${novoPlano.toUpperCase()}` });
+                          fetchAll();
+                        } catch (err: any) {
+                          toast.error("Erro", { description: err.message });
+                        } finally {
+                          setProcessingId(null);
+                        }
+                      }}
+                      className="h-10 px-4 rounded-xl bg-primary text-white text-[11px] font-black uppercase tracking-widest shadow-sm disabled:opacity-50"
+                    >
+                      {processingId === loja.id ? <Loader2 className="w-4 h-4 animate-spin mx-auto" /> : 'Atualizar'}
+                    </motion.button>
+                  </div>
                 </div>
               );
             })}
