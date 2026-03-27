@@ -47,8 +47,8 @@ const PrivacyPage = () => {
               <ShieldAlert className="w-8 h-8 text-primary" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold tracking-tight">Política de Privacidade</h1>
-              <p className="text-muted-foreground mt-1 text-sm uppercase tracking-widest">Privacidade de Dados Enterprise</p>
+              <h1 className="text-4xl font-bold tracking-tight text-white">Política de Privacidade</h1>
+              <p className="text-slate-400 mt-1 text-sm uppercase tracking-widest">Privacidade de Dados Enterprise</p>
             </div>
           </div>
           
@@ -72,8 +72,8 @@ const PrivacyPage = () => {
               <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
                 <section.icon className="w-6 h-6 text-primary" />
               </div>
-              <h2 className="text-xl font-bold mb-4">{section.title}</h2>
-              <p className="text-slate-400 leading-relaxed text-sm">
+              <h2 className="text-xl font-bold mb-4 text-white">{section.title}</h2>
+              <p className="text-slate-300 leading-relaxed text-sm">
                 {section.content}
               </p>
             </motion.div>
@@ -83,8 +83,8 @@ const PrivacyPage = () => {
         {/* Closing Note */}
         <div className="mt-20 pt-12 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-8 text-center md:text-left">
           <div className="max-w-md">
-            <h3 className="text-lg font-bold mb-2">Compromisso com a Segurança</h3>
-            <p className="text-slate-500 text-xs uppercase tracking-widest leading-relaxed">
+            <h3 className="text-lg font-bold mb-2 text-white">Compromisso com a Segurança</h3>
+            <p className="text-slate-400 text-xs uppercase tracking-widest leading-relaxed">
               O CRM TOP utiliza infraestrutura Tier 4 e auditorias periódicas para garantir a integridade máxima do seu negócio.
             </p>
           </div>

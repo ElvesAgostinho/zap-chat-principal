@@ -46,8 +46,8 @@ const TermsPage = () => {
               <Shield className="w-8 h-8 text-primary" />
             </div>
             <div>
-              <h1 className="text-4xl font-bold tracking-tight">Termos de Serviço</h1>
-              <p className="text-muted-foreground mt-1">Última atualização: Março de 2026</p>
+              <h1 className="text-4xl font-bold tracking-tight text-white">Termos de Serviço</h1>
+              <p className="text-slate-400 mt-1">Última atualização: Março de 2026</p>
             </div>
           </div>
           
@@ -66,11 +66,11 @@ const TermsPage = () => {
               className="relative group"
             >
               <div className="absolute -left-6 top-0 bottom-0 w-px bg-white/5 group-hover:bg-primary/30 transition-colors" />
-              <h2 className="text-xl font-bold mb-4 flex items-center gap-3">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-3 text-white">
                 <span className="text-primary/50 text-sm font-mono">0{index + 1}</span>
                 {section.title}
               </h2>
-              <p className="text-slate-400 leading-relaxed text-sm lg:text-base pl-2">
+              <p className="text-slate-300 leading-relaxed text-sm lg:text-base pl-2">
                 {section.content}
               </p>
             </motion.section>
@@ -84,8 +84,8 @@ const TermsPage = () => {
           className="mt-20 p-8 rounded-3xl bg-white/[0.02] border border-white/5 text-center"
         >
           <Zap className="w-10 h-10 text-primary mx-auto mb-6 shadow-glow" />
-          <h3 className="text-lg font-bold mb-2 uppercase tracking-tighter">Dúvidas Jurídicas?</h3>
-          <p className="text-slate-400 text-sm mb-6 max-w-md mx-auto">
+          <h3 className="text-lg font-bold mb-2 uppercase tracking-tighter text-white">Dúvidas Jurídicas?</h3>
+          <p className="text-slate-300 text-sm mb-6 max-w-md mx-auto">
             Se tiver qualquer questão sobre estes termos, por favor contacte o nosso suporte via WhatsApp ou e-mail corporativo.
           </p>
           <a href="mailto:geral@topia.solutions" className="inline-flex items-center gap-2 text-primary font-bold hover:underline">
