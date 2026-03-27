@@ -21,6 +21,7 @@ interface AuthState {
   statusLoja: 'pendente_aprovacao' | 'ativo' | 'suspenso' | 'cancelado' | null;
   storeProfilePic: string | null;
   storePhone: string | null;
+  dataFim: string | null;
   signOut: () => Promise<void>;
 }
 
@@ -41,6 +42,7 @@ const AuthContext = createContext<AuthState>({
   statusLoja: null,
   storeProfilePic: null,
   storePhone: null,
+  dataFim: null,
   signOut: async () => {},
 });
 
@@ -81,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [statusLoja, setStatusLoja] = useState<'pendente_aprovacao' | 'ativo' | 'suspenso' | 'cancelado' | null>(null);
   const [storeProfilePic, setStoreProfilePic] = useState<string | null>(null);
   const [storePhone, setStorePhone] = useState<string | null>(null);
+  const [dataFim, setDataFim] = useState<string | null>(null);
   const versionRef = useRef(0);
 
   const clearMembership = () => {
@@ -96,6 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatusLoja(null);
     setStoreProfilePic(null);
     setStorePhone(null);
+    setDataFim(null);
   };
 
   const checkSuperAdmin = async (userId: string): Promise<boolean> => {
@@ -209,6 +213,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setStoreName(storeData.nome);
             setStoreProfilePic(storeData.profile_picture_url || null);
             setStorePhone(storeData.phone || null);
+
+            // Fetch active subscription for expiration date
+            const { data: sub } = await supabase
+              .from('assinaturas')
+              .select('data_fim')
+              .eq('loja_id', storeData.id)
+              .eq('status', 'ativo')
+              .maybeSingle();
+            
+            if (sub) setDataFim(sub.data_fim);
           }
         }
         
@@ -381,7 +395,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{ 
         user, session, role, storeId, storeSlug, storeCode, storeName, status, userName, 
         loading, membershipState, isSuperAdmin, 
-        plano, statusLoja, storeProfilePic, storePhone, signOut 
+        plano, statusLoja, storeProfilePic, storePhone, dataFim, signOut 
       }}
     >
       {children}

@@ -17,6 +17,7 @@ import CatalogPage from "./pages/CatalogPage";
 import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import PendingApprovalScreen from "./components/PendingApprovalScreen";
+import SuspendedScreen from "./components/SuspendedScreen";
 import CookieConsent from "./components/CookieConsent";
 import FloatingSupportBot from "./components/FloatingSupportBot";
 
@@ -39,6 +40,11 @@ function ProtectedRoute({ children, adminOnly = false, superAdminOnly = false }:
   // If store is pending approval, redirect to a special state or screen
   if (!isSuperAdmin && statusLoja === 'pendente_aprovacao') {
     return <PendingApprovalScreen />;
+  }
+
+  // If store is suspended (e.g. for non-payment)
+  if (!isSuperAdmin && statusLoja === 'suspenso') {
+    return <SuspendedScreen />;
   }
 
   if (adminOnly && role !== 'admin' && !isSuperAdmin) return <Navigate to="/" replace />;

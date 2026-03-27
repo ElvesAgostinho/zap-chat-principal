@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { DollarSign, ShoppingBag, Users, TrendingUp, AlertTriangle, Copy, BarChart3, Bell, ArrowUpRight, ArrowDownRight, Target, Calendar, MessageSquare, Plus, Download, Globe } from 'lucide-react';
+import { DollarSign, ShoppingBag, Users, TrendingUp, AlertTriangle, Copy, BarChart3, Bell, ArrowUpRight, ArrowDownRight, Target, Calendar, MessageSquare, Plus, Download, Globe, Clock } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Produto, Lead, Venda } from '@/types';
 import { formatCurrency } from '@/data/mock';
@@ -21,9 +21,22 @@ interface DashboardPanelProps {
 const PIPELINE_COLORS = ['hsl(215, 25%, 65%)', 'hsl(217, 91%, 60%)', 'hsl(43, 96%, 56%)', 'hsl(158, 85%, 35%)'];
 
 export default function DashboardPanel({ vendas, leads, products, alertCount, onAddLead, onAddProduct }: DashboardPanelProps) {
-  const { role, storeId, storeCode, storeSlug } = useAuth();
+  const { role, storeId, storeCode, storeSlug, dataFim, storeName } = useAuth();
   const isAdmin = role === 'admin';
   const [period, setPeriod] = useState<'7d' | '30d' | 'all'>('7d');
+
+  const daysLeft = useMemo(() => {
+    if (!dataFim) return null;
+    const fim = new Date(dataFim);
+    const hoje = new Date();
+    const diffTime = fim.getTime() - hoje.getTime();
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  }, [dataFim]);
+
+  const handleRenew = () => {
+    const message = `Olá! O acesso da minha loja *${storeName || 'Minha Loja'}* expira em breve (${daysLeft} dias). Gostaria de renovar a minha assinatura.`;
+    window.open(`https://wa.me/351936179188?text=${encodeURIComponent(message)}`, '_blank');
+  };
   const [activeTab, setActiveTab] = useState<'geral' | 'insights'>('geral');
 
 
@@ -136,7 +149,46 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
   };
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <div className="space-y-6 pb-20 p-4 md:p-8 max-w-7xl mx-auto">
+      {/* Expiration Banner */}
+      {daysLeft !== null && daysLeft < 7 && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`p-4 rounded-[24px] border flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl ${
+            daysLeft <= 0 
+              ? 'bg-destructive/10 border-destructive/20 text-destructive' 
+              : 'bg-orange-500/10 border-orange-500/20 text-orange-400'
+          }`}
+        >
+          <div className="flex items-center gap-4">
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${
+              daysLeft <= 0 ? 'bg-destructive/20' : 'bg-orange-500/20'
+            }`}>
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-sm font-bold uppercase tracking-wider">Assinatura Próxima do Fim</p>
+              <p className="text-xs opacity-80">
+                {daysLeft <= 0 
+                  ? 'O seu plano expirou hoje. Regularize o seu acesso para evitar bloqueios.' 
+                  : `O seu acesso expira em ${daysLeft} ${daysLeft === 1 ? 'dia' : 'dias'}. Renove agora e mantenha a sua operação ativa.`}
+              </p>
+            </div>
+          </div>
+          <button 
+            onClick={handleRenew}
+            className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all hover:scale-105 active:scale-95 ${
+              daysLeft <= 0 
+                ? 'bg-destructive text-white' 
+                : 'bg-orange-500 text-white shadow-glow-orange'
+            }`}
+          >
+            Renovar Agora
+          </button>
+        </motion.div>
+      )}
+
       {/* Tabs */}
       <div className="flex border-b border-white/5 mb-6 overflow-x-auto scrollbar-hide">
         <button 

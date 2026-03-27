@@ -2,7 +2,23 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
+
+const getPlanDisplayName = (p: string | null) => {
+  const plan = (p || '').toLowerCase();
+  if (plan === 'enterprise') return 'Enterprise';
+  if (plan === 'profissional') return 'Profissional';
+  return 'Starter'; // Fallback for 'iniciante' or empty
+};
+
+const getDaysLeft = (date: string | null) => {
+  if (!date) return null;
+  const fim = new Date(date);
+  const hoje = new Date();
+  const diffTime = fim.getTime() - hoje.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays;
+};
 import {
   Store, Users, ShoppingBag, CheckCircle, XCircle, Clock, LogOut,
   CreditCard, Eye, FileText, Loader2, BarChart3, Package, UserCheck
@@ -50,7 +66,7 @@ interface Stats {
 
 export default function SuperAdminPanel() {
   const { signOut } = useAuth();
-  const { toast } = useToast();
+  const { user } = useAuth();
   const [lojas, setLojas] = useState<LojaInfo[]>([]);
   const [assinaturas, setAssinaturas] = useState<Assinatura[]>([]);
   const [allAdmins, setAllAdmins] = useState<UsuarioLoja[]>([]);
@@ -106,10 +122,10 @@ export default function SuperAdminPanel() {
         update.data_fim = fim.toISOString();
       }
       await (supabase as any).from('assinaturas').update(update).eq('id', id);
-      toast({ title: action === 'aprovar' ? '✅ Pagamento aprovado!' : '❌ Pagamento rejeitado' });
+      toast(action === 'aprovar' ? '✅ Pagamento aprovado!' : '❌ Pagamento rejeitado');
       fetchAll();
     } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+      toast("Erro", { description: err.message });
     } finally {
       setProcessingId(null);
     }
@@ -121,10 +137,10 @@ export default function SuperAdminPanel() {
       await (supabase as any).from('usuarios_loja').update({
         status: action === 'aprovar' ? 'aprovado' : 'rejeitado'
       }).eq('id', id);
-      toast({ title: action === 'aprovar' ? '✅ Admin aprovado!' : '❌ Admin rejeitado' });
+      toast(action === 'aprovar' ? '✅ Admin aprovado!' : '❌ Admin rejeitado');
       fetchAll();
     } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+      toast("Erro", { description: err.message });
     } finally {
       setProcessingId(null);
     }
@@ -147,10 +163,10 @@ export default function SuperAdminPanel() {
         status: action === 'aprovar' ? 'aprovado' : 'rejeitado'
       }).eq('loja_id', id);
 
-      toast({ title: action === 'aprovar' ? `✅ Loja Ativada! Plano: ${planoSelecionado}` : '⚠️ Loja Suspensa' });
+      toast(action === 'aprovar' ? `✅ Loja Ativada! Plano: ${planoSelecionado}` : '⚠️ Loja Suspensa');
       fetchAll();
     } catch (err: any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+      toast("Erro", { description: err.message });
     } finally {
       setProcessingId(null);
     }
@@ -279,8 +295,8 @@ export default function SuperAdminPanel() {
                       <div key={admin.id} className="space-y-0.5">
                         <p className="text-sm font-semibold text-foreground">{admin.nome}</p>
                         <div className="flex flex-wrap gap-x-3 gap-y-1">
-                          <p className="text-[11px] text-primary font-medium">{admin.email || admin.user_id || 'Sem email'}</p>
-                          {admin.telefone && <p className="text-[11px] text-emerald-500 font-mono italic">{admin.telefone}</p>}
+                          <p className="text-[11px] text-primary font-medium">{(admin as any).email || (admin as any).user_id || 'Sem email'}</p>
+                          {(admin as any).telefone && <p className="text-[11px] text-emerald-500 font-mono italic">{(admin as any).telefone}</p>}
                         </div>
                       </div>
                     ))}
@@ -290,7 +306,7 @@ export default function SuperAdminPanel() {
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Atribuir Plano</label>
                     <select
-                      value={selectedPlans[l.id] || l.plano || 'iniciante'}
+                      value={selectedPlans[l.id] || l.plano || 'starter'}
                       onChange={(e) => setSelectedPlans(prev => ({ ...prev, [l.id]: e.target.value }))}
                       className="w-full px-3 py-2 text-sm rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
                     >
@@ -406,22 +422,56 @@ export default function SuperAdminPanel() {
                   <div className="flex flex-wrap gap-4 pt-1">
                     {allAdmins.filter(a => a.loja_id === loja.id).map(admin => (
                       <div key={admin.id} className="space-y-0.5 border-l-2 border-primary/20 pl-3">
-                        <p className="text-xs font-bold text-foreground">{admin.nome}</p>
-                        <p className="text-[10px] text-muted-foreground">{admin.email}</p>
-                        <p className="text-[10px] text-emerald-500 font-mono">{admin.telefone}</p>
+                        <p className="text-xs font-bold text-foreground">{(admin as any).nome}</p>
+                        <p className="text-[10px] text-muted-foreground">{(admin as any).email}</p>
+                        <p className="text-[10px] text-emerald-500 font-mono">{(admin as any).telefone}</p>
                       </div>
                     ))}
                   </div>
                   {loja.telefone && <p className="text-xs text-muted-foreground">{loja.telefone}</p>}
+                  
+                  {/* Expiration Banner */}
+                  <div className="flex items-center justify-between text-[11px] p-2 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-3.5 h-3.5 text-primary" />
+                      <span className="font-medium">Vencimento:</span>
+                      {sub ? (
+                        <span className={getDaysLeft(sub.data_fim)! < 5 ? 'text-red-500 font-bold' : 'text-foreground'}>
+                          {getDaysLeft(sub.data_fim)! > 0 
+                            ? `${getDaysLeft(sub.data_fim)} dias restantes` 
+                            : 'Expirado'} 
+                          ({new Date(sub.data_fim).toLocaleDateString()})
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground italic">Sem assinatura ativa</span>
+                      )}
+                    </div>
+                    {sub && (
+                      <button 
+                        onClick={async () => {
+                          const novaData = new Date(sub.data_fim);
+                          novaData.setDate(novaData.getDate() + 30);
+                          const { error } = await supabase.from('assinaturas').update({ data_fim: novaData.toISOString() }).eq('id', sub.id);
+                          if (!error) {
+                            toast("✅ Renovado!", { description: '+30 dias adicionados' });
+                            fetchAll();
+                          }
+                        }}
+                        className="text-primary hover:underline font-bold"
+                      >
+                        +30 dias
+                      </button>
+                    )}
+                  </div>
+
                   {/* Plan changer */}
                   {loja.status_aprovacao === 'ativo' && (
                     <div className="flex gap-2 items-center pt-1 border-t border-border/50">
                       <select
-                        value={selectedPlans[loja.id] ?? loja.plano ?? 'iniciante'}
+                        value={selectedPlans[loja.id] ?? loja.plano ?? 'starter'}
                         onChange={(e) => setSelectedPlans(prev => ({ ...prev, [loja.id]: e.target.value }))}
                         className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
                       >
-                        <option value="iniciante">Iniciante (Grátis)</option>
                         <option value="starter">Starter — 25.000 Kz</option>
                         <option value="profissional">Profissional — 50.000 Kz</option>
                         <option value="enterprise">Enterprise — 100.000 Kz</option>
@@ -432,12 +482,20 @@ export default function SuperAdminPanel() {
                         onClick={async () => {
                           setProcessingId(loja.id);
                           try {
-                            const novoPlano = selectedPlans[loja.id] ?? loja.plano ?? 'iniciante';
-                            await (supabase as any).from('lojas').update({ plano: novoPlano }).eq('id', loja.id);
-                            toast({ title: `✅ Plano atualizado para ${novoPlano}` });
+                            const novoPlano = (selectedPlans[loja.id] ?? loja.plano ?? 'starter').toLowerCase();
+                            await (supabase as any).from('lojas').update({ 
+                              plano: novoPlano,
+                              status_aprovacao: 'ativo'
+                            }).eq('id', loja.id);
+                            
+                            await (supabase as any).from('usuarios_loja').update({
+                              status: 'aprovado'
+                            }).eq('loja_id', loja.id);
+                            
+                            toast("✅ Sucesso", { description: `Plano atualizado para ${novoPlano}` });
                             fetchAll();
                           } catch (err: any) {
-                            toast({ title: 'Erro', description: err.message, variant: 'destructive' });
+                            toast("Erro", { description: err.message });
                           } finally {
                             setProcessingId(null);
                           }
