@@ -7,89 +7,89 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 224 71% 4%;
-    --card: 0 0% 100%;
-    --card-foreground: 224 71% 4%;
+    --background: 210 40% 98%; /* #F8FAFC */
+    --foreground: 222 47% 11%; /* #0F172A */
+    --card: 0 0% 100%; /* #FFFFFF */
+    --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71% 4%;
-    --primary: 142 76% 45%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 220 14% 96%;
-    --muted-foreground: 215 25% 27%;
-    --accent: 220 14% 96%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 161 84% 39%; /* #10B981 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%; /* #F1F5F9 (Hover Light) */
+    --secondary-foreground: 215 16% 47%; /* #64748B */
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215 16% 47%; /* #64748B */
+    --accent: 210 40% 96.1%;
     --accent-foreground: 222 47% 11%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214 32% 91%;
+    --border: 214 32% 91%; /* #E2E8F0 */
     --input: 214 32% 91%;
-    --ring: 142 76% 45%;
+    --ring: 161 84% 39%;
     --radius: 0.75rem;
     
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 142 76% 45%;
-    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-background: 0 0% 100%; /* #FFFFFF */
+    --sidebar-foreground: 222 47% 11%; /* #0F172A */
+    --sidebar-primary: 161 84% 39%;
+    --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 40% 96.1%;
     --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 161 84% 39%;
   }
 
   .dark {
-    --background: 210 33% 6.5%; /* #0B0F14ish */
-    --foreground: 210 20% 98%;
+    --background: 222 95% 3%; /* #020617 */
+    --foreground: 210 40% 98%; /* #F8FAFC (Soft White) */
 
-    --card: 210 33% 8%;
-    --card-foreground: 210 20% 98%;
+    --card: 222 47% 11%; /* #0F172A (Carbon Blue) */
+    --card-foreground: 210 40% 98%;
 
-    --popover: 210 33% 8%;
-    --popover-foreground: 210 20% 98%;
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 98%;
 
-    --primary: 142 76% 45%; /* #22C55E */
-    --primary-foreground: 144 100% 98%;
+    --primary: 158 64% 52%; /* #34D399 (Neon Emerald Soft) */
+    --primary-foreground: 222 47% 5%;
 
-    --secondary: 224 30% 12%;
-    --secondary-foreground: 210 20% 98%;
+    --secondary: 215 33% 17%; /* #1E293B (Hover Dark & Inactive Filter Bg) */
+    --secondary-foreground: 215 20% 65%; /* #94A3B8 */
 
-    --muted: 210 33% 10%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 215 33% 12%;
+    --muted-foreground: 215 20% 65%; /* #94A3B8 */
 
-    --accent: 210 33% 12%;
-    --accent-foreground: 210 20% 98%;
+    --accent: 215 33% 15%;
+    --accent-foreground: 210 40% 98%;
 
     --destructive: 0 62% 30%;
     --destructive-foreground: 210 20% 98%;
 
-    --border: 210 33% 12%;
-    --input: 210 33% 12%;
-    --ring: 142 76% 45%;
+    --border: 215 33% 17%; /* #1E293B */
+    --input: 215 33% 17%;
+    --ring: 158 64% 52%;
 
-    --whatsapp-dark: 142 76% 15%;
-    --whatsapp-mid: 142 76% 45%;
-    --whatsapp-light: 142 76% 70%;
-    --whatsapp-bubble-sent: 142 76% 15%;
-    --whatsapp-bubble-received: 210 33% 10%;
-    --whatsapp-bg: 210 33% 4%;
+    --whatsapp-dark: 158 64% 15%;
+    --whatsapp-mid: 158 64% 52%;
+    --whatsapp-light: 158 64% 70%;
+    --whatsapp-bubble-sent: 158 64% 15%;
+    --whatsapp-bubble-received: 215 33% 12%;
+    --whatsapp-bg: 222 95% 2%;
     --badge-red: 0 84% 60%;
 
-    --header-emerald: 210 33% 2%;
-    --header-foreground: 210 20% 98%;
+    --header-emerald: 222 47% 4%;
+    --header-foreground: 210 40% 98%;
 
-    --shadow-card: 0 10px 25px rgba(0, 0, 0, 0.2);
-    --shadow-elevated: 0 30px 60px -12px rgba(0, 0, 0, 0.8);
-    --shadow-glow: 0 0 20px rgba(34, 197, 94, 0.1);
+    --shadow-card: 0 10px 25px rgba(0, 0, 0, 0.4);
+    --shadow-elevated: 0 30px 60px -12px rgba(0, 0, 0, 0.9);
+    --shadow-glow: 0 0 20px rgba(52, 211, 153, 0.1);
 
-    --sidebar-background: 210 33% 2%; /* Darker background for more depth */
-    --sidebar-foreground: 215 20% 90%; /* Brighter text for better contrast */
-    --sidebar-primary: 142 76% 45%;
-    --sidebar-primary-foreground: 142 76% 5%;
-    --sidebar-accent: 210 33% 8%;
-    --sidebar-accent-foreground: 210 20% 98%;
-    --sidebar-border: 210 33% 8%;
-    --sidebar-ring: 142 76% 45%;
+    --sidebar-background: 222 47% 6%; /* #0F172A variant for depth */
+    --sidebar-foreground: 215 20% 85%;
+    --sidebar-primary: 158 64% 52%;
+    --sidebar-primary-foreground: 222 47% 5%;
+    --sidebar-accent: 215 33% 12%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 215 33% 12%;
+    --sidebar-ring: 158 64% 52%;
 
     --chart-1: 139 100% 57%;
     --chart-2: 258 91% 66%;
@@ -133,12 +133,74 @@
 
 /* Universal high-contrast for common shadcn/tailwind patterns in light mode */
 :root:not(.dark) .text-muted-foreground {
-  color: hsl(215, 25%, 25%) !important;
+  color: #64748B !important;
 }
 
 :root:not(.dark) .text-slate-400,
 :root:not(.dark) .text-slate-500 {
-  color: hsl(215, 25%, 30%) !important;
+  color: #64748B !important;
+}
+
+/* Status Badges */
+.status-badge-active {
+  background-color: #ECFDF5;
+  color: #065F46;
+  border: 1px solid #10B981;
+}
+
+.dark .status-badge-active {
+  background-color: #065F46;
+  color: #34D399;
+  border: 1px solid #34D399;
+}
+
+/* Notificações (Badge Number 1) */
+.notification-badge {
+  background-color: #10B981;
+  color: #FFFFFF;
+}
+
+.dark .notification-badge {
+  background-color: #059669;
+  color: #FFFFFF;
+}
+
+/* Status Livre */
+.status-badge-livre {
+  background-color: #F1F5F9;
+  color: #64748B;
+  border: 1px solid #E2E8F0;
+}
+
+.dark .status-badge-livre {
+  background-color: #1E293B;
+  color: #94A3B8;
+  border: 1px solid #1E293B;
+}
+
+/* Filtros Enterprise */
+.filter-active {
+  background-color: #ECFDF5;
+  color: #065F46;
+  border: 1px solid #10B981;
+}
+
+.dark .filter-active {
+  background-color: #065F46;
+  color: #34D399;
+  border: 1px solid #34D399;
+}
+
+.filter-inactive {
+  background-color: #FFFFFF;
+  color: #64748B;
+  border: 1px solid #E2E8F0;
+}
+
+.dark .filter-inactive {
+  background-color: #1E293B;
+  color: #94A3B8;
+  border: 1px solid #1E293B;
 }
 
 @layer base {

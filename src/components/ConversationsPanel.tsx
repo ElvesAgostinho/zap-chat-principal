@@ -228,7 +228,7 @@ export default function ConversationsPanel({ initialLeads, initialAgents, messag
               >
                 <button
                   onClick={() => navigate(`/chat?lead=${conv.leadId}`)}
-                  className="flex-1 bg-card rounded-2xl px-4 py-3 shadow-card border border-border/50 flex items-center gap-3 text-left hover:bg-accent/30 transition-all hover:shadow-elevated"
+                  className="flex-1 bg-card rounded-2xl px-4 py-3 shadow-card border border-border/50 flex items-center gap-3 text-left hover:bg-secondary transition-all hover:shadow-elevated"
                 >
                   <div className="relative flex-shrink-0">
                     <div className="w-11 h-11 rounded-full overflow-hidden bg-accent flex items-center justify-center border border-border/50">
@@ -237,7 +237,7 @@ export default function ConversationsPanel({ initialLeads, initialAgents, messag
                       ) : null}
                       <span className="text-accent-foreground font-semibold text-sm">{conv.leadName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
                     </div>
-                    {conv.unreadCount > 0 && <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full bg-[hsl(var(--whatsapp-mid))] text-white text-[10px] font-bold flex items-center justify-center px-1 border-2 border-card">{conv.unreadCount}</span>}
+                    {conv.unreadCount > 0 && <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full notification-badge text-[10px] font-bold flex items-center justify-center px-1 border-2 border-card">{conv.unreadCount}</span>}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
@@ -264,7 +264,8 @@ export default function ConversationsPanel({ initialLeads, initialAgents, messag
                   <select 
                     value={conv.atendenteId || 'none'}
                     onChange={(e) => handleAssignAgent(conv.leadId, e.target.value)}
-                    className="p-1.5 rounded-lg border border-border bg-card text-[10px] focus:outline-none focus:ring-1 focus:ring-primary/30 max-w-[80px]"
+                    className={`p-1.5 rounded-lg border text-[10px] font-bold focus:outline-none focus:ring-1 focus:ring-primary/30 max-w-[80px] transition-colors
+                      ${!conv.atendenteId ? 'status-badge-livre' : 'bg-card border-border text-foreground'}`}
                   >
                     <option value="none">Livre</option>
                     {agents.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}

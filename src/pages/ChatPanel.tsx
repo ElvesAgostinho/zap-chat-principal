@@ -301,33 +301,33 @@ export default function ChatPanel() {
   return (
     <div className="fixed inset-0 flex bg-[hsl(var(--whatsapp-bg))] overflow-hidden">
       <div className={`flex-1 flex flex-col h-full transition-all duration-300 ${showProfile ? 'mr-[350px]' : ''}`}>
-        {/* Header - Refined with brand emerald background for high contrast */}
-        <div className="px-4 py-3 flex items-center gap-3 flex-shrink-0 bg-[hsl(var(--header-emerald))] border-b border-white/10 shadow-md z-10 transition-colors">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-xl text-[hsl(var(--header-foreground))] hover:bg-white/10 transition-colors">
+        {/* Header - Refined with slate-950/primary for high-end look */}
+        <div className="px-4 py-3 flex items-center gap-3 flex-shrink-0 bg-background border-b border-border shadow-sm z-10 transition-colors">
+          <button onClick={() => navigate(-1)} className="p-2 rounded-xl text-foreground hover:bg-secondary transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="w-10 h-10 rounded-full overflow-hidden bg-white/20 flex items-center justify-center flex-shrink-0 border border-white/20 shadow-inner">
+          <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary flex items-center justify-center flex-shrink-0 border border-border/50 shadow-inner">
             {leadFoto ? (
               <img src={leadFoto} alt={leadName} className="w-full h-full object-cover" onError={(e) => { (e.target as any).src = ''; (e.target as any).style.display = 'none'; }} />
             ) : null}
-            <span className="text-[hsl(var(--header-foreground))] font-bold text-sm tracking-tight">{leadName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
+            <span className="text-secondary-foreground font-bold text-sm tracking-tight">{leadName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="font-bold text-[hsl(var(--header-foreground))] text-[15px] truncate">{leadName}</h2>
-            <p className="text-[10px] text-[hsl(var(--header-foreground))]/80 uppercase tracking-widest font-semibold">{leadPhone}</p>
+            <h2 className="font-bold text-foreground text-[15px] truncate">{leadName}</h2>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">{leadPhone}</p>
           </div>
           <div className="flex items-center gap-2">
             <button 
               onClick={() => setShowProfile(!showProfile)} 
-              className={`p-2 rounded-xl transition-all ${showProfile ? 'bg-white text-[hsl(var(--header-emerald))] shadow-elevated' : 'text-[hsl(var(--header-foreground))] hover:bg-white/10'}`}
+              className={`p-2 rounded-xl transition-all ${showProfile ? 'bg-primary text-primary-foreground shadow-glow' : 'text-foreground hover:bg-secondary'}`}
               title="Informações do Lead"
             >
               <Info className="w-5 h-5" />
             </button>
             <div className={`hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold shadow-sm 
-              ${!storeBotActive ? 'bg-secondary text-muted-foreground border border-border' : 
+              ${!storeBotActive ? 'filter-inactive' : 
                 isHumanMode ? 'bg-orange-500 text-white shadow-glow' : 
-                'bg-primary/10 text-primary border border-primary/20'}`}>
+                'filter-active'}`}>
               {!storeBotActive ? (
                 <><X className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none text-[8px]">BOT OFF</span></>
               ) : isHumanMode ? (
@@ -336,11 +336,11 @@ export default function ChatPanel() {
                 <><Bot className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none text-[8px]">BOT</span></>
               )}
             </div>
-            <button onClick={scheduleFollowup} className="p-2 rounded-xl text-[hsl(var(--header-foreground))] hover:bg-white/10 transition-colors" title="Agendar Follow-up" >
+            <button onClick={scheduleFollowup} className="p-2 rounded-xl text-foreground hover:bg-secondary transition-colors" title="Agendar Follow-up" >
               <CalendarClock className="w-5 h-5" />
             </button>
             {isHumanMode ? (
-              <button onClick={returnToBot} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-secondary text-foreground text-[11px] font-bold hover:bg-secondary/80 transition-all border border-border/50">
+              <button onClick={returnToBot} className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl filter-inactive text-[11px] font-bold hover:bg-muted transition-all">
                 <RotateCcw className="w-3.5 h-3.5 mb-[1px]" /> <span className="leading-none">Bot</span>
               </button>
             ) : (
@@ -377,8 +377,8 @@ export default function ChatPanel() {
               <motion.div key={msg.id} initial={{ opacity: 0, scale: 0.95, y: 5 }} animate={{ opacity: 1, scale: 1, y: 0 }} className={`flex ${isSent ? 'justify-end' : 'justify-start'}`}>
                 <div className={`relative max-w-[85%] sm:max-w-[70%] px-2.5 py-1.5 shadow-sm
                   ${isSent
-                    ? 'bg-primary text-primary-foreground rounded-[16px] rounded-tr-none border border-black/5 shadow-md'
-                    : 'bg-white dark:bg-card text-foreground rounded-[16px] rounded-tl-none border border-border/50 shadow-md'
+                    ? 'bg-[hsl(var(--whatsapp-bubble-sent))] text-white rounded-[16px] rounded-tr-none border border-black/5 shadow-md'
+                    : 'bg-[hsl(var(--whatsapp-bubble-received))] text-foreground rounded-[16px] rounded-tl-none border border-border/50 shadow-md'
                   }`}
                 >
                   {msg.media_url && msg.media_type && (
@@ -397,9 +397,9 @@ export default function ChatPanel() {
                   })()}
                   <div className={`flex items-center gap-1 mt-1 justify-end opacity-80 float-right ml-3 pt-1 text-[10px]`}>
                     {isSent && !msg.is_bot && msg.respondido_por_nome && <span className="font-bold uppercase tracking-widest opacity-80">{msg.respondido_por_nome}</span>}
-                    <time className={`font-medium ${isSent ? 'text-primary-foreground/90' : 'text-muted-foreground'}`}>{formatTime(msg.created_at)}</time>
-                    {isSent && msg.is_bot && <Bot className="w-3 h-3 text-primary-foreground/90" />}
-                    {isSent && !msg.is_bot && <CheckCheck className="w-[15px] h-[15px] text-white" />}
+                    <time className={`font-medium ${isSent ? 'text-white/80' : 'text-muted-foreground'}`}>{formatTime(msg.created_at)}</time>
+                    {isSent && msg.is_bot && <Bot className="w-3 h-3 text-white/80" />}
+                    {isSent && !msg.is_bot && <CheckCheck className="w-[15px] h-[15px] text-white/90" />}
                   </div>
                   <div className="clear-both" />
                 </div>
