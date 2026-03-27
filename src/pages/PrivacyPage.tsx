@@ -85,7 +85,7 @@ const PrivacyPage = () => {
           <div className="max-w-md">
             <h3 className="text-lg font-bold mb-2 text-white">Compromisso com a Segurança</h3>
             <p className="text-slate-400 text-xs uppercase tracking-widest leading-relaxed">
-              O CRM TOP utiliza infraestrutura Tier 4 e auditorias periódicas para garantir a integridade máxima do seu negócio.
+              O CRM TOP utiliza infraestrutura Tier 4 e auditorias periódicas para garantir a integridade máxima do seu negócio. Desenvolvido por <a href="https://www.topia.solutions" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">TOP IA SOLUTIONS</a>.
             </p>
           </div>
           <Link 
