@@ -371,35 +371,64 @@ export default function ChatPanel() {
               <p className="text-sm font-bold uppercase tracking-[0.2em]">Inicie a conversa</p>
             </div>
           )}
-          {messages.map(msg => {
+          {messages.map((msg, idx) => {
             const isSent = msg.tipo !== 'recebida';
+            const prevMsg = idx > 0 ? messages[idx - 1] : null;
+            
+            // Grouping logic: same sender, close time
+            const isFirstInGroup = !prevMsg || 
+              prevMsg.tipo !== msg.tipo || 
+              prevMsg.is_bot !== msg.is_bot ||
+              (new Date(msg.created_at).getTime() - new Date(prevMsg.created_at).getTime() > 5 * 60 * 1000);
+
             return (
-              <motion.div key={msg.id} initial={{ opacity: 0, scale: 0.95, y: 5 }} animate={{ opacity: 1, scale: 1, y: 0 }} className={`flex ${isSent ? 'justify-end' : 'justify-start'}`}>
-                <div className={`relative max-w-[85%] sm:max-w-[70%] px-2.5 py-1.5 shadow-sm
+              <motion.div 
+                key={msg.id} 
+                initial={{ opacity: 0, scale: 0.95, y: 5 }} 
+                animate={{ opacity: 1, scale: 1, y: 0 }} 
+                className={`flex w-full mb-0.5 ${isSent ? 'justify-end' : 'justify-start'} ${isFirstInGroup ? 'mt-3' : 'mt-0'}`}
+              >
+                <div className={`relative max-w-[85%] sm:max-w-[70%] px-3 py-1.5 shadow-sm
                   ${isSent
-                    ? 'bg-[hsl(var(--whatsapp-bubble-sent))] text-white rounded-[16px] rounded-tr-none border border-black/5 shadow-md'
-                    : 'bg-[hsl(var(--whatsapp-bubble-received))] text-foreground rounded-[16px] rounded-tl-none border border-border/50 shadow-md'
-                  }`}
+                    ? 'bg-[hsl(var(--whatsapp-bubble-sent))] text-slate-900 dark:text-emerald-50 rounded-[12px] shadow-sm'
+                    : 'bg-[hsl(var(--whatsapp-bubble-received))] text-foreground rounded-[12px] shadow-sm'
+                  }
+                  ${isFirstInGroup ? (isSent ? 'rounded-tr-none' : 'rounded-tl-none') : ''}
+                `}
                 >
+                  {/* Bubble Tail for first in group */}
+                  {isFirstInGroup && (
+                    <div className={`absolute top-0 w-2 h-3 ${isSent ? '-right-1.5' : '-left-1.5'}`}>
+                      <svg width="100%" height="100%" viewBox="0 0 8 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path 
+                          d={isSent ? "M0 0 L8 0 L0 12 C0 12 0 6 0 0 Z" : "M8 0 L0 0 L8 12 C8 12 8 6 8 0 Z"} 
+                          fill={`hsl(var(--whatsapp-bubble-${isSent ? 'sent' : 'received'}))`} 
+                        />
+                      </svg>
+                    </div>
+                  )}
+
                   {msg.media_url && msg.media_type && (
-                    <div className="mb-1 rounded-lg overflow-hidden mt-1"><MessageMedia url={msg.media_url} type={msg.media_type} /></div>
+                    <div className="mb-1 rounded-lg overflow-hidden mt-0.5"><MessageMedia url={msg.media_url} type={msg.media_type} /></div>
                   )}
                   {msg.conteudo && (() => {
                     const isPlaceholder = /^\[([📷📹🎵📄🏷️👤📍]|Mídia)/.test(msg.conteudo) || msg.conteudo === '[Mídia]' || typeof msg.conteudo !== 'string';
                     if (isPlaceholder && msg.media_url) return null;
                     
-                    // Highlight system notifications differently
                     if (msg.conteudo.startsWith('[SISTEMA]')) {
                        return <p className="whitespace-pre-wrap break-words text-[13px] leading-snug font-medium italic text-orange-600 dark:text-orange-400 p-2 bg-orange-50 dark:bg-orange-950/30 rounded-lg">{msg.conteudo.replace('[SISTEMA] ', '')}</p>;
                     }
                     
-                    return <p className="whitespace-pre-wrap break-words text-[14px] leading-[19px] mt-0.5 px-1 font-normal">{msg.conteudo}</p>;
+                    return <p className="whitespace-pre-wrap break-words text-[14.5px] leading-[20px] mt-0.5 px-0.5 font-normal">{msg.conteudo}</p>;
                   })()}
-                  <div className={`flex items-center gap-1 mt-1 justify-end opacity-80 float-right ml-3 pt-1 text-[10px]`}>
-                    {isSent && !msg.is_bot && msg.respondido_por_nome && <span className="font-bold uppercase tracking-widest opacity-80">{msg.respondido_por_nome}</span>}
-                    <time className={`font-medium ${isSent ? 'text-white/80' : 'text-muted-foreground'}`}>{formatTime(msg.created_at)}</time>
-                    {isSent && msg.is_bot && <Bot className="w-3 h-3 text-white/80" />}
-                    {isSent && !msg.is_bot && <CheckCheck className="w-[15px] h-[15px] text-white/90" />}
+                  <div className={`flex items-center gap-1 mt-1 justify-end opacity-60 float-right ml-4 pt-1 text-[10px]`}>
+                    {isSent && !msg.is_bot && msg.respondido_por_nome && isFirstInGroup && (
+                      <span className="font-bold uppercase tracking-widest mr-1">{msg.respondido_por_nome}</span>
+                    )}
+                    <time className="font-medium whitespace-nowrap">{formatTime(msg.created_at)}</time>
+                    {isSent && (
+                      msg.is_bot ? <Bot className="w-3.5 h-3.5 text-primary" /> : <CheckCheck className="w-[15px] h-[15px] text-primary" />
+                    )}
                   </div>
                   <div className="clear-both" />
                 </div>

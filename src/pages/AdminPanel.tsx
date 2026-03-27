@@ -1,12 +1,19 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Plus, Store, Wifi, WifiOff, Users, Trash2, Loader2, Copy, CheckCircle, UserCheck, XCircle, KeyRound, Code } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Store, Wifi, WifiOff, Users, Trash2, Loader2, Copy, CheckCircle, UserCheck, XCircle, KeyRound, Code, ShieldCheck, QrCode } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { UsuarioLoja } from '@/types';
 import ApiIntegrationPanel from '@/components/ApiIntegrationPanel';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface LojaRow {
   id: string;
@@ -25,6 +32,8 @@ export default function AdminPanel() {
   const [employees, setEmployees] = useState<UsuarioLoja[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [showQrModal, setShowQrModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'geral' | 'api'>('geral');
   const [connectingInProcess, setConnectingInProcess] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -114,12 +123,15 @@ export default function AdminPanel() {
       const base64 = data?.data?.base64;
       if (base64) {
         const qrSrc = base64.startsWith('data:') ? base64 : `data:image/png;base64,${base64}`;
-        const w = window.open('', 'QR Code', 'width=400,height=500');
-        if (w) {
-          w.document.write(`<html><head><title>QR - ${instanceName}</title></head><body style="display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f5f5f5;font-family:sans-serif;flex-direction:column;gap:16px"><img src="${qrSrc}" style="width:300px;height:300px;border-radius:16px;box-shadow:0 4px 12px rgba(0,0,0,0.1)"/><p style="color:#666;font-size:14px">Escaneie com WhatsApp</p></body></html>`);
-        }
-      } else if (data?.status !== 'connected') {
-        throw new Error(`QR não disponível. Payload: ${JSON.stringify(data?.data || data).slice(0, 150)}`);
+        setQrCode(qrSrc);
+        setShowQrModal(true);
+      } else if (data?.status === 'connected') {
+        await (supabase as any).from('lojas').update({ instance_status: 'connected', instance_name: instanceName }).eq('id', loja.id);
+        fetchData();
+        toast({ title: 'WhatsApp já está conectado!' });
+        return;
+      } else {
+        throw new Error(`QR não disponível no momento. Tente novamente em instantes.`);
       }
 
       // Poll status
@@ -131,8 +143,10 @@ export default function AdminPanel() {
         if (state === 'open' || state === 'connected') {
           await (supabase as any).from('lojas').update({ instance_status: 'connected', instance_name: instanceName }).eq('id', loja.id);
           clearInterval(poll);
+          setQrCode(null);
+          setShowQrModal(false);
           fetchData();
-          toast({ title: 'WhatsApp conectado!' });
+          toast({ title: 'WhatsApp conectado com sucesso!' });
         }
       }, 5000);
       setTimeout(() => clearInterval(poll), 120000);
@@ -316,6 +330,36 @@ export default function AdminPanel() {
           </div>
         </>
       )}
+
+      {/* WhatsApp QR Code Modal */}
+      <Dialog open={showQrModal} onOpenChange={(open) => { setShowQrModal(open); if (!open) setQrCode(null); }}>
+        <DialogContent className="sm:max-w-md bg-card border-border rounded-[2rem] p-8 shadow-elevated">
+          <DialogHeader className="flex flex-col items-center text-center">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+              <QrCode className="w-8 h-8 text-primary" />
+            </div>
+            <DialogTitle className="text-2xl font-black text-foreground uppercase tracking-tight">Conectar WhatsApp</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground mt-2 font-medium">
+              Abra o WhatsApp no seu telemóvel, vá em <span className="text-foreground font-bold">Aparelhos Conectados</span> e escaneie o código abaixo.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center py-6 bg-secondary/30 rounded-3xl border border-border/50 mt-4">
+            {qrCode ? (
+              <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="p-4 bg-white rounded-2xl shadow-sm border border-border/20">
+                <img src={qrCode} alt="WhatsApp QR Code" className="w-64 h-64 rounded-xl" />
+              </motion.div>
+            ) : (
+              <div className="w-64 h-64 flex items-center justify-center">
+                <Loader2 className="w-10 h-10 animate-spin text-primary/40" />
+              </div>
+            )}
+            <p className="mt-6 text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground animate-pulse">Aguardando Conexão...</p>
+          </div>
+          <div className="flex justify-center mt-4">
+            <button onClick={() => setShowQrModal(false)} className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors">Cancelar Operação</button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

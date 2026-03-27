@@ -744,25 +744,42 @@ Deno.serve(async (req) => {
                         isoDate = new Date().toISOString();
                       }
 
-                      // Anti-duplication check: Check for existing appointments for the same lead, store, service, and date/time
-                      const { data: existingAppointment } = await supabase
+                      // ═══════════════════════════════════════════════════════
+                      // ULTRA-SMART SLOT CHECK (±15 min window)
+                      // ═══════════════════════════════════════════════════════
+                      const targetDate = new Date(isoDate);
+                      const windowMs = 15 * 60 * 1000;
+                      const startTime = new Date(targetDate.getTime() - windowMs).toISOString();
+                      const endTime = new Date(targetDate.getTime() + windowMs).toISOString();
+
+                      const { data: conflictAppt } = await supabase
                         .from('agendamentos')
-                        .select('id')
+                        .select('id, lead_id, data_hora, servico')
                         .eq('loja_id', storeId)
-                        .eq('lead_id', leadId)
-                        .eq('servico', sd.servico || 'Consulta/Serviço')
-                        .eq('data_hora', isoDate)
+                        .neq('status', 'cancelado')
+                        .gte('data_hora', startTime)
+                        .lte('data_hora', endTime)
+                        .limit(1)
                         .maybeSingle();
 
-                      if (existingAppointment) {
-                        console.log(`[webhook] ⚠️ Duplicate appointment detected for ${leadName} at ${isoDate}. Skipping creation.`);
-                        // Optionally send a message to the user that it's already booked
-                        const duplicateMsg = `Parece que você já tem um agendamento para *${sd.servico || 'atendimento'}* no dia *${new Date(isoDate).toLocaleDateString('pt-PT')}* às *${new Date(isoDate).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}*. Se precisar remarcar, me avise!`;
-                        await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
-                          body: JSON.stringify({ number: phone, text: duplicateMsg }),
-                        });
+                      if (conflictAppt) {
+                        if (conflictAppt.lead_id === leadId) {
+                          console.log(`[webhook] ⚠️ Lead ${leadName} already has an appointment at this time.`);
+                          const msg = `Olha, já agendei a tua ${sd.servico || 'visita'} para este horário (${new Date(conflictAppt.data_hora).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}). Não precisas de te preocupar, já está tudo guardado!`;
+                          await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
+                            body: JSON.stringify({ number: phone, text: msg }),
+                          });
+                        } else {
+                          console.log(`[webhook] 🚫 Slot occupied by another client.`);
+                          const msg = `Infelizmente esse horário das ${new Date(isoDate).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })} já está reservado. Consegues sugerir um outro horário ou preferes que eu veja qual é o próximo livre?`;
+                          await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
+                            body: JSON.stringify({ number: phone, text: msg }),
+                          });
+                        }
                       } else {
                         const { data: appointment, error: schedErr } = await supabase.from('agendamentos').insert({
                           loja_id: storeId,
@@ -778,8 +795,7 @@ Deno.serve(async (req) => {
                         if (!schedErr || (schedErr.code === '23505')) {
                           console.log(`[webhook] ✅ Appointment registered for ${leadName} at ${isoDate}`);
 
-                          // Send second HUMAN confirmation message
-                          const confirmMsg = `✅ *Confirmado!* Já reservei aqui na agenda o seu horário de *${sd.servico || 'atendimento'}* para o dia *${new Date(isoDate).toLocaleDateString('pt-PT')}* às *${new Date(isoDate).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}*. Atá lá! 😊`;
+                          const confirmMsg = `Confirmado! Acabei de reservar o teu ${sd.servico || 'atendimento'} para ${new Date(isoDate).toLocaleDateString('pt-PT')} às ${new Date(isoDate).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}. Vemo-nos lá!`;
 
                           await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
                             method: 'POST',

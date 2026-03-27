@@ -36,6 +36,11 @@
     --sidebar-accent-foreground: 222 47% 11%;
     --sidebar-border: 214 32% 91%;
     --sidebar-ring: 161 84% 39%;
+
+    --whatsapp-bg: 0 0% 95%; /* #F2F2F2 */
+    --whatsapp-bubble-sent: 142 70% 92%; /* #DCF8C6 */
+    --whatsapp-bubble-received: 0 0% 100%; /* #FFFFFF */
+    --whatsapp-mid: 161 84% 39%;
   }
 
   .dark {

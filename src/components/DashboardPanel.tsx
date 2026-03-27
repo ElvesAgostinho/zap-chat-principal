@@ -119,9 +119,9 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
 
   const stats = [
     { icon: DollarSign, label: 'Lucro Real', value: formatCurrency(realProfit), color: 'text-primary', bg: 'bg-primary/10', trend: trend, showTrend: true },
-    { icon: TrendingUp, label: 'Previsão Mês', value: formatCurrency(revenueForecast), color: 'text-blue-500', bg: 'bg-blue-500/10', trend: 0, showTrend: false },
-    { icon: Users, label: 'Leads Ativos', value: `${leads.length - clientCount}`, color: 'text-indigo-500', bg: 'bg-indigo-500/10', trend: 0, showTrend: false },
-    { icon: AlertTriangle, label: 'Atenção IA', value: coldLeadsCount.toString(), color: 'text-amber-500', bg: 'bg-amber-500/10', trend: 0, showTrend: false },
+    { icon: TrendingUp, label: 'Previsão Mensal', value: formatCurrency(revenueForecast), color: 'text-blue-500', bg: 'bg-blue-500/10', trend: 0, showTrend: false },
+    { icon: Users, label: 'Potenciais Clientes', value: `${leads.length - clientCount}`, color: 'text-indigo-500', bg: 'bg-indigo-500/10', trend: 0, showTrend: false },
+    { icon: AlertTriangle, label: 'Intervenção da IA', value: coldLeadsCount.toString(), color: 'text-amber-500', bg: 'bg-amber-500/10', trend: 0, showTrend: false },
   ];
 
   const CustomTooltip = ({ active, payload, label }: any) => {
@@ -150,7 +150,7 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
           onClick={() => setActiveTab('insights')}
           className={`px-6 py-3 text-[11px] font-bold uppercase tracking-widest transition-all relative ${activeTab === 'insights' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
         >
-          Performance de ROI
+          Análise de Desempenho
           {activeTab === 'insights' && <motion.div layoutId="tab-active" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full shadow-[0_0_10px_rgba(34,197,94,0.5)]" />}
         </button>
       </div>

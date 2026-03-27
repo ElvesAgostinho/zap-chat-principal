@@ -50,16 +50,24 @@ EXEMPLO DO QUE DEVES FAZER:
 - Podes mencionar que o produto existe, mas só envias a foto se for pedido
 
 ════════════════════════════════════════════════
-🚨 AGENDAMENTOS — REGRA ABSOLUTA (NUNCA IGNORES)
+🚨 AGENDAMENTOS — SISTEMA INTELIGENTE
 ════════════════════════════════════════════════
-Quando o cliente confirmar data e hora:
-1. Diz algo natural como: "Já marquei aqui na agenda." — e inclua na mesma mensagem:
-   [AGENDAR:nome_do_servico|AAAA-MM-DDTHH:MM]
-2. NÃO digas "Está confirmado" ou "Já agendei" antes do sistema confirmar.
-3. O sistema envia a confirmação automática após processar o marcador.
-4. Para remarcar: [REMARCAR_AGENDAMENTO:AAAA-MM-DDTHH:MM]
-5. Para cancelar: [CANCELAR_AGENDAMENTO]
-⚠️ Sem o marcador, o agendamento NÃO é gravado.
+És um especialista no negócio. Segue estas regras rigorosas:
+1. SÓ AGENDAS serviços listados no "SERVIÇOS DISPONÍVEIS". Se pedirem "Manicure" e não estiver na lista, não agendes.
+2. VERIFICA DISPONIBILIDADE: Se o horário pedido colidir com um "HORÁRIO OCUPADO" enviado no contexto, sugere outro ou pergunta por uma alternativa.
+3. DETEÇÃO DE INTENÇÃO:
+   - Se o cliente já tem agendamento e quer mudar: Usa [REMARCAR_AGENDAMENTO:AAAA-MM-DDTHH:MM]
+   - Se é um agendamento novo: Usa [AGENDAR:servico|AAAA-MM-DDTHH:MM]
+4. NUNCA confirmes antes de incluir o marcador. Diz: "Vou verificar aqui... [AGENDAR:...]"
+5. Se o cliente for vago (ex: "quero marcar amanhã"), pergunta a hora e o serviço específico.
+6. O marcador deve estar OBRIGATORIAMENTE na mensagem de resposta final.
+
+════════════════════════════════════════════════
+🧠 MEMÓRIA E IDENTIDADE
+════════════════════════════════════════════════
+- Se o cliente se apresentar, usa [NOME_CLIENTE:Nome] para gravarmos.
+- Trata o cliente pelo nome se já o souberes.
+- Recorda-te do que foi falado antes (ex: se já escolheu um produto, foca a venda nesse item).
 
 ════════════════════════════════════════════════
 🧠 MEMÓRIA E NOME DO CLIENTE
@@ -193,16 +201,30 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (config) {
+        storeLanguage = config.linguagem_bot || 'neutro';
         storeIdioma = config.idioma || 'pt-AO';
         const businessType = config.tipo_negocio || 'Geral';
         storeContext = `\n\nINFORMAÇÕES DO NEGÓCIO (${businessType.toUpperCase()}):
 - Nome: ${config.nome || 'Empresa'}
 - Especialidade: ${businessType}
-- Formas de pagamento: ${config.formas_pagamento?.join(', ') || 'A definir'}
-- IBAN/Dados: ${config.iban || 'Solicitar ao humano'} (${config.conta_nome || ''})
-- Localização: ${config.localizacao_url || 'Disponível via marcador'}
-- Zonas de entrega: ${config.zonas_entrega?.join(', ') || 'A definir'}`;
-        if (config.linguagem_bot) storeContext += `\n- Tom Desejado: ${config.linguagem_bot}`;
+- Pagamento: ${config.formas_pagamento?.join(', ') || 'Multicaixa, Cash'}
+- Localização: ${config.localizacao_url || 'Solicitar envio de mapa'}
+- Zonas de Entrega: ${config.zonas_entrega?.join(', ') || 'Consultar taxa'}`;
+        
+        // Fetch specific services for this store
+        const { data: services } = await supabase
+          .from('servicos_loja')
+          .select('nome, descricao, duracao_min, preco')
+          .eq('loja_id', store_id)
+          .eq('ativo', true);
+
+        if (services && services.length > 0) {
+          storeContext += '\n\nSERVIÇOS DISPONÍVEIS (SÓ AGENDAR ESTES):\n' +
+            services.map(s => `- ${s.nome} | Preço: Kz ${s.preco || 'Sob consulta'} | Duração: ${s.duracao_min}min | ${s.descricao || ''}`).join('\n');
+          storeContext += '\n\nREGRA: Se o cliente pedir algo que não está nesta lista, informa educadamente que não fazemos esse serviço.';
+        } else {
+          storeContext += '\n\nAVISO: Não há serviços específicos listados. Age como um assistente geral de agendamentos.';
+        }
       }
 
       // Get business schedule + compute free slots for next 7 days
