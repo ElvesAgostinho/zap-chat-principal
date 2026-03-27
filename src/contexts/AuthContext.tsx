@@ -197,7 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (sId) {
           const { data: storeData } = await (supabase as any)
             .from('lojas')
-            .select(`plano, status_aprovacao, slug, nome, profile_picture_url, phone${membership.role === 'admin' ? ', codigo_unico' : ''}`)
+            .select('plano, status_aprovacao, slug, nome, profile_picture_url, phone, codigo_unico')
             .eq('id', sId)
             .maybeSingle();
             
@@ -205,7 +205,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setPlano(storeData.plano);
             setStatusLoja(storeData.status_aprovacao);
             setStoreSlug(storeData.slug);
-            setStoreCode(membership.role === 'admin' ? storeData.codigo_unico : null);
+            setStoreCode(storeData.codigo_unico);
             setStoreName(storeData.nome);
             setStoreProfilePic(storeData.profile_picture_url || null);
             setStorePhone(storeData.phone || null);

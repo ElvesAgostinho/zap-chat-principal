@@ -188,11 +188,16 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
             <div className="flex flex-wrap items-center gap-3 w-full md:w-auto relative z-10">
               <div className="flex-1 md:flex-none flex items-center gap-3 bg-secondary px-4 py-2.5 rounded-xl border border-border group min-w-[240px]">
                 <span className="text-[11px] text-muted-foreground font-medium truncate">
-                  {window.location.host}/loja/{storeSlug || (isAdmin ? storeCode : '...')}
+                  {window.location.host}/loja/{(storeSlug || storeCode) || '...'}
                 </span>
                 <button
                   onClick={() => { 
-                    const url = `${window.location.origin}/loja/${storeSlug || storeCode}`;
+                    const identifier = storeSlug || storeCode;
+                    if (!identifier) {
+                      toast.error('Identificador da loja não encontrado.');
+                      return;
+                    }
+                    const url = `${window.location.origin}/loja/${identifier}`;
                     navigator.clipboard.writeText(url); 
                     toast.success('Link copiado!'); 
                   }}
@@ -203,9 +208,12 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
               </div>
               <button
                 onClick={() => {
-                  const finalSlug = storeSlug || (isAdmin ? storeCode : null);
-                  if (!finalSlug) return;
-                  window.open(`https://wa.me/?text=${encodeURIComponent(`Confira nosso catálogo: ${window.location.origin}/loja/${finalSlug}`)}`, '_blank');
+                  const identifier = storeSlug || storeCode;
+                  if (!identifier) {
+                    toast.error('Identificador da loja não encontrado.');
+                    return;
+                  }
+                  window.open(`https://wa.me/?text=${encodeURIComponent(`Confira nosso catálogo: ${window.location.origin}/loja/${identifier}`)}`, '_blank');
                 }}
                 className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg hover:scale-105 transition-all"
               >
