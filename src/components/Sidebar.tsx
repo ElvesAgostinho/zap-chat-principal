@@ -43,9 +43,10 @@ const getNavGroups = (
   showAdmin: boolean,
   plano: string | null
 ): NavGroup[] => {
-  const isStarter = plano === 'starter' || plano === 'profissional' || plano === 'enterprise';
-  const isPro = plano === 'profissional' || plano === 'enterprise';
-  const isEnterprise = plano === 'enterprise';
+  const p = plano?.toLowerCase();
+  const isStarter = p === 'starter' || p === 'profissional' || p === 'enterprise';
+  const isPro = p === 'profissional' || p === 'enterprise';
+  const isEnterprise = p === 'enterprise';
 
   const groups: NavGroup[] = [
     {

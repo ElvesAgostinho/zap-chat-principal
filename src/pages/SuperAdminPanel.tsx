@@ -53,6 +53,7 @@ export default function SuperAdminPanel() {
   const { toast } = useToast();
   const [lojas, setLojas] = useState<LojaInfo[]>([]);
   const [assinaturas, setAssinaturas] = useState<Assinatura[]>([]);
+  const [allAdmins, setAllAdmins] = useState<UsuarioLoja[]>([]);
   const [pendingUsers, setPendingUsers] = useState<(UsuarioLoja & { lojas: { nome: string } | null })[]>([]);
   const [stats, setStats] = useState<Stats>({ totalLojas: 0, totalLeads: 0, totalVendas: 0, vendasValor: 0, pendingPayments: 0 });
   const [loading, setLoading] = useState(true);
@@ -63,17 +64,18 @@ export default function SuperAdminPanel() {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [{ data: lojasData }, { data: assData }, { count: leadsCount }, { data: vendasData }, { data: usersData }] = await Promise.all([
+    const [{ data: lojasData }, { data: assData }, { count: leadsCount }, { data: vendasData }, { data: adminsData }] = await Promise.all([
       (supabase as any).from('lojas').select('id, nome, telefone, codigo_unico, slug, instance_status, criado_em, owner_user_id, status_aprovacao, plano').order('criado_em', { ascending: false }),
       (supabase as any).from('assinaturas').select('*, lojas(nome), planos(nome, preco)').order('criado_em', { ascending: false }),
       (supabase as any).from('leads').select('id', { count: 'exact', head: true }),
       (supabase as any).from('vendas').select('valor, status'),
-      (supabase as any).from('usuarios_loja').select('*, lojas(nome)').eq('role', 'admin').eq('status', 'pendente'),
+      (supabase as any).from('usuarios_loja').select('*').eq('role', 'admin'),
     ]);
 
     setLojas(lojasData || []);
     setAssinaturas(assData || []);
-    setPendingUsers(usersData || []);
+    setAllAdmins(adminsData || []);
+    setPendingUsers((adminsData || []).filter(u => u.status === 'pendente') as any);
 
     const vendas = vendasData || [];
     const pending = (assData || []).filter((a: Assinatura) => a.status === 'aguardando_pagamento').length;
@@ -268,6 +270,22 @@ export default function SuperAdminPanel() {
                     </Badge>
                   </div>
 
+                  {/* Admin Info */}
+                  <div className="bg-secondary/50 p-2.5 rounded-xl space-y-1">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1 flex items-center gap-1">
+                      <UserCheck className="w-3 h-3" /> Responsável
+                    </p>
+                    {allAdmins.filter(a => a.loja_id === l.id).map(admin => (
+                      <div key={admin.id} className="space-y-0.5">
+                        <p className="text-sm font-semibold text-foreground">{admin.nome}</p>
+                        <div className="flex flex-wrap gap-x-3 gap-y-1">
+                          <p className="text-[11px] text-primary font-medium">{admin.email || 'Sem email'}</p>
+                          <p className="text-[11px] text-emerald-500 font-mono">{admin.telefone || 'Sem telefone'}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
                   {/* Plan assignment dropdown */}
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Atribuir Plano</label>
@@ -383,6 +401,17 @@ export default function SuperAdminPanel() {
                         'bg-orange-100 text-orange-700'
                       }`}>{loja.status_aprovacao}</span>
                     </div>
+                  </div>
+
+                  {/* Admin Info in All Stores List */}
+                  <div className="flex flex-wrap gap-4 pt-1">
+                    {allAdmins.filter(a => a.loja_id === loja.id).map(admin => (
+                      <div key={admin.id} className="space-y-0.5 border-l-2 border-primary/20 pl-3">
+                        <p className="text-xs font-bold text-foreground">{admin.nome}</p>
+                        <p className="text-[10px] text-muted-foreground">{admin.email}</p>
+                        <p className="text-[10px] text-emerald-500 font-mono">{admin.telefone}</p>
+                      </div>
+                    ))}
                   </div>
                   {loja.telefone && <p className="text-xs text-muted-foreground">{loja.telefone}</p>}
                   {/* Plan changer */}

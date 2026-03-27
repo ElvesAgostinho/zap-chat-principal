@@ -267,6 +267,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // When the Super Admin approves a store, usuarios_loja.status changes to 'aprovado'
     // and we re-resolve the auth state automatically — no manual logout needed.
     let realtimeChannel: ReturnType<typeof supabase.channel> | null = null;
+    let storeChannel: ReturnType<typeof supabase.channel> | null = null;
 
     const setupRealtime = async () => {
       const { data: sessionData } = await supabase.auth.getSession();
@@ -292,6 +293,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         )
         .subscribe();
+
+      // Listen for changes on the store itself (Plan or Approval updates)
+      const { data: membership } = await (supabase as any).rpc('get_my_membership');
+      const sId = Array.isArray(membership) ? membership[0]?.loja_id : membership?.loja_id;
+      
+      if (sId && mounted) {
+        storeChannel = supabase
+          .channel('store-watch-' + sId)
+          .on(
+            'postgres_changes',
+            {
+              event: 'UPDATE',
+              schema: 'public',
+              table: 'lojas',
+              filter: `id=eq.${sId}`,
+            },
+            async () => {
+              if (!mounted) return;
+              const { data: latest } = await supabase.auth.getSession();
+              if (latest?.session && mounted) {
+                scheduleResolve(latest.session);
+              }
+            }
+          )
+          .subscribe();
+      }
     };
 
     const initFallback = window.setTimeout(() => {
@@ -335,6 +362,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.clearTimeout(initFallback);
       subscription.unsubscribe();
       if (realtimeChannel) supabase.removeChannel(realtimeChannel);
+      if (storeChannel) supabase.removeChannel(storeChannel);
     };
   }, []);
 
