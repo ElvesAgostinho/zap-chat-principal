@@ -177,37 +177,37 @@ export default function ConversationsPanel({ initialLeads, initialAgents, messag
   return (
     <div className="space-y-4 animate-fade-in-up">
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-        <div className="flex-1 flex items-center px-3 bg-card rounded-xl border border-border focus-within:border-primary/50 transition-all hover:border-border/80">
-          <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+        <div className="flex-1 flex items-center px-4 bg-card/40 backdrop-blur-md rounded-2xl border border-white/5 focus-within:border-primary/40 transition-all hover:bg-card/60 shadow-inner group">
+          <Search className="w-4 h-4 text-muted-foreground group-focus-within:text-primary transition-colors flex-shrink-0" />
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar conversa..."
-            className="w-full bg-transparent py-2.5 px-2 text-[13px] font-medium text-foreground placeholder:text-muted-foreground outline-none border-none" />
+            className="w-full bg-transparent py-3 px-3 text-[13px] font-medium text-foreground placeholder:text-muted-foreground outline-none border-none" />
         </div>
         <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide flex-shrink-0 items-center">
           {filters.map(f => (
             <button key={f.id} onClick={() => setFilter(f.id)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all
-                ${filter === f.id ? 'gradient-primary text-white shadow-glow' : 'bg-card text-muted-foreground border border-border hover:bg-muted'}`}>
+              className={`px-5 py-2.5 rounded-2xl text-[11px] font-black uppercase tracking-[0.15em] whitespace-nowrap transition-all border
+                ${filter === f.id ? 'bg-primary text-black border-primary shadow-glow' : 'bg-card/40 backdrop-blur-sm text-muted-foreground border-white/5 hover:bg-white/10 hover:text-foreground'}`}>
               {f.label}
             </button>
           ))}
           <div className="w-px h-6 bg-border mx-1" />
-          <div className="flex gap-1.5">
+          <div className="flex gap-2">
             <button 
               onClick={handleSyncProfiles}
               disabled={syncing}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-muted text-foreground border border-border hover:bg-accent transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider bg-white/5 text-foreground border border-white/10 hover:bg-white/10 transition-all disabled:opacity-50"
               title="Sincronizar fotos do WhatsApp"
             >
-              {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImageIcon className="w-3.5 h-3.5" />}
+              {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" /> : <ImageIcon className="w-4 h-4 text-primary" />}
               <span className="hidden sm:inline">Fotos</span>
             </button>
             <button 
               onClick={handleSyncNames}
               disabled={syncing}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-muted text-foreground border border-border hover:bg-accent transition-all disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-wider bg-white/5 text-foreground border border-white/10 hover:bg-white/10 transition-all disabled:opacity-50"
               title="Sincronizar nomes do WhatsApp"
             >
-              {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <User className="w-3.5 h-3.5" />}
+              {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" /> : <User className="w-4 h-4 text-primary" />}
               <span className="hidden sm:inline">Nomes</span>
             </button>
           </div>
@@ -228,34 +228,37 @@ export default function ConversationsPanel({ initialLeads, initialAgents, messag
               >
                 <button
                   onClick={() => navigate(`/chat?lead=${conv.leadId}`)}
-                  className="flex-1 bg-card rounded-2xl px-4 py-3 shadow-card border border-border/50 flex items-center gap-3 text-left hover:bg-secondary transition-all hover:shadow-elevated"
+                  className="flex-1 bg-card/40 backdrop-blur-md rounded-3xl px-5 py-4 border border-white/5 flex items-center gap-4 text-left hover:bg-white/[0.05] transition-all hover:border-primary/20 hover:shadow-glow group/card"
                 >
                   <div className="relative flex-shrink-0">
-                    <div className="w-11 h-11 rounded-full overflow-hidden bg-accent flex items-center justify-center border border-border/50">
+                    <div className="w-12 h-12 rounded-2xl overflow-hidden bg-white/5 flex items-center justify-center border border-white/10 shadow-inner group-hover/card:border-primary/30 transition-colors">
                       {conv.fotoUrl ? (
                         <img src={conv.fotoUrl} alt={conv.leadName} className="w-full h-full object-cover" onError={(e) => { (e.target as any).src = ''; (e.target as any).style.display = 'none'; }} />
                       ) : null}
-                      <span className="text-accent-foreground font-semibold text-sm">{conv.leadName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
+                      <span className="text-muted-foreground font-bold text-xs font-display">{conv.leadName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
                     </div>
-                    {conv.unreadCount > 0 && <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] rounded-full notification-badge text-[10px] font-bold flex items-center justify-center px-1 border-2 border-card">{conv.unreadCount}</span>}
+                    {conv.unreadCount > 0 && <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-[20px] rounded-full bg-primary text-black text-[10px] font-black flex items-center justify-center px-1 border-2 border-slate-950 shadow-glow animate-bounce-subtle">{conv.unreadCount}</span>}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-0.5">
-                      <h3 className="font-semibold text-sm text-foreground truncate">{conv.leadName}</h3>
-                      <time className="text-[10px] text-muted-foreground flex-shrink-0">{formatTime(conv.lastMessageTime)}</time>
+                    <div className="flex items-center justify-between mb-1">
+                      <h3 className="font-bold text-base text-foreground truncate font-display tracking-tight">{conv.leadName}</h3>
+                      <time className="text-[10px] text-muted-foreground font-bold tabular-nums opacity-60">{formatTime(conv.lastMessageTime)}</time>
                     </div>
                     {conv.phone && (
-                      <p className="text-[10px] text-muted-foreground/70 font-medium mb-1">{conv.phone}</p>
+                      <p className="text-[10px] text-muted-foreground/70 font-black tracking-widest uppercase mb-1.5">{conv.phone}</p>
                     )}
-                    <div className="flex items-center gap-1.5 opacity-90">
-                      {conv.precisaHumano ? <span className="relative flex h-2.5 w-2.5 flex-shrink-0"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[hsl(var(--badge-red))] opacity-75" /><span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[hsl(var(--badge-red))]" /></span>
-                      : conv.isBot ? <Bot className="w-3.5 h-3.5 text-[hsl(var(--whatsapp-mid))] flex-shrink-0 mb-[1px]" /> : <User className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mb-[1px]" />}
-                      <p className="text-[12px] leading-none text-muted-foreground truncate">{conv.lastDirection === 'enviada' ? (conv.lastResponderName ? <span className="font-semibold text-foreground/70">{conv.lastResponderName}: </span> : <span className="font-semibold text-foreground/70">Você: </span>) : ''}{conv.lastMessage}</p>
+                    <div className="flex items-center gap-2 opacity-90">
+                      {conv.precisaHumano ? <span className="relative flex h-2.5 w-2.5 flex-shrink-0"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75" /><span className="relative inline-flex rounded-full h-2 w-2 bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" /></span>
+                      : conv.isBot ? <Bot className="w-4 h-4 text-primary flex-shrink-0 opacity-80" /> : <User className="w-4 h-4 text-muted-foreground flex-shrink-0 opacity-60" />}
+                      <p className="text-[13px] leading-tight text-muted-foreground/80 truncate font-medium">
+                        {conv.lastDirection === 'enviada' ? (conv.lastResponderName ? <span className="font-bold text-primary/80">{conv.lastResponderName}: </span> : <span className="font-bold text-primary/80">Você: </span>) : ''}
+                        {conv.lastMessage}
+                      </p>
                     </div>
                     {conv.atendenteId && (
-                      <div className="mt-1 flex items-center gap-1">
-                        <div className="w-1 h-1 rounded-full bg-primary" />
-                        <span className="text-[9px] font-bold text-primary uppercase tracking-wider">Atribuído a: {agents.find(a => a.id === conv.atendenteId)?.nome}</span>
+                      <div className="mt-2 flex items-center gap-1.5">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary shadow-glow" />
+                        <span className="text-[9px] font-black text-primary/80 uppercase tracking-[0.2em]">Atendente: {agents.find(a => a.id === conv.atendenteId)?.nome}</span>
                       </div>
                     )}
                   </div>
