@@ -727,22 +727,39 @@ Deno.serve(async (req) => {
                   const sd = botData.schedule_data;
                   try {
                     if (sd.action === 'create' || sd.action === 'reschedule') {
+                      let isoDate: string;
+                      try {
+                        const dateToParse = sd.data_hora || new Date().toISOString();
+                        let dateObj = new Date(dateToParse);
+                        if (isNaN(dateObj.getTime())) {
+                           console.error(`[webhook] Invalid date string: ${dateToParse}`);
+                           // Fallback to today + 1 hour if totally invalid
+                           dateObj = new Date();
+                           dateObj.setHours(dateObj.getHours() + 1);
+                           dateObj.setMinutes(0, 0, 0);
+                        }
+                        isoDate = dateObj.toISOString();
+                      } catch (e) {
+                        console.error(`[webhook] Critical date parse error:`, e);
+                        isoDate = new Date().toISOString();
+                      }
+
                       const { data: appointment, error: schedErr } = await supabase.from('agendamentos').insert({
                         loja_id: storeId,
                         lead_id: leadId,
                         cliente_nome: leadName,
                         cliente_telefone: phone,
                         servico: sd.servico || 'Consulta/Serviço',
-                        data_hora: sd.data_hora,
+                        data_hora: isoDate,
                         status: 'pendente',
                         duracao_min: 60,
                       }).select().single();
 
-                      if (!schedErr || (schedErr.code === '23505')) { // Success or already exists
-                        console.log(`[webhook] ✅ Appointment registered for ${leadName}: ${sd.data_hora}`);
+                      if (!schedErr || (schedErr.code === '23505')) { 
+                        console.log(`[webhook] ✅ Appointment registered for ${leadName} at ${isoDate}`);
                         
                         // Send second HUMAN confirmation message
-                        const confirmMsg = `✅ *Confirmado!* Já reservei aqui na agenda o seu horário de *${sd.servico || 'atendimento'}* para o dia *${new Date(sd.data_hora).toLocaleDateString('pt-PT')}* às *${new Date(sd.data_hora).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}*. Atá lá! 😊`;
+                        const confirmMsg = `✅ *Confirmado!* Já reservei aqui na agenda o seu horário de *${sd.servico || 'atendimento'}* para o dia *${new Date(isoDate).toLocaleDateString('pt-PT')}* às *${new Date(isoDate).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}*. Atá lá! 😊`;
                         
                         await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
                           method: 'POST',
@@ -756,7 +773,7 @@ Deno.serve(async (req) => {
                           lead_id: leadId,
                           tipo: 'agendamento',
                           titulo: 'Novo Agendamento',
-                          mensagem: `${leadName} marcou ${sd.servico || 'um serviço'} para ${new Date(sd.data_hora).toLocaleString('pt-AO')}`,
+                          mensagem: `${leadName} marcou ${sd.servico || 'um serviço'} para ${new Date(isoDate).toLocaleString('pt-AO')}`,
                           link: '/scheduling'
                         });
                       } else {
@@ -768,7 +785,7 @@ Deno.serve(async (req) => {
                         .update({ status: 'cancelado' })
                         .eq('lead_id', leadId)
                         .eq('loja_id', storeId)
-                        .eq('status', 'pendente'); // Only cancel pending ones via bot
+                        .eq('status', 'pendente'); 
                       
                       if (!cancelErr) {
                         console.log(`[webhook] ❌ Appointment cancelled for ${leadName}`);

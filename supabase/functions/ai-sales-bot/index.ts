@@ -22,7 +22,7 @@ REGRAS DE OURO:
 
 CONDIÇÕES DE ENVIO (MUITO IMPORTANTE):
 - FOTOS E PRODUTOS: NUNCA envie fotos ou o marcador [ENVIAR_PRODUTO:...] de forma espontânea. Você só deve usar esse marcador se o cliente PEDIR para ver o produto, perguntar "como é", quiser detalhes visuais ou demonstrar interesse claro em comprar aquele item específico.
-- AGENDAMENTO AUTOMÁTICO: As marcações devem ser automáticas para facilitar o trabalho. Quando o cliente concordar com um horário, use [AGENDAR:servico|data]. Seja proativo ao sugerir horários disponíveis se o cliente mostrar interesse em visitar ou agendar.
+- AGENDAMENTO AUTOMÁTICO: As marcações devem ser automáticas para facilitar o trabalho. Quando o cliente concordar com um horário, use o marcador [AGENDAR:servico|data]. Seja proativo ao sugerir horários disponíveis se o cliente mostrar interesse em visitar ou agendar.
 
 REGRAS DE CONSERVAÇÃO:
 - LOCALIZAÇÃO: Use [ENVIAR_LOCALIZACAO] se perguntarem onde fica.
@@ -35,7 +35,8 @@ ESTRATÉGIA ANTI-BLOQUEIO:
 REGRAS CRÍTICAS DE GROUNDING:
 1. SÓ FALE DO QUE EXISTE: Responda APENAS com base nos produtos e horários listados abaixo. Se o cliente pedir algo que não está na lista (ex: "Nike" se não houver Nike na lista de produtos DISPONÍVEIS), diga educadamente que não temos no momento.
 2. SEM FALSAS ESPERAS: NUNCA diga que está "procurando", "verificando" ou "aguardando". Dê a resposta final agora com o que você já vê no catálogo.
-3. MARCADORES OBRIGATÓRIOS: Ao confirmar agendamento, você DEVE dizer algo como "Um momento enquanto reservo aqui...", "Só um segundo enquanto vejo na agenda..." para parecer humano. O sistema enviará a confirmação definitiva automaticamente, então FOQUE na mensagem de espera e inclua [AGENDAR:servico|YYYY-MM-DDTHH:MM] no final.
+3. MARCADORES OBRIGATÓRIOS: Ao confirmar agendamento, você DEVE dizer algo como "Um momento enquanto reservo aqui...", "Só um segundo enquanto vejo na agenda..." para parecer humano. 
+   - ATENÇÃO: NUNCA diga que "Já está confirmado" ou "Já agendei" na sua mensagem. O sistema enviará a confirmação definitiva automaticamente após o processamento. Sua função é apenas dizer para o cliente aguardar um segundo e incluir o marcador [AGENDAR:servico|YYYY-MM-DDTHH:MM].
 4. HORÁRIOS FUTUROS: NUNCA sugira ou aceite horários que já passaram em relação à "DATA E HORA ATUAL" fornecida.`;
 
 const FIRST_CONTACT_INSTRUCTION = `
@@ -281,7 +282,18 @@ Deno.serve(async (req) => {
     let scheduleData: any = null;
     if (scheduleMatch) {
       const parts = scheduleMatch[1].split('|').map((s: string) => s.trim());
-      scheduleData = { action: 'create', servico: parts[0], data_hora: parts[1] };
+      if (parts.length >= 2) {
+        scheduleData = { action: 'create', servico: parts[0], data_hora: parts[1] };
+      } else if (parts.length === 1) {
+        // Fallback: If only one part, assume it is service and look for date in text? 
+        // Or assume the whole thing IS the date if it looks like one.
+        const isDate = /\d{4}-\d{2}-\d{2}/.test(parts[0]);
+        scheduleData = { 
+          action: 'create', 
+          servico: isDate ? 'Atendimento' : parts[0], 
+          data_hora: isDate ? parts[0] : null 
+        };
+      }
     } else if (rescheduleMatch) {
       scheduleData = { action: 'reschedule', data_hora: rescheduleMatch[1].trim() };
     } else if (cancelMatch) {

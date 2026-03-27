@@ -789,6 +789,30 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (action === 'list_all_lojas') {
+      const { data: lojas } = await sb.from('lojas').select('id, nome, instance_name, criado_em');
+      const { data: users } = await sb.from('usuarios_loja').select('loja_id, user_id, nome, role, status');
+      return json({ success: true, lojas, users });
+    }
+
+    if (action === 'list_agendamentos') {
+      const { data: ags } = await sb.from('agendamentos')
+        .select('*')
+        .eq('loja_id', store_id)
+        .order('data_hora', { ascending: false })
+        .limit(20);
+      return json({ success: true, ags });
+    }
+
+    if (action === 'list_recent_messages') {
+      const { data: messages } = await sb.from('mensagens')
+        .select('*')
+        .eq('loja_id', store_id)
+        .order('created_at', { ascending: false })
+        .limit(20);
+      return json({ success: true, messages });
+    }
+
 
     // ============================================================
     // ACTION: check_connection
