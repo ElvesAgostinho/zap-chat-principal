@@ -183,58 +183,64 @@ export default function SuperAdminPanel() {
         }
       />
 
-      <div className="max-w-2xl mx-auto px-4 pt-4 space-y-5">
+      <div className="max-w-4xl mx-auto px-4 pt-8 space-y-8">
         {/* Title */}
-        <div>
-          <p className="text-xs uppercase tracking-wide text-muted-foreground font-medium">Super Admin</p>
-          <h1 className="text-xl font-bold text-foreground">Painel Central</h1>
-        </div>
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+          <p className="text-xs uppercase tracking-[0.2em] text-primary font-bold mb-1">Central de Comando</p>
+          <h1 className="text-4xl font-display font-bold text-foreground tracking-tight">Painel Super Admin</h1>
+        </motion.div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
-            { icon: Store, label: 'Lojas', value: stats.totalLojas, color: 'text-primary' },
-            { icon: Users, label: 'Leads', value: stats.totalLeads, color: 'text-blue-500' },
-            { icon: ShoppingBag, label: 'Vendas', value: stats.totalVendas, color: 'text-amber-500' },
-            { icon: CreditCard, label: 'Pendentes', value: stats.pendingPayments, color: 'text-red-500' },
-          ].map(({ icon: Icon, label, value, color }) => (
-            <motion.div key={label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card p-3 rounded-2xl shadow-card">
-              <Icon className={`w-4 h-4 ${color} mb-1`} />
-              <p className="text-lg font-semibold text-foreground tabular-nums">{value}</p>
-              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{label}</p>
+            { icon: Store, label: 'Lojas', value: stats.totalLojas, color: 'text-primary', glow: 'bg-primary/20' },
+            { icon: Users, label: 'Leads', value: stats.totalLeads, color: 'text-emerald-400', glow: 'bg-emerald-500/10' },
+            { icon: ShoppingBag, label: 'Vendas', value: stats.totalVendas, color: 'text-slate-400', glow: 'bg-slate-500/10' },
+            { icon: CreditCard, label: 'Pendentes', value: stats.pendingPayments, color: 'text-orange-400', glow: 'bg-orange-500/10' },
+          ].map(({ icon: Icon, label, value, color, glow }) => (
+            <motion.div 
+              key={label} 
+              initial={{ opacity: 0, y: 10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              className="glassmorphism p-4 rounded-3xl relative overflow-hidden group hover:border-primary/30 transition-all duration-500"
+            >
+              <div className={`absolute -right-2 -top-2 w-12 h-12 rounded-full blur-2xl ${glow} group-hover:scale-150 transition-transform duration-700`} />
+              <Icon className={`w-5 h-5 ${color} mb-3 relative z-10`} />
+              <p className="text-2xl font-display font-bold text-foreground tabular-nums relative z-10">{value}</p>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest relative z-10">{label}</p>
             </motion.div>
           ))}
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full flex overflow-x-auto no-scrollbar justify-start border-b border-border/50 bg-transparent rounded-none h-12">
-            <TabsTrigger value="stores_pending" className="relative shrink-0 font-medium">
+          <TabsList className="w-full flex overflow-x-auto no-scrollbar justify-start border-b border-white/5 bg-white/5 backdrop-blur-xl rounded-2xl h-14 p-1">
+            <TabsTrigger value="stores_pending" className="relative shrink-0 font-display font-semibold transition-all data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-5">
               Lojas
               {pendingStores.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-orange-500 text-[10px] text-white flex items-center justify-center font-bold">
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-orange-500 text-[10px] text-white flex items-center justify-center font-bold shadow-glow-orange border-2 border-background">
                   {pendingStores.length}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="users" className="relative text-[10px] sm:text-xs">
-              Admins
+            <TabsTrigger value="users" className="relative font-display font-semibold transition-all data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-5">
+              Administradores
               {pendingUsers.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-primary text-[10px] text-primary-foreground flex items-center justify-center font-bold">
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-primary text-[10px] text-primary-foreground flex items-center justify-center font-bold shadow-glow border-2 border-background">
                   {pendingUsers.length}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="payments" className="relative text-[10px] sm:text-xs">
-              Pagtos
+            <TabsTrigger value="payments" className="relative font-display font-semibold transition-all data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-5">
+              Pagamentos
               {pendingAssinaturas.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-destructive text-[10px] text-white flex items-center justify-center font-bold">
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-[10px] text-white flex items-center justify-center font-bold shadow-glow-destructive border-2 border-background">
                   {pendingAssinaturas.length}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="stores" className="shrink-0 font-medium text-sm">Todas</TabsTrigger>
-            <TabsTrigger value="subscriptions" className="shrink-0 font-medium text-sm">Faturas</TabsTrigger>
-            <TabsTrigger value="billing_config" className="shrink-0 font-medium text-sm">Definições</TabsTrigger>
+            <TabsTrigger value="stores" className="shrink-0 font-display font-semibold transition-all data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-5 text-sm">Todas</TabsTrigger>
+            <TabsTrigger value="subscriptions" className="shrink-0 font-display font-semibold transition-all data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-5 text-sm">Faturas</TabsTrigger>
+            <TabsTrigger value="billing_config" className="shrink-0 font-display font-semibold transition-all data-[state=active]:bg-primary data-[state=active]:text-white rounded-xl px-5 text-sm">Configuração</TabsTrigger>
           </TabsList>
 
           {/* New Stores Approval */}

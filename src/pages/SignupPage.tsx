@@ -99,17 +99,23 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full bg-primary/5 blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 rounded-full bg-primary/5 blur-3xl" />
+        <div className="absolute top-[10%] -right-[10%] w-[500px] h-[500px] rounded-full bg-primary/10 blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[10%] -left-[10%] w-[500px] h-[500px] rounded-full bg-primary/5 blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
+        <div className="absolute inset-0 bg-noise opacity-[0.03] mix-blend-overlay" />
       </div>
 
-      <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="w-full max-w-sm relative z-10">
-        <div className="text-center mb-6">
-          <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.1, type: 'spring', stiffness: 200 }} className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary mb-4">
-            <MessageSquare className="w-8 h-8 text-primary-foreground" />
+      <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeOut" }} className="w-full max-w-sm relative z-10">
+        <div className="text-center mb-8">
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0, rotate: -10 }} 
+            animate={{ scale: 1, opacity: 1, rotate: 0 }} 
+            transition={{ delay: 0.2, type: 'spring', stiffness: 200 }} 
+            className="inline-flex items-center justify-center w-20 h-20 rounded-[28px] bg-primary shadow-glow mb-6 group cursor-pointer"
+          >
+            <MessageSquare className="w-10 h-10 text-primary-foreground group-hover:scale-110 transition-transform duration-500" />
           </motion.div>
-          <h1 className="text-2xl font-bold text-foreground">Criar Conta</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-4xl font-display font-bold text-foreground tracking-tight">Criar Conta</h1>
+          <p className="text-sm text-muted-foreground mt-2 font-medium">
             {step === 'role' && 'Como deseja usar o CRM TOP?'}
             {step === 'company' && 'Dados da sua empresa'}
             {step === 'account' && 'Dados da sua conta'}
@@ -127,22 +133,45 @@ export default function SignupPage() {
 
         <AnimatePresence mode="wait">
           {step === 'role' && (
-            <motion.div key="role" variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.25 }} className="space-y-3">
-              <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} onClick={() => handleSelectRole('admin')} className="w-full bg-card p-5 rounded-2xl shadow-card text-left group hover:shadow-elevated transition-shadow">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0"><Store className="w-6 h-6 text-primary" /></div>
+            <motion.div key="role" variants={stepVariants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.4 }} className="space-y-4">
+              <motion.button 
+                whileHover={{ scale: 1.02, y: -2 }} 
+                whileTap={{ scale: 0.98 }} 
+                onClick={() => handleSelectRole('admin')} 
+                className="w-full glassmorphism p-6 rounded-3xl text-left group hover:border-primary/40 transition-all duration-300 shadow-soft overflow-hidden relative"
+              >
+                <div className="absolute inset-0 bg-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="flex items-start gap-5 relative z-10">
+                  <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/20 transition-colors duration-500">
+                    <Store className="w-7 h-7 text-primary" />
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-foreground flex items-center gap-2">Sou Dono / Admin <ChevronRight className="w-4 h-4 text-muted-foreground" /></h3>
-                    <p className="text-xs text-muted-foreground mt-1">Criar a minha empresa no CRM TOP e gerenciar tudo</p>
+                    <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2 group-hover:text-primary transition-colors duration-500">
+                      Sou Dono / Admin 
+                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">Configurar minha empresa e gerenciar a operação completa</p>
                   </div>
                 </div>
               </motion.button>
-              <motion.button whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.98 }} onClick={() => handleSelectRole('employee')} className="w-full bg-card p-5 rounded-2xl shadow-card text-left group hover:shadow-elevated transition-shadow">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center flex-shrink-0"><Users className="w-6 h-6 text-foreground" /></div>
+              
+              <motion.button 
+                whileHover={{ scale: 1.02, y: -2 }} 
+                whileTap={{ scale: 0.98 }} 
+                onClick={() => handleSelectRole('employee')} 
+                className="w-full glassmorphism p-6 rounded-3xl text-left group hover:border-slate-400/40 transition-all duration-300 shadow-soft overflow-hidden relative"
+              >
+                <div className="absolute inset-0 bg-slate-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="flex items-start gap-5 relative z-10">
+                  <div className="w-14 h-14 rounded-2xl bg-slate-500/10 flex items-center justify-center flex-shrink-0 group-hover:bg-slate-500/20 transition-colors duration-500">
+                    <Users className="w-7 h-7 text-slate-400" />
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-foreground flex items-center gap-2">Sou Funcionário <ChevronRight className="w-4 h-4 text-muted-foreground" /></h3>
-                    <p className="text-xs text-muted-foreground mt-1">Entrar na equipa com o código da loja. O admin aprovará seu acesso.</p>
+                    <h3 className="font-display font-bold text-lg text-foreground flex items-center gap-2 group-hover:text-slate-400 transition-colors duration-500">
+                      Sou Funcionário 
+                      <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:translate-x-1 transition-transform" />
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">Aceder à equipa através do código da loja fornecido pelo Admin</p>
                   </div>
                 </div>
               </motion.button>

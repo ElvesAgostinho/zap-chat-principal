@@ -302,19 +302,19 @@ export default function ChatPanel() {
     <div className="fixed inset-0 flex bg-[hsl(var(--whatsapp-bg))] overflow-hidden">
       <div className={`flex-1 flex flex-col h-full transition-all duration-300 ${showProfile ? 'mr-[350px]' : ''}`}>
         {/* Header - Refined with slate-950/primary for high-end look */}
-        <div className="px-4 py-3 flex items-center gap-3 flex-shrink-0 bg-background border-b border-border shadow-sm z-10 transition-colors">
-          <button onClick={() => navigate(-1)} className="p-2 rounded-xl text-foreground hover:bg-secondary transition-colors">
+        <div className="px-6 py-4 flex items-center gap-4 flex-shrink-0 bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm z-10 transition-colors">
+          <button onClick={() => navigate(-1)} className="p-2.5 rounded-2xl text-foreground hover:bg-secondary transition-all duration-300 hover:scale-105 active:scale-95">
             <ArrowLeft className="w-5 h-5" />
           </button>
-          <div className="w-10 h-10 rounded-full overflow-hidden bg-secondary flex items-center justify-center flex-shrink-0 border border-border/50 shadow-inner">
+          <div className="w-12 h-12 rounded-[18px] overflow-hidden bg-secondary flex items-center justify-center flex-shrink-0 border-2 border-border/50 shadow-inner group cursor-pointer transition-transform duration-500 hover:rotate-3">
             {leadFoto ? (
-              <img src={leadFoto} alt={leadName} className="w-full h-full object-cover" onError={(e) => { (e.target as any).src = ''; (e.target as any).style.display = 'none'; }} />
+              <img src={leadFoto} alt={leadName} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" onError={(e) => { (e.target as any).src = ''; (e.target as any).style.display = 'none'; }} />
             ) : null}
-            <span className="text-secondary-foreground font-bold text-sm tracking-tight">{leadName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>
+            {!leadFoto && <span className="text-secondary-foreground font-display font-bold text-base tracking-tight">{leadName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}</span>}
           </div>
           <div className="flex-1 min-w-0">
-            <h2 className="font-bold text-foreground text-[15px] truncate">{leadName}</h2>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-semibold">{leadPhone}</p>
+            <h2 className="font-display font-bold text-xl text-foreground truncate tracking-tight">{leadName}</h2>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-bold mt-0.5 opacity-70">{leadPhone}</p>
           </div>
           <div className="flex items-center gap-2">
             <button 
@@ -398,11 +398,12 @@ export default function ChatPanel() {
                 >
                   {/* Bubble Tail for first in group */}
                   {isFirstInGroup && (
-                    <div className={`absolute top-0 w-2 h-3 ${isSent ? '-right-1.5' : '-left-1.5'}`}>
+                    <div className={`absolute top-0 w-3 h-4 ${isSent ? '-right-2' : '-left-2'}`}>
                       <svg width="100%" height="100%" viewBox="0 0 8 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path 
                           d={isSent ? "M0 0 L8 0 L0 12 C0 12 0 6 0 0 Z" : "M8 0 L0 0 L8 12 C8 12 8 6 8 0 Z"} 
                           fill={`hsl(var(--whatsapp-bubble-${isSent ? 'sent' : 'received'}))`} 
+                          className="drop-shadow-sm"
                         />
                       </svg>
                     </div>

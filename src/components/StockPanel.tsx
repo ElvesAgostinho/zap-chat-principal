@@ -84,33 +84,43 @@ export default function StockPanel({ products, onUpdate, onAddProduct, onDeleteP
       {onAddProduct && (
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold tracking-tight text-foreground">Gestão de Estoque</h2>
-            <p className="text-xs text-muted-foreground mt-1">Gerencie produtos e quantidades do catálogo</p>
+            <h2 className="text-2xl font-display font-bold tracking-tight text-foreground">Gestão de Estoque</h2>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-bold mt-1 opacity-70">Monitorização de Inventário</p>
           </div>
-          <button onClick={onAddProduct} className="flex items-center gap-2 px-4 py-2 rounded-xl gradient-primary text-white text-xs font-bold shadow-glow hover:scale-105 transition-all">
+          <motion.button 
+            whileHover={{ scale: 1.05, y: -2 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onAddProduct} 
+            className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-primary text-primary-foreground text-xs font-bold shadow-glow hover:bg-primary/90 transition-all"
+          >
             <Plus className="w-4 h-4" /> Novo Produto
-          </button>
+          </motion.button>
         </div>
       )}
 
       {/* Stock Overview Cards */}
 
       {/* Alerts */}
-      <div className="grid grid-cols-2 gap-3">
-        <div className="bg-card p-3 rounded-2xl shadow-card">
-          <div className="flex items-center gap-2 mb-1">
-            <AlertTriangle className={`w-4 h-4 ${outOfStock.length > 0 ? 'text-destructive' : 'text-muted-foreground'}`} />
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Esgotados</span>
+      <div className="grid grid-cols-2 gap-4">
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="glassmorphism p-4 rounded-[28px] border-border/50 shadow-soft">
+          <div className="flex items-center gap-2.5 mb-2">
+            <div className={`p-2 rounded-xl ${outOfStock.length > 0 ? 'bg-destructive/10 text-destructive' : 'bg-secondary text-muted-foreground'}`}>
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] uppercase font-bold tracking-[0.15em] text-muted-foreground">Esgotados</span>
           </div>
-          <p className="text-2xl font-bold text-foreground tabular-nums">{outOfStock.length}</p>
-        </div>
-        <div className="bg-card p-3 rounded-2xl shadow-card">
-          <div className="flex items-center gap-2 mb-1">
-            <TrendingDown className={`w-4 h-4 ${lowStock.length > 0 ? 'text-amber-500' : 'text-muted-foreground'}`} />
-            <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Stock Baixo</span>
+          <p className="text-3xl font-display font-bold text-foreground tabular-nums">{outOfStock.length}</p>
+        </motion.div>
+        
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }} className="glassmorphism p-4 rounded-[28px] border-border/50 shadow-soft">
+          <div className="flex items-center gap-2.5 mb-2">
+            <div className={`p-2 rounded-xl ${lowStock.length > 0 ? 'bg-amber-500/10 text-amber-500' : 'bg-secondary text-muted-foreground'}`}>
+              <TrendingDown className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] uppercase font-bold tracking-[0.15em] text-muted-foreground">Stock Baixo</span>
           </div>
-          <p className="text-2xl font-bold text-foreground tabular-nums">{lowStock.length}</p>
-        </div>
+          <p className="text-3xl font-display font-bold text-foreground tabular-nums">{lowStock.length}</p>
+        </motion.div>
       </div>
 
       {/* Product list */}
@@ -121,22 +131,22 @@ export default function StockPanel({ products, onUpdate, onAddProduct, onDeleteP
 
           return (
             <motion.div key={p.id} layout initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-              className={`bg-card rounded-2xl shadow-card overflow-hidden border border-border/40 ${p.estoque === 0 ? 'ring-1 ring-destructive/20' : ''}`}>
+              className={`glassmorphism rounded-3xl shadow-soft overflow-hidden border border-border/50 transition-all duration-300 hover:shadow-glow/5 ${p.estoque === 0 ? 'border-destructive/30' : ''}`}>
               
-              <div className="p-3 flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-secondary overflow-hidden flex-shrink-0 cursor-pointer" onClick={() => hasVariations && setExpandedId(isExpanded ? null : p.id)}>
-                  {p.imagem ? <img src={p.imagem} alt={p.nome} className="w-full h-full object-cover" /> :
-                    <div className="w-full h-full flex items-center justify-center"><Package className="w-5 h-5 text-muted-foreground/30" /></div>}
+              <div className="p-4 flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-secondary overflow-hidden flex-shrink-0 cursor-pointer shadow-inner group border border-border/50" onClick={() => hasVariations && setExpandedId(isExpanded ? null : p.id)}>
+                  {p.imagem ? <img src={p.imagem} alt={p.nome} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" /> :
+                    <div className="w-full h-full flex items-center justify-center bg-primary/5"><Package className="w-6 h-6 text-primary/20" /></div>}
                 </div>
                 
                 <div className="flex-1 min-w-0 cursor-pointer" onClick={() => hasVariations && setExpandedId(isExpanded ? null : p.id)}>
                   <div className="flex items-center gap-2">
-                    <p className="text-sm font-bold text-foreground truncate">{p.nome}</p>
-                    {hasVariations && <span className="text-[8px] bg-indigo-500/10 text-indigo-500 px-1.5 py-0.5 rounded-md font-black uppercase tracking-tighter shadow-sm border border-indigo-500/20">Variedades</span>}
+                    <p className="text-[15px] font-display font-bold text-foreground truncate tracking-tight">{p.nome}</p>
+                    {hasVariations && <span className="text-[8px] bg-emerald-500/10 text-emerald-500 px-2 py-0.5 rounded-full font-black uppercase tracking-[0.1em] border border-emerald-500/20 shadow-sm">Multi-Variant</span>}
                   </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <p className="text-[11px] font-black text-primary">{formatCurrency(p.preco)}</p>
-                    {p.categoria && <span className="text-[8px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-md font-black uppercase tracking-tighter">{p.categoria}</span>}
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-xs font-bold text-primary tabular-nums">{formatCurrency(p.preco)}</p>
+                    {p.categoria && <span className="text-[9px] bg-primary/5 text-primary/70 px-2 py-0.5 rounded-lg font-bold uppercase tracking-tight border border-primary/10">{p.categoria}</span>}
                   </div>
                 </div>
 
