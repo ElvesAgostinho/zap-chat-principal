@@ -13,35 +13,72 @@ const LANGUAGE_INSTRUCTIONS: Record<string, string> = {
   'pt-ST': 'Responda em Português de São Tomé e Príncipe. Use expressões santomenses. Moeda: Db (Dobra). Estilo amável e próximo.',
 };
 
-const SYSTEM_PROMPT = `Você é um "Consultor de Atendimento Humanizado" e especialista em conversão gentil via WhatsApp. Seu tom deve ser 100% humano, natural, empático e extremamente educado.
+const SYSTEM_PROMPT = `És um consultor de atendimento humanizado, especialista em vendas via WhatsApp. O teu tom é 100% humano, caloroso, natural e educado — como um bom amigo que também é expert no negócio.
 
-REGRAS DE OURO:
-1. COMPORTAMENTO HUMANO: Não pareça um robô. Use pausas naturais na escrita (vírgulas), varie o vocabulário e seja honesto. Se não souber algo, pergunte ou sugira falar com um humano.
-2. PERSUASÃO SUTIL: Seja persuasivo destacando os benefícios e a qualidade, mas NUNCA seja agressivo ou insistente demais. O cliente deve se sentir no controle.
-3. INTENÇÃO DO CLIENTE: Antes de agir, entenda profundamente o que o cliente deseja. Se a dúvida for vaga, peça gentilmente por mais detalhes.
+════════════════════════════════════════════════
+🚫 PROIBIÇÃO ABSOLUTA DE FORMATAÇÃO (NUNCA VIOLES)
+════════════════════════════════════════════════
+NUNCA uses os seguintes elementos nas tuas respostas:
+- Asteriscos duplos para negrito: **texto** — PROIBIDO
+- Asterisco simples para itálico: *texto* — PROIBIDO
+- Listas numeradas (1., 2., 3. com ponto) — PROIBIDO
+- Hashes para títulos (#, ##) — PROIBIDO
+- Linhas separadoras (---) — PROIBIDO
+- Emojis a substituir palavras ou em excesso (máximo 1-2 por mensagem)
+- Linguagem robótica como "Claro!", "Entendido!", "Com certeza!", "Perfeitamente!"
 
-CONDIÇÕES DE ENVIO (MUITO IMPORTANTE):
-- FOTOS E PRODUTOS: NUNCA envie fotos ou o marcador [ENVIAR_PRODUTO:...] de forma espontânea. Você só deve usar esse marcador se o cliente PEDIR para ver o produto, perguntar "como é", quiser detalhes visuais ou demonstrar interesse claro em comprar aquele item específico.
-- AGENDAMENTO AUTOMÁTICO: As marcações devem ser automáticas para facilitar o trabalho. Quando o cliente concordar com um horário, use o marcador [AGENDAR:servico|data]. Seja proativo ao sugerir horários disponíveis se o cliente mostrar interesse em visitar ou agendar.
+Em vez disso, escreve como um ser humano culto escreveria uma mensagem de texto:
+✔ Frases naturais e fluidas
+✔ Vírgulas e pontos para pausas naturais
+✔ Linguagem coloquial mas correcta
+✔ Máximo 3-4 frases por resposta
 
-REGRAS DE CONSERVAÇÃO:
-- LOCALIZAÇÃO: Use [ENVIAR_LOCALIZACAO] se perguntarem onde fica.
-- PAGAMENTOS: Use [ENVIAR_PAGAMENTO] se perguntarem como pagar ou quiserem fechar.
+EXEMPLO DO QUE NÃO DEVES FAZER:
+"Entendi! Vou te enviar as fotos dos tênis. 😊
+1. **Tênis Jordan** - Kz 50.000
+2. **Tênis Adidas** - Kz 90.000"
 
-ESTRATÉGIA ANTI-BLOQUEIO:
-- Varie as saudações: Olá, Tudo bem, Boas, Salve, etc.
-- Mensagens curtas e directas.
+EXEMPLO DO QUE DEVES FAZER:
+"Temos sim! O Jordan está a Kz 50.000 e o Adidas a Kz 90.000. Quer que te mostre as fotos de algum em especial? [ENVIAR_PRODUTO:Tênis Jordan]"
 
-REGRAS CRÍTICAS DE GROUNDING:
-1. SÓ FALE DO QUE EXISTE: Responda APENAS com base nos produtos e horários listados abaixo. Se o cliente pedir algo que não está na lista (ex: "Nike" se não houver Nike na lista de produtos DISPONÍVEIS), diga educadamente que não temos no momento.
-2. SEM FALSAS ESPERAS: NUNCA diga que está "procurando", "verificando" ou "aguardando". Dê a resposta final agora com o que você já vê no catálogo.
-3. MARCADORES OBRIGATÓRIOS: Ao confirmar agendamento, você DEVE dizer algo como "Um momento enquanto reservo aqui...", "Só um segundo enquanto vejo na agenda..." para parecer humano. 
-   - ATENÇÃO: NUNCA diga que "Já está confirmado" ou "Já agendei" na sua mensagem. O sistema enviará a confirmação definitiva automaticamente após o processamento. Sua função é apenas dizer para o cliente aguardar um segundo e incluir o marcador [AGENDAR:servico|YYYY-MM-DDTHH:MM].
-4. HORÁRIOS FUTUROS: NUNCA sugira ou aceite horários que já passaram em relação à "DATA E HORA ATUAL" fornecida.`;
+════════════════════════════════════════════════
+📸 REGRAS DE FOTOS E PRODUTOS
+════════════════════════════════════════════════
+- Se o cliente PEDIR para ver um produto, quiser saber "como é", ou perguntar por fotos → usa OBRIGATORIAMENTE [ENVIAR_PRODUTO:nome_exacto_do_produto]
+- Se o cliente pedir vários produtos → usa [ENVIAR_PRODUTO:nome1] [ENVIAR_PRODUTO:nome2] (máximo 3)
+- NUNCA envia fotos de forma espontânea sem o cliente pedir
+- Podes mencionar que o produto existe, mas só envias a foto se for pedido
+
+════════════════════════════════════════════════
+🚨 AGENDAMENTOS — REGRA ABSOLUTA (NUNCA IGNORES)
+════════════════════════════════════════════════
+Quando o cliente confirmar data e hora:
+1. Diz algo natural como: "Já marquei aqui na agenda." — e inclua na mesma mensagem:
+   [AGENDAR:nome_do_servico|AAAA-MM-DDTHH:MM]
+2. NÃO digas "Está confirmado" ou "Já agendei" antes do sistema confirmar.
+3. O sistema envia a confirmação automática após processar o marcador.
+4. Para remarcar: [REMARCAR_AGENDAMENTO:AAAA-MM-DDTHH:MM]
+5. Para cancelar: [CANCELAR_AGENDAMENTO]
+⚠️ Sem o marcador, o agendamento NÃO é gravado.
+
+════════════════════════════════════════════════
+🧠 MEMÓRIA E NOME DO CLIENTE
+════════════════════════════════════════════════
+- Se o cliente disser o seu nome, extrai-o e inclui o marcador [NOME_CLIENTE:Nome] na resposta.
+- Usa sempre o nome do cliente (se conhecido) para personalizar as mensagens.
+- Mantém o fio da conversa — se o cliente já mostrou interesse num produto ou serviço, prioriza esse contexto.
+
+
+1. Entende a intenção antes de agir. Se a mensagem for vaga, faz uma pergunta natural.
+2. Só fala do que existe no catálogo. Se não temos, diz educadamente.
+3. Persuasão suave: destaca benefícios sem pressionar.
+4. Nunca inventas produtos, preços ou serviços.
+5. Para localização: [ENVIAR_LOCALIZACAO]
+6. Para pagamento: [ENVIAR_PAGAMENTO]`;
 
 const FIRST_CONTACT_INSTRUCTION = `
-INSTRUÇÃO ESPECIAL - PRIMEIRO CONTACTO:
-Este é o primeiro contacto com este cliente. Comece com uma saudação calorosa e natural. Apresente-se, diga de qual loja você é e pergunte como pode ajudar hoje. NÃO envie produtos agora, a menos que o cliente já tenha perguntado algo específico na primeira mensagem.`;
+
+PRIMEIRO CONTACTO: Saúda de forma calorosa e natural. Apresenta-te e pergunta como podes ajudar. Não envies produtos agora, a menos que o cliente já tenha perguntado algo específico.`;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -124,15 +161,23 @@ Deno.serve(async (req) => {
         allProducts = products || [];
       }
       if (allProducts.length > 0) {
-        productContext = '\n\nPRODUTOS DISPONÍVEIS NA LOJA:\n' +
-          allProducts.map(p => {
-            const hasStock = p.estoque > 0;
-            return `- ${p.nome} | Preço: Kz ${p.formatted_preco || p.preco} | Estoque: ${hasStock ? 'Sim' : 'Não'} | Detalhes: ${p.descricao || 'Sem descrição'}`;
+        productContext = '\n\nCATÁLOGO DE PRODUTOS DA LOJA:\n' +
+          allProducts.map((p: any) => {
+            const hasStock = (p.estoque ?? 1) > 0;
+            const stock = hasStock ? 'Disponível' : 'Esgotado';
+            const price = p.formatted_preco || p.preco;
+            const variations = p.variations?.length > 0
+              ? ` | Variações: ${p.variations.map((v: any) => `${v.nome} (${v.tipo})`).join(', ')}`
+              : '';
+            return `- ${p.nome} | Kz ${price} | ${stock}${p.descricao ? ' | ' + p.descricao : ''}${variations}`;
           }).join('\n');
-        productContext += '\n\nMARCADOR DE FOTO: Use [ENVIAR_PRODUTO:nome_exacto_do_produto] SOMENTE se o cliente pedir para ver o produto ou detalhes visuais.';
-        productContext += '\nUse os "Detalhes" para responder perguntas sobre tamanhos, cores ou especificações.';
+        productContext += '\n\nINSTRUÇÕES DE FOTO:';
+        productContext += '\n- Se o cliente PEDIR para ver, perguntar "como é" ou quiser detalhes visuais → usa [ENVIAR_PRODUTO:nome_exacto]';
+        productContext += '\n- Se pedir múltiplos → [ENVIAR_PRODUTO:nome1] [ENVIAR_PRODUTO:nome2] (máx. 3)';
+        productContext += '\n- Usa os Detalhes/Variações para responder sobre tamanhos, cores, especificações.';
+        productContext += '\n- NUNCA envias fotos sem o cliente pedir.';
       } else {
-        productContext = '\n\nATENÇÃO: Não existem produtos cadastrados ou em stock nesta loja no momento. Informe o cliente educadamente.';
+        productContext = '\n\nATENÇÃO: Não existem produtos cadastrados nesta loja. Informa o cliente educadamente e oferece alternativas ou contacto humano.';
       }
     }
 
@@ -160,7 +205,7 @@ Deno.serve(async (req) => {
         if (config.linguagem_bot) storeContext += `\n- Tom Desejado: ${config.linguagem_bot}`;
       }
 
-      // Get available schedules for today + next 7 days
+      // Get business schedule + compute free slots for next 7 days
       const { data: horarios } = await supabase
         .from('horarios_loja')
         .select('dia_semana, hora_inicio, hora_fim, ativo')
@@ -169,12 +214,76 @@ Deno.serve(async (req) => {
       if (horarios && horarios.length > 0) {
         const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
         const activeHorarios = horarios.filter((h: any) => h.ativo);
+        const now = new Date();
+
         if (activeHorarios.length > 0) {
-          scheduleContext = '\n\nHORÁRIOS DA LOJA:\n' +
-            activeHorarios.map((h: any) => `- ${dias[h.dia_semana]}: ${h.hora_inicio} - ${h.hora_fim}`).join('\n');
-          scheduleContext += '\n\nSe o cliente quiser agendar, pergunte o serviço e sugira horários disponíveis. Use [AGENDAR:servico|AAAA-MM-DDTHH:MM] quando confirmado.';
-          scheduleContext += '\nSe o cliente quiser mudar (remarcar), use [REMARCAR_AGENDAMENTO:AAAA-MM-DDTHH:MM].';
-          scheduleContext += '\nSe o cliente quiser cancelar, use [CANCELAR_AGENDAMENTO].';
+          // Fetch existing appointments for next 7 days to compute conflicts
+          const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+          const { data: existingBookings } = await supabase
+            .from('agendamentos')
+            .select('data_hora, duracao_min, status')
+            .eq('loja_id', store_id)
+            .neq('status', 'cancelado')
+            .gte('data_hora', now.toISOString())
+            .lte('data_hora', nextWeek.toISOString());
+
+          const bookedRanges = (existingBookings || []).map((b: any) => {
+            const start = new Date(b.data_hora).getTime();
+            return { start, end: start + (b.duracao_min || 60) * 60000 };
+          });
+
+          // Compute free slots for next 7 days (1h slots)
+          const freeSlots: string[] = [];
+          for (let d = 0; d < 7 && freeSlots.length < 15; d++) {
+            const day = new Date(now);
+            day.setDate(day.getDate() + d);
+            const dayOfWeek = day.getDay();
+            const schedule = activeHorarios.find((h: any) => h.dia_semana === dayOfWeek);
+            if (!schedule) continue;
+
+            const [startH, startM] = schedule.hora_inicio.split(':').map(Number);
+            const [endH, endM] = schedule.hora_fim.split(':').map(Number);
+            const openTime = startH * 60 + startM;
+            const closeTime = endH * 60 + endM;
+
+            for (let slot = openTime; slot + 60 <= closeTime && freeSlots.length < 15; slot += 60) {
+              const slotDate = new Date(day);
+              slotDate.setHours(Math.floor(slot / 60), slot % 60, 0, 0);
+
+              // Skip past times
+              if (slotDate <= now) continue;
+
+              const slotStart = slotDate.getTime();
+              const slotEnd = slotStart + 60 * 60000;
+
+              const hasConflict = bookedRanges.some(r => slotStart < r.end && slotEnd > r.start);
+              if (!hasConflict) {
+                const label = `${dias[dayOfWeek]} ${slotDate.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })} às ${String(Math.floor(slot/60)).padStart(2,'0')}:${String(slot%60).padStart(2,'0')}`;
+                freeSlots.push(`${label} → [AGENDAR:SERVICO|${slotDate.getFullYear()}-${String(slotDate.getMonth()+1).padStart(2,'0')}-${String(slotDate.getDate()).padStart(2,'0')}T${String(Math.floor(slot/60)).padStart(2,'0')}:${String(slot%60).padStart(2,'0')}]`);
+              }
+            }
+          }
+
+          const horariosLoja = activeHorarios.map((h: any) => `- ${dias[h.dia_semana]}: ${h.hora_inicio} — ${h.hora_fim}`).join('\n');
+
+          scheduleContext = `\n\nHORÁRIOS DE FUNCIONAMENTO:\n${horariosLoja}`;
+
+          if (freeSlots.length > 0) {
+            scheduleContext += `\n\nSLOTS DISPONÍVEIS (próximos horários livres):\n${freeSlots.slice(0, 10).join('\n')}`;
+            scheduleContext += '\n(Substitua "SERVICO" pelo serviço real pretendido pelo cliente)';
+          } else {
+            scheduleContext += '\n\nATENÇÃO: Não há horários livres nos próximos 7 dias. Informe o cliente educadamente.';
+          }
+
+          scheduleContext += '\n\n🚨 REGRAS CRÍTICAS DE AGENDAMENTO 🚨';
+          scheduleContext += '\n1. NUNCA aceite um horário fora do funcionamento (ex: 14:00 se a loja fecha às 13:00).';
+          scheduleContext += '\n2. Se o cliente pedir um horário ocupado ou fora do horário, diga educadamente e sugira os SLOTS DISPONÍVEIS listados acima.';
+          scheduleContext += '\n3. Quando o cliente CONFIRMAR um slot disponível: use [AGENDAR:servico_real|AAAA-MM-DDTHH:MM]';
+          scheduleContext += '\n   Exemplo: "Um momento, já marco aqui... 📅 [AGENDAR:Manicure|2026-03-28T10:00]"';
+          scheduleContext += '\n4. Se quiser REMARCAR: use [REMARCAR_AGENDAMENTO:AAAA-MM-DDTHH:MM]';
+          scheduleContext += '\n   Exemplo: "Claro, já actualizo aqui... 📅 [REMARCAR_AGENDAMENTO:2026-03-29T14:00]"';
+          scheduleContext += '\n5. Se quiser CANCELAR: use [CANCELAR_AGENDAMENTO]';
+          scheduleContext += '\n⚠️ SEM o marcador, o agendamento NÃO é gravado no sistema.';
         }
       }
     }
@@ -235,7 +344,7 @@ Deno.serve(async (req) => {
     const response = await fetch(aiUrl, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, messages, max_tokens: 500, temperature: 0.7 }),
+      body: JSON.stringify({ model, messages, max_tokens: 500, temperature: 0.3 }),
     });
 
     if (!response.ok) {
@@ -326,10 +435,35 @@ Deno.serve(async (req) => {
       .replace(/\s{2,}/g, ' ')
       .trim();
 
+    // ═══════════════════════════════════════════════════════
+    // POST-PROCESSOR: Strip ALL markdown formatting
+    // Safety net in case the LLM ignores system instructions
+    // ═══════════════════════════════════════════════════════
+    const humanReply = cleanReply
+      // Remove bold (**text** or __text__)
+      .replace(/\*\*([^*]+)\*\*/g, '$1')
+      .replace(/__([^_]+)__/g, '$1')
+      // Remove italic (*text* or _text_) — careful not to remove emoji
+      .replace(/(?<!\w)\*([^*\n]+)\*(?!\w)/g, '$1')
+      .replace(/(?<!\w)_([^_\n]+)_(?!\w)/g, '$1')
+      // Remove markdown headings
+      .replace(/^#{1,6}\s+/gm, '')
+      // Remove numbered list prefixes like "1. " "2. "
+      .replace(/^\d+\.\s+/gm, '')
+      // Remove bullet points - but keep natural dashes in context
+      .replace(/^[•\-\*]\s+/gm, '')
+      // Remove horizontal rules
+      .replace(/^[-_\*]{3,}\s*$/gm, '')
+      // Remove strikethrough
+      .replace(/~~([^~]+)~~/g, '$1')
+      // Clean up excess newlines (max 2)
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+
     // 6.5 Fallback if AI returned ONLY markers but no text, or just failed
-    let finalReply = cleanReply;
+    let finalReply = humanReply;
     if (!finalReply && !productsToSend.length && !orderData && !scheduleData && !paymentMatch && !locationMatch) {
-      finalReply = "Como posso ajudar você hoje?";
+      finalReply = "Como posso ajudar?";
     }
 
     // 7. Match products

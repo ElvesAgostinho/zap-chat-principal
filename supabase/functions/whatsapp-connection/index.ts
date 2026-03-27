@@ -813,6 +813,15 @@ Deno.serve(async (req) => {
       return json({ success: true, messages });
     }
 
+    if (action === 'list_leads') {
+      const { data: leads } = await sb.from('leads')
+        .select('*')
+        .eq('loja_id', store_id)
+        .order('updated_at', { ascending: false })
+        .limit(10);
+      return json({ success: true, leads });
+    }
+
 
     // ============================================================
     // ACTION: check_connection

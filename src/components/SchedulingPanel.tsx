@@ -57,12 +57,35 @@ export default function SchedulingPanel() {
 
   useEffect(() => { fetchData(); }, [storeId]);
 
-  // Realtime
+  // Realtime — scoped to this store, no stale closure
   useEffect(() => {
     if (!storeId) return;
-    const ch = supabase.channel('agendamentos-rt')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'agendamentos' }, () => fetchData())
-      .subscribe();
+    const ch = supabase
+      .channel(`agendamentos-rt-${storeId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'agendamentos',
+          filter: `loja_id=eq.${storeId}`,
+        },
+        (payload) => {
+          console.log('[Realtime] agendamentos change:', payload.eventType);
+          // Refetch to keep data fresh (simple, reliable)
+          (supabase as any)
+            .from('agendamentos')
+            .select('*')
+            .eq('loja_id', storeId)
+            .order('data_hora', { ascending: true })
+            .then(({ data }: { data: Agendamento[] | null }) => {
+              setAgendamentos(data || []);
+            });
+        },
+      )
+      .subscribe((status) => {
+        console.log('[Realtime] agendamentos channel status:', status);
+      });
     return () => { supabase.removeChannel(ch); };
   }, [storeId]);
 
