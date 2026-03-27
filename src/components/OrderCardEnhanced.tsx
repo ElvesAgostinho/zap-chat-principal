@@ -10,52 +10,66 @@ interface Props { venda: Venda; onOpenChat?: (leadId: string) => void; }
 
 export default function OrderCardEnhanced({ venda, onOpenChat }: Props) {
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      className="bg-card p-5 rounded-2xl border border-border/50 hover:border-border transition-all group shadow-card hover:shadow-elevated"
+    <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
+      className="bg-card/40 backdrop-blur-md p-6 rounded-3xl border border-white/5 hover:border-primary/30 transition-all group shadow-card hover:shadow-glow relative overflow-hidden"
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[60px] -mr-16 -mt-16 pointer-events-none" />
+      
+      <div className="flex items-center justify-between mb-5 relative z-10">
         <div className="flex gap-4 items-center min-w-0">
-          <div className="w-12 h-12 rounded-xl bg-secondary border border-border overflow-hidden flex-shrink-0 flex items-center justify-center">
-            {venda.produto_imagem ? <img src={venda.produto_imagem} alt={venda.produto || ''} className="object-cover w-full h-full" /> : <Package className="w-6 h-6 text-muted-foreground" />}
+          <div className="w-14 h-14 rounded-2xl bg-secondary/50 border border-white/5 overflow-hidden flex-shrink-0 flex items-center justify-center shadow-inner">
+            {venda.produto_imagem ? <img src={venda.produto_imagem} alt={venda.produto || ''} className="object-cover w-full h-full" /> : <Package className="w-7 h-7 text-muted-foreground/50" />}
           </div>
           <div className="min-w-0">
-            <h3 className="font-bold text-foreground truncate text-sm mb-0.5">{venda.cliente_nome || 'Cliente'}</h3>
-            <p className="text-xs text-muted-foreground font-medium truncate">{venda.produto} · <span className="text-primary font-bold">{formatCurrency(venda.valor)}</span></p>
+            <h3 className="font-bold text-foreground truncate text-base mb-1 font-display tracking-tight">{venda.cliente_nome || 'Cliente'}</h3>
+            <p className="text-xs text-muted-foreground font-medium truncate uppercase tracking-widest opacity-80">
+                {venda.produto} · <span className="text-primary font-black ml-1">{formatCurrency(venda.valor)}</span>
+            </p>
           </div>
         </div>
-        <div className="flex flex-col items-end gap-1.5 flex-shrink-0 ml-2">
-            <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${
-                venda.status === 'pendente' ? 'bg-amber-500/10 text-amber-500' : 
-                venda.status === 'pago' ? 'bg-primary/10 text-primary' : 
-                'bg-slate-800 text-slate-400'
+        <div className="flex flex-col items-end gap-2 flex-shrink-0 ml-4">
+            <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1.5 rounded-full shadow-sm border ${
+                venda.status === 'pendente' ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' : 
+                venda.status === 'pago' ? 'bg-primary/20 text-primary border-primary/30 shadow-glow' : 
+                'bg-slate-800/50 text-slate-400 border-white/5'
             }`}>
                 {venda.status}
             </span>
-            <time className="text-[10px] text-muted-foreground font-bold tabular-nums">{formatTime(venda.criado_em)}</time>
+            <time className="text-[10px] text-muted-foreground font-bold tabular-nums opacity-60 tracking-wider font-display">{formatTime(venda.criado_em)}</time>
         </div>
       </div>
       
-      <div className="flex items-center gap-3 pt-3 border-t border-border/50">
-        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            <Truck className="w-3.5 h-3.5" /> {deliveryStatusLabels[venda.status_entrega] || 'Pendente'}
-        </span>
-        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            <CreditCard className="w-3.5 h-3.5" /> {paymentStatusLabels[venda.pagamento_status] || 'Pendente'}
-        </span>
+      <div className="flex items-center gap-4 pt-4 border-t border-white/5 relative z-10">
+        <div className="flex items-center gap-2 group/status px-3 py-1.5 rounded-xl bg-white/[0.02] border border-white/5 transition-colors hover:bg-white/[0.05]">
+            <Truck className="w-3.5 h-3.5 text-muted-foreground group-hover/status:text-primary transition-colors" /> 
+            <span className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground group-hover/status:text-foreground transition-colors">
+                {deliveryStatusLabels[venda.status_entrega] || 'Pendente'}
+            </span>
+        </div>
+        
+        <div className="flex items-center gap-2 group/status px-3 py-1.5 rounded-xl bg-white/[0.02] border border-white/5 transition-colors hover:bg-white/[0.05]">
+            <CreditCard className="w-3.5 h-3.5 text-muted-foreground group-hover/status:text-primary transition-colors" /> 
+            <span className="text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground group-hover/status:text-foreground transition-colors">
+                {paymentStatusLabels[venda.pagamento_status] || 'Pendente'}
+            </span>
+        </div>
         
         {onOpenChat && venda.lead_id && (
             <button 
                 onClick={() => onOpenChat(venda.lead_id!)} 
-                className="ml-auto w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary hover:bg-primary hover:text-black transition-all"
+                className="ml-auto w-10 h-10 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 hover:bg-primary hover:text-black transition-all shadow-sm active:scale-95"
             >
-                <MessageSquare className="w-4 h-4" />
+                <MessageSquare className="w-5 h-5 fill-current" />
             </button>
         )}
       </div>
       
       {venda.observacoes && (
-          <div className="mt-3 p-3 rounded-xl bg-secondary/50 border border-border/50">
-              <p className="text-[11px] text-muted-foreground font-medium"><span className="text-primary mr-2">●</span>{venda.observacoes}</p>
+          <div className="mt-4 p-4 rounded-2xl bg-white/[0.02] border border-white/5 relative z-10 group-hover:border-white/10 transition-colors">
+              <p className="text-[11px] text-muted-foreground font-medium flex items-start gap-3">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary mt-1 shadow-glow" />
+                  <span className="italic leading-relaxed">"{venda.observacoes}"</span>
+              </p>
           </div>
       )}
     </motion.div>

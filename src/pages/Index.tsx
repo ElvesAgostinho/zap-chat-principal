@@ -333,24 +333,25 @@ export default function Index() {
       >
         <div className="max-w-6xl mx-auto px-6 py-8 pt-20 lg:pt-8">
           {/* Unified Header */}
-          <header className="mb-10 flex items-end justify-between border-b border-white/5 pb-6">
-            <motion.div
-              key={activeTab + '-title'}
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              <h1 className="text-4xl font-bold tracking-tight text-foreground mb-2">{authStoreName || 'CRM TOP'}</h1>
-              <div className="flex items-center gap-3">
-                <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
-                    Official Hub
-                </span>
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-[0.2em] border-l border-border pl-3">
-                    {TAB_TITLES[activeTab]}
-                </p>
-              </div>
-            </motion.div>
-          </header>
+            <header className="mb-12 flex items-end justify-between border-b border-white/5 pb-8">
+              <motion.div
+                key={activeTab + '-title'}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <h1 className="text-5xl font-bold tracking-tight text-foreground mb-3 font-display">{authStoreName || 'CRM TOP'}</h1>
+                <div className="flex items-center gap-4">
+                  <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] border border-primary/20 shadow-glow">
+                      Official Hub
+                  </span>
+                  <div className="h-4 w-[1px] bg-border/50 mx-1" />
+                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
+                      {TAB_TITLES[activeTab]}
+                  </p>
+                </div>
+              </motion.div>
+            </header>
 
           {/* Tab Content with AnimatePresence to solve "joining everything" bug */}
           <div className="relative min-h-[60vh]">

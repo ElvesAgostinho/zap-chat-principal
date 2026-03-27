@@ -138,20 +138,30 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
   return (
     <div className="space-y-6 animate-fade-in-up">
       {/* Tabs */}
-      <div className="flex border-b border-white/5 mb-4">
+      <div className="flex border-b border-white/5 mb-6 overflow-x-auto scrollbar-hide">
         <button 
           onClick={() => setActiveTab('geral')}
-          className={`px-6 py-3 text-[11px] font-bold uppercase tracking-widest transition-all relative ${activeTab === 'geral' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+          className={`px-6 py-4 text-[12px] font-bold uppercase tracking-[0.2em] transition-all relative whitespace-nowrap ${activeTab === 'geral' ? 'text-primary bg-primary/5' : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.02]'}`}
         >
           Visão Estratégica
-          {activeTab === 'geral' && <motion.div layoutId="tab-active" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full shadow-[0_0_10px_rgba(34,197,94,0.5)]" />}
+          {activeTab === 'geral' && (
+            <motion.div 
+              layoutId="tab-active-indicator" 
+              className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full shadow-[0_-4px_12px_rgba(52,211,153,0.4)]" 
+            />
+          )}
         </button>
         <button 
           onClick={() => setActiveTab('insights')}
-          className={`px-6 py-3 text-[11px] font-bold uppercase tracking-widest transition-all relative ${activeTab === 'insights' ? 'text-primary' : 'text-muted-foreground hover:text-foreground'}`}
+          className={`px-6 py-4 text-[12px] font-bold uppercase tracking-[0.2em] transition-all relative whitespace-nowrap ${activeTab === 'insights' ? 'text-primary bg-primary/5' : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.02]'}`}
         >
           Análise de Desempenho
-          {activeTab === 'insights' && <motion.div layoutId="tab-active" className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t-full shadow-[0_0_10px_rgba(34,197,94,0.5)]" />}
+          {activeTab === 'insights' && (
+            <motion.div 
+              layoutId="tab-active-indicator" 
+              className="absolute bottom-0 left-0 right-0 h-1 bg-primary rounded-t-full shadow-[0_-4px_12px_rgba(52,211,153,0.4)]" 
+            />
+          )}
         </button>
       </div>
 
@@ -165,13 +175,13 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
           >
             <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-50" />
             
-            <div className="flex items-center gap-5 relative z-10">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary flex-shrink-0">
-                <Globe className="w-6 h-6" />
+            <div className="flex items-center gap-6 relative z-10">
+              <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary flex-shrink-0 shadow-glow">
+                <Globe className="w-7 h-7" />
               </div>
               <div>
-                <h3 className="font-bold text-foreground text-base">Hub Comercial Ativo 🚀</h3>
-                <p className="text-xs text-muted-foreground font-medium">Capture leads e pedidos automaticamente através do seu catálogo digital.</p>
+                <h3 className="font-bold text-foreground text-lg font-display">Hub Comercial Ativo 🚀</h3>
+                <p className="text-sm text-muted-foreground font-medium max-w-md">Capture leads e pedidos automaticamente através do seu catálogo digital premium.</p>
               </div>
             </div>
             
@@ -209,23 +219,23 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
             {stats.map((stat, i) => (
               <motion.div 
                 key={stat.label} 
-                initial={{ opacity: 0, y: 12 }} 
-                animate={{ opacity: 1, y: 0 }} 
-                transition={{ delay: i * 0.05 }} 
-                className="bg-card p-5 rounded-2xl border border-border hover:border-primary/20 transition-all group shadow-sm"
+                initial={{ opacity: 0, scale: 0.95 }} 
+                animate={{ opacity: 1, scale: 1 }} 
+                transition={{ delay: i * 0.05 + 0.1 }} 
+                className="bg-card/50 backdrop-blur-sm p-6 rounded-3xl border border-white/5 hover:border-primary/30 transition-all group shadow-sm hover:shadow-glow"
               >
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`w-10 h-10 rounded-xl ${stat.bg} flex items-center justify-center border border-white/5`}>
+                <div className="flex items-center justify-between mb-5">
+                  <div className={`w-11 h-11 rounded-2xl ${stat.bg} flex items-center justify-center border border-white/5 shadow-sm`}>
                     <stat.icon className={`w-5 h-5 ${stat.color}`} />
                   </div>
                   {stat.showTrend && stat.trend !== 0 && (
-                    <span className={`flex items-center gap-0.5 text-[10px] font-bold px-2 py-0.5 rounded-full ${stat.trend > 0 ? 'bg-primary/10 text-primary' : 'bg-red-500/10 text-red-400'}`}>
+                    <span className={`flex items-center gap-0.5 text-[10px] font-black px-2.5 py-1 rounded-full ${stat.trend > 0 ? 'bg-primary/10 text-primary border border-primary/20' : 'bg-red-500/10 text-red-400 border border-red-500/20'}`}>
                       {stat.trend > 0 ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}{Math.abs(stat.trend)}%
                     </span>
                   )}
                 </div>
-                <p className="text-2xl font-bold text-foreground tracking-tight tabular-nums">{stat.value}</p>
-                <p className="text-[11px] text-slate-500 font-bold uppercase tracking-wider mt-1">{stat.label}</p>
+                <p className="text-3xl font-bold text-foreground tracking-tight tabular-nums font-display">{stat.value}</p>
+                <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.15em] mt-2 opacity-60">{stat.label}</p>
               </motion.div>
             ))}
           </div>

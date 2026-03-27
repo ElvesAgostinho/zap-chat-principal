@@ -1,5 +1,4 @@
-/* Build Stamp: 2026-03-26-05-58 */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -26,7 +25,7 @@
     --border: 214 32% 91%; /* #E2E8F0 */
     --input: 214 32% 91%;
     --ring: 161 84% 39%;
-    --radius: 0.75rem;
+    --radius: 1rem;
     
     --sidebar-background: 0 0% 100%; /* #FFFFFF */
     --sidebar-foreground: 222 47% 11%; /* #0F172A */
@@ -85,15 +84,15 @@
 
     --shadow-card: 0 10px 25px rgba(0, 0, 0, 0.4);
     --shadow-elevated: 0 30px 60px -12px rgba(0, 0, 0, 0.9);
-    --shadow-glow: 0 0 20px rgba(52, 211, 153, 0.1);
+    --shadow-glow: 0 0 20px rgba(52, 211, 153, 0.05);
 
-    --sidebar-background: 222 47% 6%; /* #0F172A variant for depth */
+    --sidebar-background: 222 47% 5%; /* Adjusted for depth */
     --sidebar-foreground: 215 20% 85%;
     --sidebar-primary: 158 64% 52%;
     --sidebar-primary-foreground: 222 47% 5%;
     --sidebar-accent: 215 33% 12%;
     --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 215 33% 12%;
+    --sidebar-border: 215 33% 10%;
     --sidebar-ring: 158 64% 52%;
 
     --chart-1: 139 100% 57%;
@@ -107,8 +106,22 @@
 /* Force light mode contrast for neutral text, icons and titles */
 :root:not(.dark) {
   --foreground: 224 71% 4%;
-  --muted-foreground: 215 25% 20%;
+  --muted-foreground: 215 25% 15%;
 }
+
+.dark::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.02;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
 
 /* Force contrast on text-white EXCEPT when inside primary/destructive/emerald containers or gradients */
 :root:not(.dark) .text-white:not(.force-dark, .force-dark *, .bg-primary *, .bg-destructive *, .bg-orange-500 *, .bg-emerald-500 *, .gradient-primary *, .bg-primary, .bg-destructive, .bg-orange-500, .bg-emerald-500, .gradient-primary, .shadow-glow *) {
