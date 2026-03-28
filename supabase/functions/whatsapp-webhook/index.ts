@@ -730,198 +730,106 @@ Deno.serve(async (req) => {
                       let isoDate: string;
                       try {
                         const dateToParse = sd.data_hora || new Date().toISOString();
-                        let dateObj = new Date(dateToParse);
+                        const normalizedDate = dateToParse.includes(' ') && !dateToParse.includes('T') 
+                          ? dateToParse.replace(' ', 'T') 
+                          : dateToParse;
+                        
+                        let dateObj = new Date(normalizedDate);
                         if (isNaN(dateObj.getTime())) {
-                           console.error(`[webhook] Invalid date string: ${dateToParse}`);
-                           // Fallback to today + 1 hour if totally invalid
                            dateObj = new Date();
                            dateObj.setHours(dateObj.getHours() + 1);
                            dateObj.setMinutes(0, 0, 0);
                         }
                         isoDate = dateObj.toISOString();
-                      } catch (e) {
-                        console.error(`[webhook] Critical date parse error:`, e);
-                        isoDate = new Date().toISOString();
-                      }
+                      } catch { isoDate = new Date().toISOString(); }
 
-                      // ═══════════════════════════════════════════════════════
-                      // ULTRA-SMART SLOT CHECK (±15 min window)
-                      // ═══════════════════════════════════════════════════════
                       const targetDate = new Date(isoDate);
-                      const windowMs = 15 * 60 * 1000;
-                      const startTime = new Date(targetDate.getTime() - windowMs).toISOString();
-                      const endTime = new Date(targetDate.getTime() + windowMs).toISOString();
-
-                      const { data: conflictAppt } = await supabase
-                        .from('agendamentos')
-                        .select('id, lead_id, data_hora, servico')
-                        .eq('loja_id', storeId)
-                        .neq('status', 'cancelado')
-                        .gte('data_hora', startTime)
-                        .lte('data_hora', endTime)
-                        .limit(1)
-                        .maybeSingle();
-
-                      if (conflictAppt) {
-                        if (conflictAppt.lead_id === leadId) {
-                          console.log(`[webhook] ⚠️ Lead ${leadName} already has an appointment at this time.`);
-                          const msg = `Olha, já agendei a tua ${sd.servico || 'visita'} para este horário (${new Date(conflictAppt.data_hora).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}). Não precisas de te preocupar, já está tudo guardado!`;
-                          await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
-                            body: JSON.stringify({ number: phone, text: msg }),
-                          });
-                        } else {
-                          console.log(`[webhook] 🚫 Slot occupied by another client.`);
-                          const msg = `Infelizmente esse horário das ${new Date(isoDate).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })} já está reservado. Consegues sugerir um outro horário ou preferes que eu veja qual é o próximo livre?`;
-                          await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
-                            body: JSON.stringify({ number: phone, text: msg }),
-                          });
-                        }
-                      } else {
-                        const { data: appointment, error: schedErr } = await supabase.from('agendamentos').insert({
-                          loja_id: storeId,
-                          lead_id: leadId,
-                          cliente_nome: leadName,
-                          cliente_telefone: phone,
-                          servico: sd.servico || 'Consulta/Serviço',
-                          data_hora: isoDate,
-                          status: 'pendente',
-                          duracao_min: 60,
-                        }).select().single();
-
-                        if (!schedErr || (schedErr.code === '23505')) {
-                          console.log(`[webhook] ✅ Appointment registered for ${leadName} at ${isoDate}`);
-
-                          const confirmMsg = `Confirmado! Acabei de reservar o teu ${sd.servico || 'atendimento'} para ${new Date(isoDate).toLocaleDateString('pt-PT')} às ${new Date(isoDate).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}. Vemo-nos lá!`;
-
-                          await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
-                            body: JSON.stringify({ number: phone, text: confirmMsg }),
-                          });
-
-                          // Create Notification
-                          await supabase.from('notificacoes').insert({
-                            loja_id: storeId,
-                            lead_id: leadId,
-                            tipo: 'agendamento',
-                            titulo: 'Novo Agendamento',
-                            mensagem: `${leadName} marcou ${sd.servico || 'um serviço'} para ${new Date(isoDate).toLocaleString('pt-AO')}`,
-                            link: '/scheduling'
-                          });
-                        } else {
-                          console.error('[webhook] Scheduling Error:', schedErr);
-                          throw schedErr;
-                        }
-                      }
-                    } else if (sd.action === 'reschedule') {
-                      // Find the most recent active appointment for this lead
-                      const { data: existingAppt } = await supabase
-                        .from('agendamentos')
-                        .select('id, servico, data_hora')
-                        .eq('lead_id', leadId)
-                        .eq('loja_id', storeId)
-                        .in('status', ['pendente', 'confirmado'])
-                        .order('data_hora', { ascending: false })
-                        .limit(1)
-                        .maybeSingle();
-
-                      let reschedIsoDate: string;
-                      try {
-                        let rd = new Date(sd.data_hora);
-                        if (isNaN(rd.getTime())) rd = new Date();
-                        reschedIsoDate = rd.toISOString();
-                      } catch { reschedIsoDate = new Date().toISOString(); }
-
-                      if (existingAppt) {
-                        // Update existing record
-                        const { error: reschedErr } = await supabase
-                          .from('agendamentos')
-                          .update({ data_hora: reschedIsoDate, status: 'pendente', notas: 'Remarcado pelo cliente via WhatsApp' })
-                          .eq('id', existingAppt.id);
-
-                        if (!reschedErr) {
-                          console.log(`[webhook] 🔄 Appointment rescheduled for ${leadName} to ${reschedIsoDate}`);
-                           const rdt = new Date(reschedIsoDate);
-                          const confirmMsg = `Remarcado! O teu agendamento foi actualizado para ${rdt.toLocaleDateString('pt-PT')} às ${rdt.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}. Até lá!`;
-                          await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
-                            body: JSON.stringify({ number: phone, text: confirmMsg }),
-                          });
-                          await supabase.from('notificacoes').insert({
-                            loja_id: storeId, lead_id: leadId, tipo: 'agendamento',
-                            titulo: 'Agendamento Remarcado',
-                            mensagem: `${leadName} remarcou o agendamento para ${rdt.toLocaleString('pt-AO')}`,
-                            link: '/scheduling',
-                          });
-                        }
-                      } else {
-                        // No existing appointment — create a new one
-                        await supabase.from('agendamentos').insert({
-                          loja_id: storeId, lead_id: leadId, cliente_nome: leadName,
-                          cliente_telefone: phone, servico: sd.servico || 'Atendimento',
-                          data_hora: reschedIsoDate, status: 'pendente', duracao_min: 60,
-                          notas: 'Criado via remarco (sem agendamento anterior)',
-                        });
-                        const rdt = new Date(reschedIsoDate);
-                        const confirmMsg = `Agendado! Reservei o teu horário para ${rdt.toLocaleDateString('pt-PT')} às ${rdt.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}. Qualquer dúvida é só dizer!`;
+                      const now = new Date();
+                      
+                      if (targetDate < now) {
+                        const msg = `Lamento, mas não consigo fazer marcações para o passado. Consegues escolher um dia e hora a partir de agora? 🕒`;
                         await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
                           method: 'POST',
                           headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
-                          body: JSON.stringify({ number: phone, text: confirmMsg }),
+                          body: JSON.stringify({ number: phone, text: msg }),
                         });
+                        return new Response('Past date', { status: 200 });
+                      }
+
+                      if (sd.action === 'create') {
+                        const windowMs = 30 * 60 * 1000;
+                        const startTime = new Date(targetDate.getTime() - windowMs).toISOString();
+                        const endTime = new Date(targetDate.getTime() + windowMs).toISOString();
+
+                        const { data: conflict } = await supabase.from('agendamentos').select('id, lead_id, data_hora')
+                          .eq('loja_id', storeId).neq('status', 'cancelado').gte('data_hora', startTime).lte('data_hora', endTime).limit(1).maybeSingle();
+
+                        if (conflict) {
+                          const msg = conflict.lead_id === leadId 
+                            ? `Olha, já temos um pedido teu para este horário (${new Date(conflict.data_hora).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}). Está em validação! 📝`
+                            : `Infelizmente esse horário das ${targetDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })} já está reservado. Podes sugerir outro?`;
+                          await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+                            method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
+                            body: JSON.stringify({ number: phone, text: msg }),
+                          });
+                        } else {
+                          const { error: sErr } = await supabase.from('agendamentos').insert({
+                            loja_id: storeId, lead_id: leadId, cliente_nome: leadName, cliente_telefone: phone,
+                            servico: sd.servico || 'Suporte/Venda', data_hora: isoDate, status: 'pendente', duracao_min: 60,
+                            notas: '📅 Pedido via Assistente AI'
+                          });
+                          if (!sErr) {
+                            const cMsg = `Pedido recebido! 📝 Dia ${targetDate.toLocaleDateString('pt-PT')} às ${targetDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}.\n\nAviso-te aqui assim que estiver confirmado! 🚀`;
+                            await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+                              method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
+                              body: JSON.stringify({ number: phone, text: cMsg }),
+                            });
+                            await supabase.from('notificacoes').insert({
+                              loja_id: storeId, lead_id: leadId, tipo: 'agendamento',
+                              titulo: '🆕 Novo Pedido', mensagem: `${leadName} pediu agendamento para ${targetDate.toLocaleString('pt-PT')}`,
+                              link: '/schedule'
+                            });
+                          }
+                        }
+                      } else if (sd.action === 'reschedule') {
+                        const { data: ext } = await supabase.from('agendamentos').select('id, notas').eq('lead_id', leadId).eq('loja_id', storeId).in('status', ['pendente', 'confirmado']).order('data_hora', { ascending: false }).limit(1).maybeSingle();
+                        if (ext) {
+                          const { error: rErr } = await supabase.from('agendamentos').update({ 
+                            data_hora: isoDate, status: 'pendente', notas: (ext.notas ? ext.notas + '\n' : '') + '🔄 Pedido de reagendamento'
+                          }).eq('id', ext.id);
+                          if (!rErr) {
+                            const rMsg = `Claro! Recebi o pedido para reagendar para ${targetDate.toLocaleString('pt-PT')}. Vou confirmar e já te digo! 🕒`;
+                            await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+                              method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
+                              body: JSON.stringify({ number: phone, text: rMsg }),
+                            });
+                          }
+                        }
                       }
                     } else if (sd.action === 'cancel') {
-                      const { error: cancelErr } = await supabase.from('agendamentos')
-                        .update({ status: 'cancelado' })
-                        .eq('lead_id', leadId)
-                        .eq('loja_id', storeId)
-                        .eq('status', 'pendente'); 
-                      
-                      if (!cancelErr) {
-                        console.log(`[webhook] ❌ Appointment cancelled for ${leadName}`);
-                         await supabase.from('notificacoes').insert({
-                          loja_id: storeId,
-                          lead_id: leadId,
-                          tipo: 'agendamento',
-                          titulo: 'Agendamento Cancelado',
-                          mensagem: `${leadName} cancelou o agendamento pendente.`,
-                          link: '/scheduling'
+                      const { error: cErr } = await supabase.from('agendamentos').update({ status: 'cancelado' }).eq('lead_id', leadId).eq('loja_id', storeId).neq('status', 'concluido');
+                      if (!cErr) {
+                        const cMsg = `Com certeza. O agendamento foi cancelado. Se precisares de outra coisa, estou aqui! 👋`;
+                        await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+                          method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
+                          body: JSON.stringify({ number: phone, text: cMsg }),
                         });
                       }
                     }
-                  } catch (schedErr) {
-                    console.error('[webhook] Schedule error:', schedErr);
-                  }
+                  } catch (e) { console.error('[webhook] Schedule error:', e); }
                 }
 
                 if (botData.escalate_to_human) {
-                  console.log(`[webhook] AI bot requested human escalation for lead ${leadId}: ${botData.escalate_to_human}`);
-                  await supabase.from('leads').update({
-                    controle_conversa: 'humano',
-                    precisa_humano: true,
-                    bot_enabled: false,
-                  }).eq('id', leadId);
-                  
+                  await supabase.from('leads').update({ controle_conversa: 'humano', precisa_humano: true, bot_enabled: false }).eq('id', leadId);
                   await notifyAdminEscalation(supabase, baseUrl, instanceName, EVOLUTION_API_KEY, storeId, leadName, textForEscalation, botData.escalate_to_human);
                 }
-              } else {
-                console.error('[webhook] Failed to send WhatsApp reply:', JSON.stringify(sendResult));
               }
-            } else {
-              console.warn('[webhook] AI bot returned no reply:', botData.error);
-            }
-          } catch (botErr) {
-            console.error('[webhook] Bot auto-reply error:', botErr);
+            } catch (botErr) { console.error('[webhook] Bot error:', botErr); }
           }
         }
       }
 
-      return new Response(JSON.stringify({ ok: true, saved: true, bot: botStatus }), {
+      return new Response(JSON.stringify({ ok: true, saved: true }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -930,72 +838,44 @@ Deno.serve(async (req) => {
     if (eventNormalized === 'connection.update') {
       const state = body.data?.state || body.state;
       const instanceName = body.instance || body.instanceName || '';
-      console.log(`[webhook] Connection update: ${instanceName} -> ${state}`);
-
       if (instanceName) {
-        const statusMap: Record<string, string> = {
-          open: 'connected', close: 'disconnected', connecting: 'connecting',
-        };
+        const statusMap: Record<string, string> = { open: 'connected', close: 'disconnected', connecting: 'connecting' };
         const newStatus = statusMap[state] || state;
         const updateData: any = { instance_status: newStatus };
-
-        // Tentar capturar o número da própria instância
         const senderJid = body.sender || body.data?.sender || '';
         const instancePhone = senderJid.replace('@s.whatsapp.net', '');
-        if (instancePhone) {
-          updateData.instance_number = instancePhone;
-        }
+        if (instancePhone) updateData.instance_number = instancePhone;
 
-        // Se conectou, vamos buscar a foto de perfil do admin conectado
         if (newStatus === 'connected' && EVOLUTION_API_URL && EVOLUTION_API_KEY && instancePhone) {
           try {
             const rawUrl = EVOLUTION_API_URL.replace(/\/+$/, '');
             const baseUrl = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
-            
             const picRes = await fetch(`${baseUrl}/chat/fetchProfilePictureUrl/${instanceName}`, {
-               method: 'POST',
-               headers: { 'apikey': EVOLUTION_API_KEY, 'Content-Type': 'application/json' },
+               method: 'POST', headers: { 'apikey': EVOLUTION_API_KEY, 'Content-Type': 'application/json' },
                body: JSON.stringify({ number: instancePhone })
             });
             if (picRes.ok) {
               const picData = await picRes.json();
               const profileUrl = picData?.profilePictureUrl || picData?.url || picData?.data?.profilePictureUrl;
-              if (profileUrl) {
-                // Evolution serve um link da internet (se não encontrar enviará 404, por isso a checagem dupla)
-                updateData.instance_profile_pic = profileUrl;
-              }
+              if (profileUrl) updateData.instance_profile_pic = profileUrl;
             }
-          } catch (e) {
-            console.error('[webhook] Error fetching instance profile pic:', e);
-          }
+          } catch {}
         }
-
-        await supabase
-          .from('lojas')
-          .update(updateData)
-          .eq('instance_name', instanceName);
+        await supabase.from('lojas').update(updateData).eq('instance_name', instanceName);
       }
-
-      return new Response(JSON.stringify({ ok: true, event: 'connection_update', state }), {
+      return new Response(JSON.stringify({ ok: true, state }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // ===== LOG UNKNOWN EVENTS =====
-    console.log(`[webhook] Unhandled event: ${rawEvent}`);
-
-    return new Response(JSON.stringify({ ok: true, event: rawEvent, handled: false }), {
+    console.log(`[webhook] handled: false | event: ${rawEvent}`);
+    return new Response(JSON.stringify({ ok: true, handled: false }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (error: any) {
     console.error('[webhook] Critical Global Error:', error);
-    return new Response(JSON.stringify({ 
-      ok: false, 
-      error: error?.message || String(error),
-      stack: error?.stack
-    }), {
-      status: 200, // Return 200 so the frontend can show the specific error
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    return new Response(JSON.stringify({ ok: false, error: error?.message }), {
+      status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });

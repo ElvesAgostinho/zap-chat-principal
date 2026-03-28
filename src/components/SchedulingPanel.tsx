@@ -42,52 +42,49 @@ export default function SchedulingPanel() {
   const [showConfig, setShowConfig] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [form, setForm] = useState({ cliente_nome: '', cliente_telefone: '', servico: '', data_hora: '', duracao_min: 60, notas: '' });
+  const [instanceName, setInstanceName] = useState<string | null>(null);
 
   const fetchData = async () => {
     if (!storeId) return;
     setLoading(true);
-    const [{ data: ag }, { data: hr }] = await Promise.all([
+    const [
+      { data: ag }, 
+      { data: hr },
+      { data: storeData }
+    ] = await Promise.all([
       (supabase as any).from('agendamentos').select('*').eq('loja_id', storeId).order('data_hora', { ascending: true }),
       (supabase as any).from('horarios_loja').select('*').eq('loja_id', storeId),
+      supabase.from('lojas').select('instance_name').eq('id', storeId).single()
     ]);
     setAgendamentos(ag || []);
     setHorarios(hr || []);
+    if (storeData) setInstanceName(storeData.instance_name);
     setLoading(false);
   };
 
   useEffect(() => { fetchData(); }, [storeId]);
 
-  // Realtime — scoped to this store, no stale closure
+  // Realtime — scoped to this store
   useEffect(() => {
     if (!storeId) return;
     const ch = supabase
       .channel(`agendamentos-rt-${storeId}`)
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'agendamentos',
-          filter: `loja_id=eq.${storeId}`,
-        },
-        (payload) => {
-          console.log('[Realtime] agendamentos change:', payload.eventType);
-          // Refetch to keep data fresh (simple, reliable)
-          (supabase as any)
-            .from('agendamentos')
-            .select('*')
-            .eq('loja_id', storeId)
-            .order('data_hora', { ascending: true })
-            .then(({ data }: { data: Agendamento[] | null }) => {
-              setAgendamentos(data || []);
-            });
-        },
+        { event: '*', schema: 'public', table: 'agendamentos', filter: `loja_id=eq.${storeId}` },
+        () => { fetchData(); }
       )
-      .subscribe((status) => {
-        console.log('[Realtime] agendamentos channel status:', status);
-      });
+      .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [storeId]);
+
+  // Status badges colors
+  const statusColor: Record<string, string> = {
+    pendente: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
+    confirmado: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+    cancelado: 'bg-red-500/10 text-red-600 dark:text-red-400',
+    concluido: 'bg-slate-500/10 text-slate-600 dark:text-slate-400',
+  };
 
   const handleCreate = async () => {
     if (!storeId || !form.cliente_nome || !form.data_hora) { toast.error('Preencha nome e data/hora'); return; }
@@ -105,7 +102,7 @@ export default function SchedulingPanel() {
     await (supabase as any).from('agendamentos').insert({
       loja_id: storeId, cliente_nome: form.cliente_nome, cliente_telefone: form.cliente_telefone || null,
       servico: form.servico || null, data_hora: form.data_hora, duracao_min: form.duracao_min,
-      notas: form.notas || null,
+      notas: form.notas || null, status: 'confirmado'
     });
     toast.success('Agendamento criado!');
     setForm({ cliente_nome: '', cliente_telefone: '', servico: '', data_hora: '', duracao_min: 60, notas: '' });
@@ -113,10 +110,36 @@ export default function SchedulingPanel() {
     fetchData();
   };
 
-  const handleCancel = async (id: string) => {
-    await (supabase as any).from('agendamentos').update({ status: 'cancelado' }).eq('id', id);
-    toast.success('Agendamento cancelado');
-    fetchData();
+  const sendWhatsAppNotification = async (number: string | null, text: string) => {
+    if (!instanceName || !number) return;
+    try {
+      await supabase.functions.invoke('send-whatsapp', {
+        body: { instance: instanceName, number, text }
+      });
+    } catch (e) { console.error('[Notification] Error:', e); }
+  };
+
+  const handleConfirm = async (ag: Agendamento) => {
+    const { error } = await (supabase as any).from('agendamentos').update({ status: 'confirmado' }).eq('id', ag.id);
+    if (!error) {
+      toast.success('Agendamento confirmado!');
+      const date = new Date(ag.data_hora);
+      const msg = `Olá ${ag.cliente_nome}! 👋\n\nConfirmamos o teu pedido para *${ag.servico || 'o serviço'}*:\n\n🗓️ Dia: ${date.toLocaleDateString('pt-PT')}\n🕒 Hora: ${date.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}\n\nEsperamos por ti! 🚀`;
+      sendWhatsAppNotification(ag.cliente_telefone, msg);
+      fetchData();
+    }
+  };
+
+  const handleCancel = async (ag: Agendamento) => {
+    const { error } = await (supabase as any).from('agendamentos').update({ status: 'cancelado' }).eq('id', ag.id);
+    if (!error) {
+      toast.success('Agendamento cancelado');
+      if (ag.status === 'confirmado' || ag.status === 'pendente') {
+        const msg = `Olá ${ag.cliente_nome}. Informamos que o teu agendamento para o dia ${new Date(ag.data_hora).toLocaleDateString('pt-PT')} foi cancelado. Se precisares de ajuda para remarcar, estamos à disposição! 👋`;
+        sendWhatsAppNotification(ag.cliente_telefone, msg);
+      }
+      fetchData();
+    }
   };
 
   const handleComplete = async (id: string) => {
@@ -125,7 +148,6 @@ export default function SchedulingPanel() {
     fetchData();
   };
 
-  // Schedule config
   const saveHorario = async (dia: number, hora_inicio: string, hora_fim: string, ativo: boolean) => {
     if (!storeId) return;
     const existing = horarios.find(h => h.dia_semana === dia);
@@ -138,7 +160,6 @@ export default function SchedulingPanel() {
     toast.success(`Horário de ${DIAS[dia]} salvo`);
   };
 
-  // Date navigation
   const goDay = (dir: number) => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() + dir);
@@ -151,14 +172,18 @@ export default function SchedulingPanel() {
     return d.toDateString() === selectedDate.toDateString() && a.status !== 'cancelado';
   }).sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime());
 
-  const upcomingCount = agendamentos.filter(a => new Date(a.data_hora) >= new Date() && (a.status === 'confirmado' || a.status === 'pendente')).length;
+  const upcomingAgendamentos = useMemo(() => {
+    const now = new Date();
+    return agendamentos
+      .filter(a => new Date(a.data_hora) >= now && (a.status === 'confirmado' || a.status === 'pendente'))
+      .sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime())
+      .slice(0, 3);
+  }, [agendamentos]);
 
-  const statusColor: Record<string, string> = {
-    pendente: 'bg-orange-100 text-orange-700 animate-pulse',
-    confirmado: 'bg-blue-100 text-blue-700',
-    concluido: 'bg-primary/10 text-primary',
-    cancelado: 'bg-destructive/10 text-destructive',
-  };
+  const upcomingCount = useMemo(() => {
+    const now = new Date();
+    return agendamentos.filter(a => new Date(a.data_hora) >= now && a.status === 'confirmado').length;
+  }, [agendamentos]);
 
   return (
     <div className="space-y-4 animate-fade-in-up">
@@ -167,7 +192,7 @@ export default function SchedulingPanel() {
           <Calendar className="w-5 h-5 text-primary" />
           <div>
             <h2 className="font-semibold text-foreground text-lg">Agendamentos</h2>
-            <p className="text-xs text-muted-foreground">{upcomingCount} próximo(s)</p>
+            <p className="text-xs text-muted-foreground">{upcomingCount} confirmado(s)</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -184,7 +209,40 @@ export default function SchedulingPanel() {
         </div>
       </div>
 
-      {/* Config horários */}
+      {upcomingAgendamentos.length > 0 && (
+        <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 mb-2">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-primary mb-3 flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            Em Destaque (Próximos)
+          </h3>
+          <div className="space-y-2">
+            {upcomingAgendamentos.map((appt) => (
+              <div key={appt.id} className="flex items-center justify-between p-2.5 rounded-xl bg-background/50 border border-border/50 hover:border-primary/30 transition-colors group">
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                    <Clock className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-foreground capitalize leading-none mb-1">{appt.cliente_nome}</p>
+                    <p className="text-[9px] text-muted-foreground">
+                      {new Date(appt.data_hora).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })} às {new Date(appt.data_hora).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <span className="text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                    {appt.servico}
+                  </span>
+                  {appt.status === 'pendente' && (
+                    <span className="text-[7px] font-bold text-yellow-600 dark:text-yellow-400 bg-yellow-500/10 px-1 py-0.5 rounded uppercase">Pendente</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <AnimatePresence>
         {showConfig && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
@@ -208,7 +266,6 @@ export default function SchedulingPanel() {
         )}
       </AnimatePresence>
 
-      {/* New appointment form */}
       <AnimatePresence>
         {showNew && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
@@ -236,58 +293,69 @@ export default function SchedulingPanel() {
         )}
       </AnimatePresence>
 
-      {/* Date navigator */}
-      <div className="flex items-center justify-between bg-card rounded-2xl p-3 shadow-card">
-        <button onClick={() => goDay(-1)} className="p-1.5 rounded-lg bg-secondary"><ChevronLeft className="w-4 h-4" /></button>
-        <p className="text-sm font-medium text-foreground capitalize">{dateStr}</p>
-        <button onClick={() => goDay(1)} className="p-1.5 rounded-lg bg-secondary"><ChevronRight className="w-4 h-4" /></button>
+      <div className="flex items-center justify-between bg-card rounded-2xl p-3 shadow-card font-inter">
+        <button onClick={() => goDay(-1)} className="p-1.5 rounded-lg bg-secondary hover:bg-secondary/70 transition-colors"><ChevronLeft className="w-4 h-4" /></button>
+        <p className="text-sm font-bold text-foreground capitalize">{dateStr}</p>
+        <button onClick={() => goDay(1)} className="p-1.5 rounded-lg bg-secondary hover:bg-secondary/70 transition-colors"><ChevronRight className="w-4 h-4" /></button>
       </div>
 
-      {/* Appointments list */}
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
       ) : dayAgendamentos.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground text-sm">
+        <div className="text-center py-8 text-muted-foreground text-sm bg-card/30 rounded-2xl border border-dashed border-border">
           <Calendar className="w-8 h-8 mx-auto mb-2 opacity-30" />
           Nenhum agendamento para este dia
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {dayAgendamentos.map(ag => (
             <motion.div key={ag.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-              className="bg-card rounded-2xl p-4 shadow-card space-y-2">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h4 className="font-semibold text-foreground text-sm">{ag.cliente_nome}</h4>
-                  {ag.servico && <p className="text-xs text-muted-foreground">{ag.servico}</p>}
+              className="bg-card rounded-2xl p-4 shadow-card border border-border/50 hover:border-primary/20 transition-all">
+              <div className="flex items-start justify-between mb-3">
+                <div className="space-y-0.5">
+                  <h4 className="font-bold text-foreground text-sm tracking-tight">{ag.cliente_nome}</h4>
+                  {ag.servico && <p className="text-[10px] text-primary font-black uppercase tracking-widest">{ag.servico}</p>}
                   {ag.cliente_telefone && <p className="text-[11px] text-muted-foreground">📱 {ag.cliente_telefone}</p>}
                 </div>
-                <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${statusColor[ag.status] || 'bg-secondary text-muted-foreground'}`}>
+                <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${statusColor[ag.status] || 'bg-secondary text-muted-foreground'}`}>
                   {ag.status}
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Clock className="w-3.5 h-3.5" />
-                {new Date(ag.data_hora).toLocaleTimeString('pt-AO', { hour: '2-digit', minute: '2-digit' })}
-                <span>• {ag.duracao_min} min</span>
+              
+              <div className="flex items-center gap-4 text-xs text-muted-foreground bg-secondary/30 p-2 rounded-xl border border-border/20 mb-3">
+                <div className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-primary" />
+                  <span className="font-semibold text-foreground">{new Date(ag.data_hora).toLocaleTimeString('pt-AO', { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div className="flex items-center gap-1.5 border-l border-border/50 pl-4">
+                  <div className="w-2 h-2 rounded-full bg-slate-400/30" />
+                  <span>{ag.duracao_min} min</span>
+                </div>
               </div>
-              {ag.notas && <p className="text-xs text-muted-foreground bg-secondary/50 px-2 py-1 rounded-lg">{ag.notas}</p>}
+
+              {ag.notas && (
+                <div className="text-[11px] text-muted-foreground bg-primary/5 px-2.5 py-2 rounded-xl mb-3 flex gap-2">
+                  <Plus className="w-3.5 h-3.5 shrink-0 rotate-45 text-primary/40" />
+                  <p className="italic leading-relaxed">"{ag.notas}"</p>
+                </div>
+              )}
+
               {(ag.status === 'confirmado' || ag.status === 'pendente') && (
-                <div className="flex gap-2">
+                <div className="flex gap-2.5 pt-1">
                   {ag.status === 'pendente' && (
-                    <motion.button whileTap={{ scale: 0.95 }} onClick={() => (supabase as any).from('agendamentos').update({ status: 'confirmado' }).eq('id', ag.id).then(() => fetchData())}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 text-white text-xs font-medium">
+                    <motion.button whileTap={{ scale: 0.95 }} onClick={() => handleConfirm(ag)}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors shadow-sm shadow-emerald-900/20">
                       <CheckCircle className="w-3.5 h-3.5" />Confirmar
                     </motion.button>
                   )}
                   {ag.status === 'confirmado' && (
                     <motion.button whileTap={{ scale: 0.95 }} onClick={() => handleComplete(ag.id)}
-                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-medium">
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground text-xs font-bold transition-colors shadow-sm shadow-primary/20">
                       <CheckCircle className="w-3.5 h-3.5" />Concluir
                     </motion.button>
                   )}
-                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => handleCancel(ag.id)}
-                    className="px-3 py-2 rounded-xl bg-destructive/10 text-destructive text-xs font-medium"
+                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => handleCancel(ag)}
+                    className="flex items-center justify-center p-2.5 rounded-xl bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors"
                     title="Cancelar">
                     <XCircle className="w-3.5 h-3.5" />
                   </motion.button>

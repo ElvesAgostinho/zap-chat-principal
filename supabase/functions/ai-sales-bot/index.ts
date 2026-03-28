@@ -8,7 +8,7 @@ const corsHeaders = {
 const LANGUAGE_INSTRUCTIONS: Record<string, string> = {
   'pt-AO': 'Responda em Português de Angola. Use expressões angolanas naturais como "bué", "fixe", "mamá", "kota". Moeda: Kz (Kwanza). Estilo amigável e directo.',
   'pt-BR': 'Responda em Português do Brasil. Use expressões brasileiras naturais como "beleza", "show", "top". Moeda: R$ (Real). Estilo descontraído e simpático.',
-  'pt-PT': 'Responda em Português de Portugal. Use expressões portuguesas naturais. Moeda: € (Euro). Estilo educado e profissional.',
+  'pt-PT': 'Responda em Português de Portugal (pt-PT) Profissional. Use "telemóvel" em vez de "celular". NUNCA use o gerúndio brasileiro (ex: use "estou a ver" em vez de "estou vendo"). Use "tu" para proximidade ou "o senhor/a senhora" para formalidade. Moeda: € (Euro). Estilo educado, polido e directo.',
   'pt-MZ': 'Responda em Português de Moçambique. Use expressões moçambicanas naturais. Moeda: MT (Metical). Estilo caloroso e acolhedor.',
   'pt-ST': 'Responda em Português de São Tomé e Príncipe. Use expressões santomenses. Moeda: Db (Dobra). Estilo amável e próximo.',
 };
@@ -201,7 +201,7 @@ Deno.serve(async (req) => {
         .maybeSingle();
 
       if (config) {
-        storeLanguage = config.linguagem_bot || 'neutro';
+        let storeLanguage = config.linguagem_bot || 'neutro';
         storeIdioma = config.idioma || 'pt-AO';
         const businessType = config.tipo_negocio || 'Geral';
         storeContext = `\n\nINFORMAÇÕES DO NEGÓCIO (${businessType.toUpperCase()}):

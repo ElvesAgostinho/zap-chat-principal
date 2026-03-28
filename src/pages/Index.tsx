@@ -19,6 +19,7 @@ import ConversationsPanel from '@/components/ConversationsPanel';
 import AutomationPanel from '@/components/AutomationPanel';
 import DeliveryPanel from '@/components/DeliveryPanel';
 import SchedulingPanel from '@/components/SchedulingPanel';
+import NotificationsCenter from '@/components/NotificationsCenter';
 import PipelinePanel from '@/components/PipelinePanel';
 import StockPanel from '@/components/StockPanel';
 import AdminPanel from '@/pages/AdminPanel';
@@ -343,20 +344,27 @@ export default function Index() {
           {/* Unified Header */}
             <header className="mb-12 flex items-end justify-between border-b border-white/5 pb-8">
               <motion.div
-                key={activeTab + '-title'}
+                key={activeTab}
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.3 }}
+                className="flex items-end justify-between w-full"
               >
-                <h1 className="text-5xl font-bold tracking-tight text-foreground mb-3 font-display">{authStoreName || 'CRM TOP'}</h1>
-                <div className="flex items-center gap-4">
-                  <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] border border-primary/20 shadow-glow">
-                      Official Hub
-                  </span>
-                  <div className="h-4 w-[1px] bg-border/50 mx-1" />
-                  <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
-                      {TAB_TITLES[activeTab]}
-                  </p>
+                <div>
+                  <h1 className="text-5xl font-bold tracking-tight text-foreground mb-3 font-display">{authStoreName || 'CRM TOP'}</h1>
+                  <div className="flex items-center gap-4">
+                    <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] border border-primary/20 shadow-glow">
+                        Official Hub
+                    </span>
+                    <div className="h-4 w-[1px] bg-border/50 mx-1" />
+                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
+                        {TAB_TITLES[activeTab]}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-4 mb-2">
+                   <NotificationsCenter />
                 </div>
               </motion.div>
             </header>
