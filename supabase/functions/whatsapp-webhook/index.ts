@@ -464,27 +464,29 @@ Deno.serve(async (req) => {
                         } else if (sd.action === 'cancel') {
                           const { error: cErr } = await supabase.from('agendamentos').update({ status: 'cancelado' }).eq('lead_id', leadId).eq('loja_id', storeId).neq('status', 'concluido');
                           if (!cErr) {
-                            const cMsg = `Agendamento cancelado com sucesso. Se precisares de novo horário, diz-me! 👋`;
+                            const cMsg = `Com certeza, conforme solicitado, o seu agendamento foi cancelado com sucesso. 👋`;
                             await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: cMsg }) });
-                            await supabase.from('notificacoes').insert({ loja_id: storeId, lead_id: leadId, tipo: 'agendamento', titulo: '🚫 Agendamento Cancelado', mensagem: `${leadName} cancelou o agendamento.`, link: '/schedule' });
+                            await supabase.from('notificacoes').insert({ loja_id: storeId, lead_id: leadId, tipo: 'agendamento', titulo: '🚫 Agendamento Cancelado', mensagem: `${leadName} cancelou o agendamento via bot.`, link: '/schedule' });
                           }
                         }
                       } catch (e) { console.error('[webhook] Schedule error:', e); }
                     }
 
                     if (botData.send_payment) {
-                      const { data: store } = await supabase.from('lojas').select('iban, conta_nome').eq('id', storeId).maybeSingle();
-                      if (store?.iban) {
-                        const payMsg = `🏦 IBAN: ${store.iban}\n👤 Titular: ${store.conta_nome || 'A confirmar'}\n\nEnvia o comprovativo por aqui! 🙏`;
+                      const { data: payments } = await supabase.from('formas_pagamento').select('tipo, detalhes').eq('loja_id', storeId).eq('is_active', true);
+                      if (payments && payments.length > 0) {
+                        const payMsg = `Aqui tens as nossas formas de pagamento:\n\n` + 
+                          payments.map(p => `🔹 *${p.tipo}*: ${p.detalhes}`).join('\n') + 
+                          `\n\nPor favor, envia o comprovativo após a operação! 🙏`;
                         await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: payMsg }) });
                         await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: payMsg, tipo: 'enviada', is_bot: true, loja_id: storeId });
                       }
                     }
 
                     if (botData.send_location) {
-                      const { data: store } = await supabase.from('lojas').select('localizacao_url').eq('id', storeId).maybeSingle();
-                      if (store?.localizacao_url) {
-                        const locMsg = `📍 Localização: ${store.localizacao_url}`;
+                      const { data: store } = await supabase.from('lojas').select('endereco').eq('id', store_id).maybeSingle();
+                      if (store?.endereco) {
+                        const locMsg = `📍 *A nossa localização:*\n${store.endereco}\n\nPodes usar a morada acima para chegar até nós! 🚗`;
                         await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: locMsg }) });
                         await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: locMsg, tipo: 'enviada', is_bot: true, loja_id: storeId });
                       }
