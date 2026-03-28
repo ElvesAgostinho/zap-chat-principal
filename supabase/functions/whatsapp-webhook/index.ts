@@ -459,15 +459,38 @@ Deno.serve(async (req: any) => {
                               await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: confMsg }) });
                             }
                           } else if (sd.action === 'reschedule') {
-                            const { data: ext } = await supabase.from('agendamentos').select('id, notas').eq('lead_id', leadId).eq('loja_id', storeId).in('status', ['pendente', 'confirmado']).order('data_hora', { ascending: false }).limit(1).maybeSingle();
-                            if (ext) {
-                              const { error: uErr } = await supabase.from('agendamentos').update({ data_hora: isoDate, status: 'pendente', notas: (ext.notas ? ext.notas + '\n' : '') + '🔄 Pedido de reagendamento via Bot' }).eq('id', ext.id);
+                            // Prioritize closest upcoming appointment
+                            const { data: ext } = await supabase.from('agendamentos')
+                              .select('id, notas')
+                              .eq('lead_id', leadId)
+                              .eq('loja_id', storeId)
+                              .gte('data_hora', new Date().toISOString())
+                              .in('status', ['pendente', 'confirmado'])
+                              .order('data_hora', { ascending: true })
+                              .limit(1)
+                              .maybeSingle();
+
+                            const targetId = ext?.id || await supabase.from('agendamentos')
+                              .select('id')
+                              .eq('lead_id', leadId)
+                              .eq('loja_id', storeId)
+                              .order('data_hora', { ascending: false })
+                              .limit(1)
+                              .maybeSingle().then(r => r.data?.id);
+
+                            if (targetId) {
+                              const { error: uErr } = await supabase.from('agendamentos').update({ 
+                                data_hora: isoDate, 
+                                status: 'pendente',
+                                notas: ((ext?.notas || '') + '\n🔄 Reagendado via Bot').trim()
+                              }).eq('id', targetId);
+                              
                               if (!uErr) {
                                 const upMsg = `🔄 *Agendamento Atualizado!*\n\nO seu horário foi alterado para:\n📅 ${targetDate.toLocaleDateString('pt-PT')} às ${targetDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}\n\nObrigado pela preferência! 👋`;
                                 await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: upMsg }) });
                               }
                             } else {
-                              // Fallback: Create new if none found to reschedule
+                              // Fallback: Create new if none found
                               await supabase.from('agendamentos').insert({ lead_id: leadId, loja_id: storeId, data_hora: isoDate, status: 'pendente', cliente_nome: leadName, cliente_whatsapp: phone, servico: sd.servico || 'Atendimento' });
                               const fallbackMsg = `✅ *Novo Agendamento Confirmado!*\n\nComo não encontrei a sua marcação anterior, criei uma nova para:\n📅 ${targetDate.toLocaleDateString('pt-PT')} às ${targetDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}\n\nAté breve! 🚀`;
                               await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: fallbackMsg }) });

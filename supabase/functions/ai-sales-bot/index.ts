@@ -204,28 +204,36 @@ Deno.serve(async (req) => {
 
     // 3. Get History
     const { data: history } = await supabase.from('mensagens').select('conteudo, tipo, is_bot').eq('lead_id', lead_id).order('created_at', { ascending: true }).limit(20);
-    const chatHistory = (history || []).map(msg => ({
+    const chatHistory = (history || []).map((msg: any) => ({
       role: msg.tipo === 'recebida' ? 'user' as const : 'assistant' as const,
       content: msg.conteudo,
     }));
 
-    // 4. Get Current Appointment + Busy Slots (Context Enhancement)
-    let currentApptContext = 'Agendamento Atual: nenhum';
+    // 4. Get Current Appointment + Busy Slots (Context Enhancement - PHASE 2)
+    let leadApptsContext = 'Agendamentos Futuros: Nenhum';
     let busySlotsContext = '';
+    
+    // Fetch lead data explicitly for context
+    const { data: leadData } = await supabase.from('leads').select('*').eq('id', lead_id).single();
+
     if (store_id) {
-      const { data: latestAppt } = await supabase.from('agendamentos')
-        .select('data_hora, servico, status')
+      // Get ALL upcoming appointments for this lead
+      const { data: leadAppts } = await supabase.from('agendamentos')
+        .select('data_hora, servico, status, duracao_min')
         .eq('lead_id', lead_id)
         .eq('loja_id', store_id)
-        .neq('status', 'concluido')
-        .order('data_hora', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .gte('data_hora', new Date().toISOString())
+        .neq('status', 'cancelado')
+        .order('data_hora', { ascending: true });
 
-      if (latestAppt) {
-        currentApptContext = `Agendamento Atual: ${latestAppt.status.toUpperCase()} para ${new Date(latestAppt.data_hora).toLocaleString('pt-PT')} (${latestAppt.servico})`;
+      if (leadAppts && leadAppts.length > 0) {
+        leadApptsContext = '📌 TEUS AGENDAMENTOS FUTUROS:\n' + leadAppts.map((a: any) => {
+          const end = new Date(new Date(a.data_hora).getTime() + (a.duracao_min || 60) * 60000);
+          return `- ${a.servico}: ${new Date(a.data_hora).toLocaleString('pt-PT')} até ${end.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })} [Status: ${a.status.toUpperCase()}]`;
+        }).join('\n');
       }
 
+      // Get ALL busy slots for the store (Next 3 days) with Intervals
       const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 3);
       const { data: busy } = await supabase.from('agendamentos')
         .select('data_hora, duracao_min')
@@ -235,38 +243,46 @@ Deno.serve(async (req) => {
         .in('status', ['pendente', 'confirmado']);
 
       if (busy && busy.length > 0) {
-        busySlotsContext = '\n\nHORÁRIOS OCUPADOS (NÃO sugerir estes):\n' + busy.map(b => `- ${new Date(b.data_hora).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`).join('\n');
+        busySlotsContext = '\n\n⚠️ AGENDA OCUPADA (NÃO marcar nestes intervalos):\n' + busy.map((b: any) => {
+          const start = new Date(b.data_hora);
+          const end = new Date(start.getTime() + (b.duracao_min || 60) * 60000);
+          return `- ${start.toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} às ${end.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}`;
+        }).join('\n');
       }
     }
 
     // 5. Build AI Persona from Rules
     const langInstruction = LANGUAGE_INSTRUCTIONS[storeIdioma] || LANGUAGE_INSTRUCTIONS['pt-PT'];
     
-    // Inject extra context into SYSTEM_PROMPT
+    // Inject extra context into SYSTEM_PROMPT (Phase 2)
     const dynamicContext = `
 ---
 📌 CONTEXTO DO CLIENTE (MEMÓRIA)
-* ${currentApptContext}
+* Nome/Interesse: ${leadData?.nome || 'Cliente'} / ${leadData?.interesse || 'Sem preferências'}
+* ${leadApptsContext}
 ${busySlotsContext}
-* Histórico: O bot deve analisar as interações anteriores para manter o foco e as preferências.
+
+---
+🌟 REGRAS DE OURO (NÃO VIOLAR)
+1. CONFLITOS DE INTERVALO: Verifique sobreposições na "AGENDA OCUPADA". Considere duração mínima de 60 min.
+2. HORÁRIO DE FECHO: Nunca marque nada que termine após o encerramento da loja.
+3. AMBIGUIDADE: Se houver >1 agendamento futuro, pergunte qual deseja alterar.
+4. MEMÓRIA: Mantenha e mencione preferências ditas anteriormente.
 
 ---
 🗓️ REGRAS DE AGENDAMENTO AUTOMÁTICO
 Estados: nenhum | pendente | confirmado | cancelado | reagendando
 
 1. REAGENDAR:
-   - Se o cliente já tem agendamento "Confirmado", sugerir nova data.
-   - Usar template: "O seu agendamento foi alterado para {{nova_data_hora}}. Confirma, por favor?"
+   - Template: "O seu agendamento foi alterado para {{nova_data_hora}}. Confirma, por favor?"
    - Marcador: [REMARCAR_AGENDAMENTO:data_hora]
 
 2. CANCELAR:
-   - Confirmar intenção, usar marcador [CANCELAR_AGENDAMENTO].
-   - Usar template: "O seu agendamento de {{data_hora_anterior}} foi cancelado. Deseja marcar outro horário?"
+   - Template: "O seu agendamento de {{data_hora_anterior}} foi cancelado. Deseja marcar outro horário?"
+   - Marcador: [CANCELAR_AGENDAMENTO]
 
 3. NOVO:
-   - Checar conflitos com os "Horários Ocupados" acima.
-   - Se houver conflito, avisar o cliente e sugerir alternativa.
-   - Usar template: "O seu agendamento para {{data_hora}} foi registado com sucesso."
+   - Template: "O seu agendamento para {{data_hora}} foi registado com sucesso."
    - Marcador: [AGENDAR:servico|data_hora]
 
 ---
