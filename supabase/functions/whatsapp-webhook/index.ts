@@ -814,6 +814,12 @@ Deno.serve(async (req) => {
                           method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
                           body: JSON.stringify({ number: phone, text: cMsg }),
                         });
+                        // Notify CRM Admin in real-time
+                        await supabase.from('notificacoes').insert({
+                          loja_id: storeId, lead_id: leadId, tipo: 'agendamento',
+                          titulo: '🚫 Agendamento Cancelado', mensagem: `${leadName} cancelou o agendamento via bot.`,
+                          link: '/schedule'
+                        });
                       }
                     }
                   } catch (e) { console.error('[webhook] Schedule error:', e); }

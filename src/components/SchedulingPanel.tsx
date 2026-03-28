@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Clock, Plus, Trash2, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight, Save } from 'lucide-react';
+import { Calendar, Clock, Plus, Trash2, Loader2, CheckCircle, XCircle, ChevronLeft, ChevronRight, Save, AlertCircle, History } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -80,10 +80,10 @@ export default function SchedulingPanel() {
 
   // Status badges colors
   const statusColor: Record<string, string> = {
-    pendente: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
-    confirmado: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-    cancelado: 'bg-red-500/10 text-red-600 dark:text-red-400',
-    concluido: 'bg-slate-500/10 text-slate-600 dark:text-slate-400',
+    pendente: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border border-yellow-500/20',
+    confirmado: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
+    cancelado: 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20',
+    concluido: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20',
   };
 
   const handleCreate = async () => {
@@ -167,20 +167,28 @@ export default function SchedulingPanel() {
   };
 
   const dateStr = selectedDate.toLocaleDateString('pt-AO', { weekday: 'long', day: '2-digit', month: 'long' });
+  
+  // Agora incluímos os cancelados para que o utilizador veja o que aconteceu no dia específico
   const dayAgendamentos = agendamentos.filter(a => {
     const d = new Date(a.data_hora);
-    return d.toDateString() === selectedDate.toDateString() && a.status !== 'cancelado';
+    return d.toDateString() === selectedDate.toDateString();
   }).sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime());
+
+  const pendingAgendamentos = useMemo(() => {
+    return agendamentos
+      .filter(a => a.status === 'pendente')
+      .sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime());
+  }, [agendamentos]);
 
   const upcomingAgendamentos = useMemo(() => {
     const now = new Date();
     return agendamentos
-      .filter(a => new Date(a.data_hora) >= now && (a.status === 'confirmado' || a.status === 'pendente'))
+      .filter(a => new Date(a.data_hora) >= now && a.status === 'confirmado')
       .sort((a, b) => new Date(a.data_hora).getTime() - new Date(b.data_hora).getTime())
       .slice(0, 3);
   }, [agendamentos]);
 
-  const upcomingCount = useMemo(() => {
+  const confirmedCount = useMemo(() => {
     const now = new Date();
     return agendamentos.filter(a => new Date(a.data_hora) >= now && a.status === 'confirmado').length;
   }, [agendamentos]);
@@ -192,7 +200,14 @@ export default function SchedulingPanel() {
           <Calendar className="w-5 h-5 text-primary" />
           <div>
             <h2 className="font-semibold text-foreground text-lg">Agendamentos</h2>
-            <p className="text-xs text-muted-foreground">{upcomingCount} confirmado(s)</p>
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-muted-foreground">{confirmedCount} confirmado(s)</p>
+              {pendingAgendamentos.length > 0 && (
+                <p className="text-[10px] font-bold text-yellow-600 dark:text-yellow-400 bg-yellow-500/10 px-1.5 py-0.5 rounded-full animate-pulse border border-yellow-500/20">
+                  {pendingAgendamentos.length} Pendente(s)
+                </p>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex gap-2">
@@ -209,15 +224,57 @@ export default function SchedulingPanel() {
         </div>
       </div>
 
+      {pendingAgendamentos.length > 0 && (
+        <div className="p-4 rounded-2xl bg-yellow-500/5 border border-yellow-500/20 mb-2">
+          <h3 className="text-[10px] font-black uppercase tracking-widest text-yellow-600 dark:text-yellow-400 mb-3 flex items-center gap-2">
+            <AlertCircle className="w-3.5 h-3.5" />
+            Aguardando Aprovação
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {pendingAgendamentos.map((appt) => (
+              <div key={appt.id} className="flex flex-col gap-3 p-3.5 rounded-xl bg-card border border-yellow-500/20 shadow-sm">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-yellow-500/10 flex items-center justify-center text-yellow-600">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-foreground leading-none mb-1">{appt.cliente_nome}</p>
+                      <p className="text-[10px] text-muted-foreground">
+                        {new Date(appt.data_hora).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' })} às {new Date(appt.data_hora).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-full bg-yellow-500/10 text-yellow-600 border border-yellow-500/20">
+                    {appt.servico}
+                  </span>
+                </div>
+                
+                <div className="flex gap-2">
+                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => handleConfirm(appt)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg bg-emerald-600 text-white text-[11px] font-bold shadow-sm shadow-emerald-900/20">
+                    <CheckCircle className="w-3 h-3" />Confirmar
+                  </motion.button>
+                  <motion.button whileTap={{ scale: 0.95 }} onClick={() => handleCancel(appt)}
+                    className="flex items-center justify-center px-4 py-2 rounded-lg bg-destructive/10 text-destructive text-[11px] font-bold">
+                    <XCircle className="w-3 h-3" />
+                  </motion.button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {upcomingAgendamentos.length > 0 && (
         <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10 mb-2">
           <h3 className="text-[10px] font-black uppercase tracking-widest text-primary mb-3 flex items-center gap-2">
             <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-            Em Destaque (Próximos)
+            Próximos Agendamentos
           </h3>
           <div className="space-y-2">
             {upcomingAgendamentos.map((appt) => (
-              <div key={appt.id} className="flex items-center justify-between p-2.5 rounded-xl bg-background/50 border border-border/50 hover:border-primary/30 transition-colors group">
+              <div key={appt.id} className="flex items-center justify-between p-2.5 rounded-xl bg-background/50 border border-border/50">
                 <div className="flex items-center gap-3">
                   <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                     <Clock className="w-3.5 h-3.5" />
@@ -229,14 +286,9 @@ export default function SchedulingPanel() {
                     </p>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
-                    {appt.servico}
-                  </span>
-                  {appt.status === 'pendente' && (
-                    <span className="text-[7px] font-bold text-yellow-600 dark:text-yellow-400 bg-yellow-500/10 px-1 py-0.5 rounded uppercase">Pendente</span>
-                  )}
-                </div>
+                <span className="text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                  {appt.servico}
+                </span>
               </div>
             ))}
           </div>
@@ -310,15 +362,18 @@ export default function SchedulingPanel() {
         <div className="space-y-3">
           {dayAgendamentos.map(ag => (
             <motion.div key={ag.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
-              className="bg-card rounded-2xl p-4 shadow-card border border-border/50 hover:border-primary/20 transition-all">
+              className={`bg-card rounded-2xl p-4 shadow-card border border-border/50 hover:border-primary/20 transition-all ${ag.status === 'cancelado' ? 'opacity-60 bg-muted/30 grayscale-[0.5]' : ''}`}>
               <div className="flex items-start justify-between mb-3">
                 <div className="space-y-0.5">
-                  <h4 className="font-bold text-foreground text-sm tracking-tight">{ag.cliente_nome}</h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-foreground text-sm tracking-tight">{ag.cliente_nome}</h4>
+                    {ag.status === 'cancelado' && <History className="w-3 h-3 text-red-500" />}
+                  </div>
                   {ag.servico && <p className="text-[10px] text-primary font-black uppercase tracking-widest">{ag.servico}</p>}
                   {ag.cliente_telefone && <p className="text-[11px] text-muted-foreground">📱 {ag.cliente_telefone}</p>}
                 </div>
                 <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${statusColor[ag.status] || 'bg-secondary text-muted-foreground'}`}>
-                  {ag.status}
+                  {ag.status === 'cancelado' ? 'CANCELADO' : ag.status}
                 </span>
               </div>
               

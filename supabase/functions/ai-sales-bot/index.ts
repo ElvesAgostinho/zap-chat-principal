@@ -304,8 +304,9 @@ Deno.serve(async (req) => {
           scheduleContext += '\n   Exemplo: "Um momento, já marco aqui... 📅 [AGENDAR:Manicure|2026-03-28T10:00]"';
           scheduleContext += '\n4. Se quiser REMARCAR: use [REMARCAR_AGENDAMENTO:AAAA-MM-DDTHH:MM]';
           scheduleContext += '\n   Exemplo: "Claro, já actualizo aqui... 📅 [REMARCAR_AGENDAMENTO:2026-03-29T14:00]"';
-          scheduleContext += '\n5. Se quiser CANCELAR: use [CANCELAR_AGENDAMENTO]';
-          scheduleContext += '\n⚠️ SEM o marcador, o agendamento NÃO é gravado no sistema.';
+          scheduleContext += '\n5. Se o cliente quiser CANCELAR ou DESMARCAR: use OBRIGATORIAMENTE [CANCELAR_AGENDAMENTO]';
+          scheduleContext += '\n   Exemplo: "Sem problema, já desmarquei o teu horário. 👋 [CANCELAR_AGENDAMENTO]"';
+          scheduleContext += '\n⚠️ SEM o marcador, o agendamento NÃO é cancelado no sistema.';
         }
       }
     }
