@@ -42,6 +42,7 @@ export default function SchedulingPanel() {
   const [showConfig, setShowConfig] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [form, setForm] = useState({ cliente_nome: '', cliente_telefone: '', servico: '', data_hora: '', duracao_min: 60, notas: '' });
+  const [editingAgendamento, setEditingAgendamento] = useState<Agendamento | null>(null);
   const [instanceName, setInstanceName] = useState<string | null>(null);
 
   const fetchData = async () => {
@@ -135,10 +136,31 @@ export default function SchedulingPanel() {
     if (!error) {
       toast.success('Agendamento cancelado');
       if (ag.status === 'confirmado' || ag.status === 'pendente') {
-        const msg = `Olá ${ag.cliente_nome}! 👋\n\nInformamos que o teu agendamento para o dia ${new Date(ag.data_hora).toLocaleDateString('pt-PT')} foi cancelado.\n\nSe precisares de ajuda para remarcar ou se tiveres alguma questão, estamos à tua inteira disposição. Até breve! 👋`;
+        const msg = `Olá ${ag.cliente_nome}! 👋\n\nInformamos que o seu agendamento para o dia ${new Date(ag.data_hora).toLocaleDateString('pt-PT')} foi cancelado.\n\nSe precisares de ajuda para remarcar ou se tiveres alguma questão, estamos à tua inteira disposição. Até breve! 👋`;
         sendWhatsAppNotification(ag.cliente_telefone, msg);
       }
       fetchData();
+    }
+  };
+
+  const handleReschedule = async () => {
+    if (!editingAgendamento || !editingAgendamento.data_hora) return;
+    
+    const { error } = await (supabase as any).from('agendamentos').update({ 
+      data_hora: editingAgendamento.data_hora,
+      servico: editingAgendamento.servico,
+      notas: (editingAgendamento.notas ? editingAgendamento.notas + '\n' : '') + '🔄 Alterado pelo administrador'
+    }).eq('id', editingAgendamento.id);
+
+    if (!error) {
+      toast.success('Agendamento atualizado!');
+      const date = new Date(editingAgendamento.data_hora);
+      const msg = `Olá ${editingAgendamento.cliente_nome}! 👋\n\nInformamos que o seu agendamento para *${editingAgendamento.servico || 'o serviço'}* foi atualizado:\n\n🗓️ Novo Dia: ${date.toLocaleDateString('pt-PT')}\n🕒 Nova Hora: ${date.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}\n\nPedimos desculpa por qualquer incómodo. Até breve! 🚀`;
+      sendWhatsAppNotification(editingAgendamento.cliente_telefone, msg);
+      setEditingAgendamento(null);
+      fetchData();
+    } else {
+      toast.error('Erro ao atualizar agendamento');
     }
   };
 
@@ -368,6 +390,15 @@ export default function SchedulingPanel() {
                   <div className="flex items-center gap-2">
                     <h4 className="font-bold text-foreground text-sm tracking-tight">{ag.cliente_nome}</h4>
                     {ag.status === 'cancelado' && <History className="w-3 h-3 text-red-500" />}
+                    {(ag.status === 'confirmado' || ag.status === 'pendente') && (
+                      <button 
+                        onClick={() => setEditingAgendamento(ag)}
+                        className="p-1 px-1.5 rounded-lg bg-secondary hover:bg-primary/10 text-muted-foreground hover:text-primary transition-all ml-1"
+                        title="Reagendar / Editar"
+                      >
+                        <Save className="w-3 h-3 rotate-180" /> {/* Using Save rotated as a replacement for Edit icon contextually */}
+                      </button>
+                    )}
                   </div>
                   {ag.servico && <p className="text-[10px] text-primary font-black uppercase tracking-widest">{ag.servico}</p>}
                   {ag.cliente_telefone && <p className="text-[11px] text-muted-foreground">📱 {ag.cliente_telefone}</p>}
@@ -426,6 +457,62 @@ export default function SchedulingPanel() {
           ))}
         </div>
       )}
+
+      {/* Modal / Dialog de Edição/Reagendamento */}
+      <AnimatePresence>
+        {editingAgendamento && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-card w-full max-w-sm rounded-3xl shadow-2xl border border-border p-6 space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-foreground">Reagendar Agendamento</h3>
+                <button onClick={() => setEditingAgendamento(null)} className="p-2 rounded-xl bg-secondary hover:bg-secondary/70"><XCircle className="w-5 h-5 text-muted-foreground" /></button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-black uppercase text-muted-foreground mb-1 block">Cliente</label>
+                  <p className="text-sm font-bold text-foreground">{editingAgendamento.cliente_nome}</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                  <div>
+                    <label className="text-[10px] font-black uppercase text-muted-foreground mb-1 block">Data e Hora</label>
+                    <Input 
+                      type="datetime-local" 
+                      value={editingAgendamento.data_hora.slice(0, 16)} 
+                      onChange={e => setEditingAgendamento(p => p ? ({ ...p, data_hora: e.target.value }) : null)} 
+                      className="text-sm rounded-xl font-semibold" 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black uppercase text-muted-foreground mb-1 block">Serviço</label>
+                    <Input 
+                      value={editingAgendamento.servico || ''} 
+                      onChange={e => setEditingAgendamento(p => p ? ({ ...p, servico: e.target.value }) : null)} 
+                      className="text-sm rounded-xl font-semibold" 
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <motion.button 
+                    whileTap={{ scale: 0.95 }} 
+                    onClick={handleReschedule}
+                    className="w-full py-3 rounded-2xl bg-primary text-primary-foreground text-sm font-bold shadow-glow"
+                  >
+                    Confirmar Alteração e Notificar
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

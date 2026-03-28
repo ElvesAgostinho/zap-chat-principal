@@ -28,13 +28,27 @@ interface Config {
   mensagemBoasVindas: string; 
   linguagemBot: string; 
   idioma: string; 
+  tomVoz: string;
+  politicaAgendamento: string;
   slug?: string;
 }
 
 export default function StoreConfigPanel() {
   const { storeId, role } = useAuth();
   const isAdmin = role === 'admin';
-  const [config, setConfig] = useState<Config>({ nomeLoja: '', telefone: '', endereco: '', formasPagamento: [], zonasEntrega: [], mensagemBoasVindas: '', linguagemBot: '', idioma: 'pt-AO', slug: '' });
+  const [config, setConfig] = useState<Config>({ 
+    nomeLoja: '', 
+    telefone: '', 
+    endereco: '', 
+    formasPagamento: [], 
+    zonasEntrega: [], 
+    mensagemBoasVindas: '', 
+    linguagemBot: '', 
+    idioma: 'pt-AO', 
+    tomVoz: 'formal',
+    politicaAgendamento: 'opcional',
+    slug: '' 
+  });
   const [newPayment, setNewPayment] = useState({ tipo: '', detalhes: '' });
   const [newZone, setNewZone] = useState({ zona: '', taxa: '' });
   const [botActive, setBotActive] = useState(true);
@@ -60,6 +74,8 @@ export default function StoreConfigPanel() {
         zonasEntrega: z || [], 
         formasPagamento: p || [], 
         idioma: loja.idioma || 'pt-AO',
+        tomVoz: loja.tom_voz || 'formal',
+        politicaAgendamento: loja.politica_agendamento || 'opcional',
         slug: loja.slug || ''
       });
     }
@@ -88,6 +104,8 @@ export default function StoreConfigPanel() {
         mensagem_boas_vindas: config.mensagemBoasVindas, 
         linguagem_bot: config.linguagemBot,
         idioma: config.idioma,
+        tom_voz: config.tomVoz,
+        politica_agendamento: config.politicaAgendamento,
         slug: config.slug,
       }).eq('id', storeId);
 
@@ -284,6 +302,46 @@ export default function StoreConfigPanel() {
             placeholder="Ex: Seja amigável e sempre ofereça nosso catálogo {{link_loja}} se o cliente quiser ver produtos."
           />
         </div>
+        <div className="space-y-4 pt-2 border-t border-border/50">
+          <div className="flex items-center gap-2">
+            <Bot className="w-4 h-4 text-primary" />
+            <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Personalidade e Agendamento</span>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-muted-foreground uppercase">Tom de Voz</label>
+              <div className="flex bg-secondary p-1 rounded-xl">
+                <button 
+                  onClick={() => setConfig(p => ({ ...p, tomVoz: 'formal' }))} 
+                  className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${config.tomVoz === 'formal' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}
+                >
+                  Formal (PT-PT)
+                </button>
+                <button 
+                  onClick={() => setConfig(p => ({ ...p, tomVoz: 'descontraído' }))} 
+                  className={`flex-1 py-1.5 text-[10px] font-bold rounded-lg transition-all ${config.tomVoz === 'descontraído' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'}`}
+                >
+                  Descontraído
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[11px] font-bold text-muted-foreground uppercase">Regras de Agendamento</label>
+              <select 
+                value={config.politicaAgendamento} 
+                onChange={e => setConfig(p => ({ ...p, politicaAgendamento: e.target.value }))}
+                className="w-full bg-secondary border-none rounded-xl p-2 text-[11px] font-semibold text-foreground outline-none focus:ring-1 ring-primary/30"
+              >
+                <option value="false">Desactivado (Não oferece horários)</option>
+                <option value="opcional">Opcional (Apenas se o cliente pedir)</option>
+                <option value="obrigatorio">Obrigatório (Oferece horários proativamente)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <div className="bg-primary/5 p-4 rounded-xl border border-primary/20">
           <p className="text-[10px] font-bold text-primary uppercase mb-1">Dica de Automação</p>
           <p className="text-xs text-muted-foreground italic">
@@ -293,7 +351,9 @@ export default function StoreConfigPanel() {
         </div>
       </motion.div>
 
-      <motion.button whileTap={{ scale: 0.97 }} onClick={save} className="w-full px-4 py-3 rounded-xl bg-primary text-primary-foreground font-medium text-sm">Salvar Configurações</motion.button>
+      <motion.button whileTap={{ scale: 0.97 }} onClick={save} className="w-full px-4 py-3 rounded-xl bg-primary text-primary-foreground font-bold text-sm shadow-glow">
+        Salvar Configurações
+      </motion.button>
     </div>
   );
 }

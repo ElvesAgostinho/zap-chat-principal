@@ -455,16 +455,24 @@ Deno.serve(async (req) => {
                               const { error: sErr } = await supabase.from('agendamentos').insert({ lead_id: leadId, loja_id: storeId, data_hora: isoDate, status: 'pendente', cliente_nome: leadName, cliente_whatsapp: phone, servico: sd.servico || 'Atendimento' });
                               if (!sErr) {
                                 await supabase.from('notificacoes').insert({ loja_id: storeId, lead_id: leadId, tipo: 'agendamento', titulo: '📅 Novo Agendamento', mensagem: `${leadName} agendou para ${targetDate.toLocaleString('pt-PT')}.`, link: '/schedule' });
+                                const confMsg = `✅ *Marcação Solicitada!*\n\nServiço: ${sd.servico || 'Atendimento'}\nData: ${targetDate.toLocaleDateString('pt-PT')}\nHora: ${targetDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}\n\nAguarde a confirmação da nossa equipa. 😊`;
+                                await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: confMsg }) });
                               }
                             } else {
                                const { data: ext } = await supabase.from('agendamentos').select('id, notas').eq('lead_id', leadId).eq('loja_id', storeId).in('status', ['pendente', 'confirmado']).order('data_hora', { ascending: false }).limit(1).maybeSingle();
-                               if (ext) await supabase.from('agendamentos').update({ data_hora: isoDate, status: 'pendente', notas: (ext.notas ? ext.notas + '\n' : '') + '🔄 Pedido de reagendamento' }).eq('id', ext.id);
+                               if (ext) {
+                                 const { error: uErr } = await supabase.from('agendamentos').update({ data_hora: isoDate, status: 'pendente', notas: (ext.notas ? ext.notas + '\n' : '') + '🔄 Pedido de reagendamento via Bot' }).eq('id', ext.id);
+                                 if (!uErr) {
+                                   const confMsg = `🔄 *Agendamento Atualizado!*\n\nO seu horário foi alterado para:\n📅 ${targetDate.toLocaleDateString('pt-PT')} às ${targetDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}\n\nAté breve! 👋`;
+                                   await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: confMsg }) });
+                                 }
+                               }
                             }
                           } catch (e) { console.error('[webhook] Date parse error:', e); }
                         } else if (sd.action === 'cancel') {
                           const { error: cErr } = await supabase.from('agendamentos').update({ status: 'cancelado' }).eq('lead_id', leadId).eq('loja_id', storeId).neq('status', 'concluido');
                           if (!cErr) {
-                            const cMsg = `Com certeza, conforme solicitado, o seu agendamento foi cancelado com sucesso. 👋`;
+                            const cMsg = `🚫 *Agendamento Cancelado*\n\nConforme o seu pedido, o agendamento foi cancelado com sucesso. Se desejar marcar uma nova data, estou aqui para ajudar! 👋`;
                             await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: cMsg }) });
                             await supabase.from('notificacoes').insert({ loja_id: storeId, lead_id: leadId, tipo: 'agendamento', titulo: '🚫 Agendamento Cancelado', mensagem: `${leadName} cancelou o agendamento via bot.`, link: '/schedule' });
                           }
