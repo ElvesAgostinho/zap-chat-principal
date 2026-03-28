@@ -105,7 +105,7 @@ export default function NotificationsCenter() {
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
-              className="absolute left-0 mt-2 w-80 max-h-[400px] bg-card border border-border rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col"
+              className="absolute right-0 mt-2 w-80 max-h-[400px] bg-card border border-border rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col"
             >
               <div className="p-4 border-b border-border flex items-center justify-between bg-secondary/20">
                 <h3 className="font-semibold text-sm">Notificações</h3>
