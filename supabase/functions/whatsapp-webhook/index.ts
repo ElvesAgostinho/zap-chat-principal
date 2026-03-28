@@ -65,13 +65,13 @@ function detectEscalation(text: string): { shouldEscalate: boolean; reason: Esca
 }
 
 const ESCALATION_MESSAGES: Record<string, string> = {
-  human_request: 'Claro! Vou transferir para um atendente agora mesmo 😊',
-  complaint: 'Entendo a sua situação. Vou transferir para um atendente que vai resolver isso para si 🙏',
-  low_confidence: 'Deixa-me transferir para um colega que pode explicar melhor 😊',
-  irritation: 'Peço desculpa pelo incómodo! Vou transferir para um atendente agora mesmo 🙏',
-  negotiation: 'Vou chamar um especialista para te dar as melhores condições 😊',
-  urgency: 'Perfeito! Vou transferir para finalizar o pagamento consigo agora mesmo 👌',
-  custom_request: 'Entendi! Vou transferir para um especialista que pode ajudar com esse pedido 😊',
+  human_request: 'Encaminho a sua conversa para um especialista. Todo o histórico e agendamento estão disponíveis para garantir continuidade do atendimento.',
+  complaint: 'Peço desculpa pelo incómodo. Encaminho a sua conversa para um especialista que tratará da sua reclamação com prioridade.',
+  low_confidence: 'Encaminho a sua conversa para um especialista que poderá esclarecer todas as suas dúvidas detalhadamente.',
+  irritation: 'Lamento muito a sua experiência. Encaminho a sua conversa para um especialista agora mesmo para resolvermos isto rapidamente.',
+  negotiation: 'Encaminho a sua conversa para um especialista comercial para lhe oferecer as melhores condições.',
+  urgency: 'Com certeza. Encaminho a sua conversa para um especialista para finalizarmos o seu pedido com a máxima urgência.',
+  custom_request: 'Encaminho a sua conversa para um especialista que ajudará a personalizar o seu pedido.',
 };
 
 async function notifyAdminEscalation(
@@ -235,7 +235,7 @@ async function fetchProfileInfo(supabase: any, evolutionUrl: string, instanceNam
   return null;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: any) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
@@ -265,7 +265,7 @@ Deno.serve(async (req) => {
 
       let targetLeads = (leads || []).slice(0, 10);
       const { data: lojas } = await supabase.from('lojas').select('id, instance_name');
-      const lojaMap = new Map(lojas?.map(l => [l.id, l.instance_name]));
+      const lojaMap = new Map(lojas?.map((l: any) => [l.id, l.instance_name]));
 
       let count = 0;
       for (const lead of targetLeads) {
@@ -415,6 +415,7 @@ Deno.serve(async (req) => {
                       }
                     }
 
+                    // 1. Pedidos / Vendas
                     if (botData.order_data) {
                       const od = botData.order_data;
                       try {
@@ -422,7 +423,6 @@ Deno.serve(async (req) => {
                         if (prodRow && (prodRow.estoque || 0) <= 0) {
                           const osMsg = 'Desculpe, esse produto está esgotado no momento 😔';
                           await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: osMsg }) });
-                          await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: osMsg, tipo: 'enviada', is_bot: true, loja_id: storeId });
                         } else {
                           const { error: vendaError } = await supabase.from('vendas').insert({ lead_id: leadId, loja_id: storeId, produto: od.produto, produto_imagem: prodRow?.imagem, valor: od.valor, quantidade: 1, status: 'pendente', pagamento_status: 'pendente', status_entrega: 'pendente', cliente_nome: od.nome_cliente, cliente_telefone: phone, cliente_endereco: od.endereco, observacoes: `Pagamento: ${od.pagamento} | Pedido automático pelo bot` });
                           if (!vendaError) {
@@ -436,70 +436,91 @@ Deno.serve(async (req) => {
                       } catch (orderErr) { console.error('[webhook] Order creation error:', orderErr); }
                     }
 
+                    // 2. Agendamentos (CRITICAL: Processar ANTES do reply para ser "instantâneo" no CRM)
                     if (botData.schedule_data) {
                       const sd = botData.schedule_data;
                       try {
                         if (sd.action === 'create' || sd.action === 'reschedule') {
-                           try {
-                            const dateToParse = sd.data_hora || new Date().toISOString();
-                            const normalizedDate = dateToParse.includes(' ') && !dateToParse.includes('T') ? dateToParse.replace(' ', 'T') : dateToParse;
-                            let dateObj = new Date(normalizedDate);
-                            if (isNaN(dateObj.getTime())) { dateObj = new Date(); dateObj.setHours(dateObj.getHours() + 1); dateObj.setMinutes(0, 0, 0); }
-                            const isoDate = dateObj.toISOString();
-                            const targetDate = new Date(isoDate);
+                          const dateToParse = sd.data_hora || new Date().toISOString();
+                          const normalizedDate = dateToParse.includes(' ') && !dateToParse.includes('T') ? dateToParse.replace(' ', 'T') : dateToParse;
+                          let dateObj = new Date(normalizedDate);
+                          if (isNaN(dateObj.getTime())) { dateObj = new Date(); dateObj.setHours(dateObj.getHours() + 1); dateObj.setMinutes(0, 0, 0); }
+                          const isoDate = dateObj.toISOString();
+                          const targetDate = new Date(isoDate);
 
-                            if (targetDate < new Date()) {
-                              const msg = `Lamento, mas não consigo fazer marcações para o passado. Escolhes outro horário? 🕒`;
-                              await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: msg }) });
-                            } else if (sd.action === 'create') {
-                              const { error: sErr } = await supabase.from('agendamentos').insert({ lead_id: leadId, loja_id: storeId, data_hora: isoDate, status: 'pendente', cliente_nome: leadName, cliente_whatsapp: phone, servico: sd.servico || 'Atendimento' });
-                              if (!sErr) {
-                                await supabase.from('notificacoes').insert({ loja_id: storeId, lead_id: leadId, tipo: 'agendamento', titulo: '📅 Novo Agendamento', mensagem: `${leadName} agendou para ${targetDate.toLocaleString('pt-PT')}.`, link: '/schedule' });
-                                const confMsg = `✅ *Marcação Solicitada!*\n\nServiço: ${sd.servico || 'Atendimento'}\nData: ${targetDate.toLocaleDateString('pt-PT')}\nHora: ${targetDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}\n\nAguarde a confirmação da nossa equipa. 😊`;
-                                await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: confMsg }) });
+                          if (targetDate < new Date()) {
+                            const pastMsg = `Lamento, mas não consigo fazer marcações para o passado. Escolha outro horário? 🕒`;
+                            await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: pastMsg }) });
+                          } else if (sd.action === 'create') {
+                            const { error: sErr } = await supabase.from('agendamentos').insert({ lead_id: leadId, loja_id: storeId, data_hora: isoDate, status: 'pendente', cliente_nome: leadName, cliente_whatsapp: phone, servico: sd.servico || 'Atendimento' });
+                            if (!sErr) {
+                              await supabase.from('notificacoes').insert({ loja_id: storeId, lead_id: leadId, tipo: 'agendamento', titulo: '📅 Novo Agendamento', mensagem: `${leadName} agendou para ${targetDate.toLocaleString('pt-PT')}.`, link: '/schedule' });
+                              const confMsg = `📅 *Agendamento Registado!*\n\nServiço: ${sd.servico || 'Atendimento'}\nData: ${targetDate.toLocaleDateString('pt-PT')}\nHora: ${targetDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}\n\nObrigado! A nossa equipa entrará em contacto se for necessário algum ajuste. 😊`;
+                              await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: confMsg }) });
+                            }
+                          } else if (sd.action === 'reschedule') {
+                            const { data: ext } = await supabase.from('agendamentos').select('id, notas').eq('lead_id', leadId).eq('loja_id', storeId).in('status', ['pendente', 'confirmado']).order('data_hora', { ascending: false }).limit(1).maybeSingle();
+                            if (ext) {
+                              const { error: uErr } = await supabase.from('agendamentos').update({ data_hora: isoDate, status: 'pendente', notas: (ext.notas ? ext.notas + '\n' : '') + '🔄 Pedido de reagendamento via Bot' }).eq('id', ext.id);
+                              if (!uErr) {
+                                const upMsg = `🔄 *Agendamento Atualizado!*\n\nO seu horário foi alterado para:\n📅 ${targetDate.toLocaleDateString('pt-PT')} às ${targetDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}\n\nObrigado pela preferência! 👋`;
+                                await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: upMsg }) });
                               }
                             } else {
-                               const { data: ext } = await supabase.from('agendamentos').select('id, notas').eq('lead_id', leadId).eq('loja_id', storeId).in('status', ['pendente', 'confirmado']).order('data_hora', { ascending: false }).limit(1).maybeSingle();
-                               if (ext) {
-                                 const { error: uErr } = await supabase.from('agendamentos').update({ data_hora: isoDate, status: 'pendente', notas: (ext.notas ? ext.notas + '\n' : '') + '🔄 Pedido de reagendamento via Bot' }).eq('id', ext.id);
-                                 if (!uErr) {
-                                   const confMsg = `🔄 *Agendamento Atualizado!*\n\nO seu horário foi alterado para:\n📅 ${targetDate.toLocaleDateString('pt-PT')} às ${targetDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}\n\nAté breve! 👋`;
-                                   await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: confMsg }) });
-                                 }
-                               }
+                              // Fallback: Create new if none found to reschedule
+                              await supabase.from('agendamentos').insert({ lead_id: leadId, loja_id: storeId, data_hora: isoDate, status: 'pendente', cliente_nome: leadName, cliente_whatsapp: phone, servico: sd.servico || 'Atendimento' });
+                              const fallbackMsg = `✅ *Novo Agendamento Confirmado!*\n\nComo não encontrei a sua marcação anterior, criei uma nova para:\n📅 ${targetDate.toLocaleDateString('pt-PT')} às ${targetDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}\n\nAté breve! 🚀`;
+                              await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: fallbackMsg }) });
                             }
-                          } catch (e) { console.error('[webhook] Date parse error:', e); }
+                          }
                         } else if (sd.action === 'cancel') {
                           const { error: cErr } = await supabase.from('agendamentos').update({ status: 'cancelado' }).eq('lead_id', leadId).eq('loja_id', storeId).neq('status', 'concluido');
                           if (!cErr) {
-                            const cMsg = `🚫 *Agendamento Cancelado*\n\nConforme o seu pedido, o agendamento foi cancelado com sucesso. Se desejar marcar uma nova data, estou aqui para ajudar! 👋`;
-                            await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: cMsg }) });
+                            const cancelMsg = `🚫 *Agendamento Cancelado*\n\nConforme o seu pedido, o seu agendamento foi cancelado com sucesso. 👋`;
+                            await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: cancelMsg }) });
                             await supabase.from('notificacoes').insert({ loja_id: storeId, lead_id: leadId, tipo: 'agendamento', titulo: '🚫 Agendamento Cancelado', mensagem: `${leadName} cancelou o agendamento via bot.`, link: '/schedule' });
                           }
                         }
-                      } catch (e) { console.error('[webhook] Schedule error:', e); }
+                      } catch (schErr) { console.error('[webhook] Schedule action error:', schErr); }
                     }
 
+                    // 3. Formas de Pagamento
                     if (botData.send_payment) {
-                      const { data: payments } = await supabase.from('formas_pagamento').select('tipo, detalhes').eq('loja_id', storeId).eq('is_active', true);
-                      if (payments && payments.length > 0) {
-                        const payMsg = `Aqui tens as nossas formas de pagamento:\n\n` + 
-                          payments.map(p => `🔹 *${p.tipo}*: ${p.detalhes}`).join('\n') + 
-                          `\n\nPor favor, envia o comprovativo após a operação! 🙏`;
-                        await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: payMsg }) });
-                        await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: payMsg, tipo: 'enviada', is_bot: true, loja_id: storeId });
-                      }
+                      try {
+                        const { data: payments } = await supabase.from('formas_pagamento').select('tipo, detalhes').eq('loja_id', storeId).eq('is_active', true);
+                        if (payments && payments.length > 0) {
+                          const payMsg = `Aqui tens as nossas formas de pagamento:\n\n` + 
+                            payments.map((p: any) => `🔹 *${p.tipo}*: ${p.detalhes}`).join('\n') + 
+                            `\n\nPor favor, envia o comprovativo após a operação! 🙏`;
+                          await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: payMsg }) });
+                          await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: payMsg, tipo: 'enviada', is_bot: true, loja_id: storeId });
+                        }
+                      } catch (pErr) { console.error('[webhook] Payment info error:', pErr); }
                     }
 
+                    // 4. Localização
                     if (botData.send_location) {
-                      const { data: store } = await supabase.from('lojas').select('endereco').eq('id', store_id).maybeSingle();
-                      if (store?.endereco) {
-                        const locMsg = `📍 *A nossa localização:*\n${store.endereco}\n\nPodes usar a morada acima para chegar até nós! 🚗`;
-                        await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: locMsg }) });
-                        await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: locMsg, tipo: 'enviada', is_bot: true, loja_id: storeId });
-                      }
+                      try {
+                        const { data: store } = await supabase.from('lojas').select('endereco').eq('id', storeId).maybeSingle();
+                        if (store?.endereco) {
+                          const locMsg = `📍 *Morada:*\n${store.endereco}\n\nPodes usar esta morada para chegar até nós! 🚗`;
+                          await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: locMsg }) });
+                          await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: locMsg, tipo: 'enviada', is_bot: true, loja_id: storeId });
+                        }
+                      } catch (lErr) { console.error('[webhook] Location info error:', lErr); }
                     }
 
+                    // 5. Enviar Resposta Principal do Bot (Última Etapa)
+                    if (botData.reply) {
+                      await fetch(`${baseUrl}/message/sendText/${instanceName}`, { 
+                        method: 'POST', 
+                        headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, 
+                        body: JSON.stringify({ number: phone, text: botData.reply }) 
+                      });
+                      await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: botData.reply, tipo: 'enviada', is_bot: true, loja_id: storeId });
+                    }
+
+                    // 6. Escalamento
                     if (botData.escalate_to_human) {
                       await supabase.from('leads').update({ controle_conversa: 'humano', precisa_humano: true, bot_enabled: false }).eq('id', leadId);
                       await notifyAdminEscalation(supabase, baseUrl, instanceName, EVOLUTION_API_KEY, storeId, leadName, textForEscalation, botData.escalate_to_human);
@@ -507,7 +528,7 @@ Deno.serve(async (req) => {
                   }
                 }
               }
-            } catch (botErr) { console.error('[webhook] Bot error:', botErr); }
+            } catch (botErr) { console.error('[webhook] Global Bot system error:', botErr); }
           }
         }
       }

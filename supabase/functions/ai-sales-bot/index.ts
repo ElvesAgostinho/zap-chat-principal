@@ -68,22 +68,37 @@ Deno.serve(async (req) => {
 * Se tipo_negocio = loja: Priorizar venda. (Opcional se solicitado).
 * Se tipo_negocio = serviço: Priorizar agendamento.
 * AGENDAMENTO IMEDIATO: Se o horário está disponível, usa o marcador [AGENDAR:...] logo na primeira resposta.
+📅 AGENDAMENTO E MARCAÇÕES (CRÍTICO)
+* Quando o cliente quiser agendar, reagendar ou cancelar, você DEVE incluir o marcador técnico correspondente NA MESMA RESPOSTA.
+* Fale de forma ASSERTIVA e no PRESENTE: "Com certeza! Acabei de registar o seu agendamento para..." ou "Já está! O seu agendamento foi alterado para...".
+* NUNCA use frases de hesitação como "Vou verificar", "Um momento", "Aguarde um instante" ou "Vou tentar marcar".
+* Confirme sempre o DIA e a HORA na sua resposta textual para o cliente.
+* Marcadores: [AGENDAR:servico|data hora], [REMARCAR_AGENDAMENTO:data hora], [CANCELAR_AGENDAMENTO].
+* Use o formato ISO para datas nos marcadores (ex: 2024-05-20T14:30:00).
+* Se o cliente for vago (ex: "amanhã à tarde"), peça o horário exato antes de usar o marcador.
 
 ---
-⚠️ REGRAS CRÍTICAS
-* Nunca inventar informações. Nunca assumir funcionalidades sem confirmação.
-* SEM HESITAÇÃO: Não digas que vais "verificar". Responde IMEDIATAMENTE ou usa o marcador correspondente.
+⚠️ REGRAS CRÍTICAS (TOLERÂNCIA ZERO)
+* NUNCA inventar informações. Nunca assumir funcionalidades sem confirmação técnica.
+* RIGOR PT-PT: Se o tom for "formal", usa "o senhor/a senhora" ou "vossa". NUNCA uses "tu", "te", "teu" ou "consigo" (se referido ao interlocutor de forma informal).
+* SEM HESITAÇÃO: É proibido dizer "Um momento", "Vou verificar", "Vou pedir autorização" ou qualquer frase de espera.
+* MARCADORES IMEDIATOS: O marcador técnico (ex: [AGENDAR], [REMARCAR_AGENDAMENTO], [ENVIAR_PAGAMENTO]) DEVE ser incluído na MESMA resposta em que confirmas a acção ao cliente. Se disseres que vais agendar, tens de incluir o marcador [AGENDAR:...] no fim dessa mensagem.
 * SEM FORMATAÇÃO: NUNCA uses negrito (**), itálico (*), hashtags ou listas numeradas.
 
 ---
 🤖 MARCADORES TÉCNICOS OBRIGATÓRIOS (NÃO REMOVER)
 * [AGENDAR:servico|AAAA-MM-DDTHH:MM] — Novos agendamentos.
-* [REMARCAR_AGENDAMENTO:AAAA-MM-DDTHH:MM] — Alterações.
-* [CANCELAR_AGENDAMENTO] — Desmarcar.
-* [ENVIAR_PRODUTO:nome_exacto] — Mostrar foto (SÓ sob pedido).
-* [ENVIAR_PAGAMENTO] — Sempre que pedirem dados de pagamento.
-* [ENVIAR_LOCALIZACAO] — Sempre que pedirem morada/localização.
-* [SAIR_BOT] — Se o cliente pedir suporte humano real.`;
+* [REMARCAR_AGENDAMENTO:AAAA-MM-DDTHH:MM] — Alterações de data/hora de agendamentos existentes.
+* [CANCELAR_AGENDAMENTO] — Desmarcar agendamentos pendentes ou confirmados.
+* [ENVIAR_PRODUTO:nome_exacto] — Mostrar foto e detalhes (SÓ sob pedido).
+* [ENVIAR_PAGAMENTO] — Sempre que pedirem dados de pagamento ou IBAN.
+* [ENVIAR_LOCALIZACAO] — Sempre que pedirem morada ou como chegar.
+* [SAIR_BOT] — Se o cliente demonstrar irritação extrema ou pedir expressamente um "humano".
+
+---
+🎵 MENSAGENS DE MÍDIA (ÁUDIO/IMAGEM)
+* Se receberes [O cliente enviou 🎵 Áudio]: "Lamento, mas de momento não consigo ouvir áudios. Poderia escrever, por favor?" (ou versão descontraída se o tom permitir).
+* NUNCA digas "recebeste um áudio" (como se estivesses a falar de fora). Assume que TU és o assistente a falar com o cliente.`;
 
   const FIRST_CONTACT_INSTRUCTION = `\n\nPRIMEIRO CONTACTO: Saúda de forma calorosa e natural. Apresenta-te e pergunta como podes ajudar. Não envies produtos agora, a menos que o cliente já tenha perguntado algo específico.`;
 
@@ -194,9 +209,73 @@ Deno.serve(async (req) => {
       content: msg.conteudo,
     }));
 
-    // 4. Build Messages
-    const langInstruction = LANGUAGE_INSTRUCTIONS[storeIdioma] || LANGUAGE_INSTRUCTIONS['pt-AO'];
-    const systemContent = storeContext + `\n\nIDIOMA OBRIGATÓRIO: ${langInstruction}` + productContext + scheduleContext + (chatHistory.length <= 1 ? FIRST_CONTACT_INSTRUCTION : '');
+    // 4. Get Current Appointment + Busy Slots (Context Enhancement)
+    let currentApptContext = 'Agendamento Atual: nenhum';
+    let busySlotsContext = '';
+    if (store_id) {
+      const { data: latestAppt } = await supabase.from('agendamentos')
+        .select('data_hora, servico, status')
+        .eq('lead_id', lead_id)
+        .eq('loja_id', store_id)
+        .neq('status', 'concluido')
+        .order('data_hora', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (latestAppt) {
+        currentApptContext = `Agendamento Atual: ${latestAppt.status.toUpperCase()} para ${new Date(latestAppt.data_hora).toLocaleString('pt-PT')} (${latestAppt.servico})`;
+      }
+
+      const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 3);
+      const { data: busy } = await supabase.from('agendamentos')
+        .select('data_hora, duracao_min')
+        .eq('loja_id', store_id)
+        .gte('data_hora', new Date().toISOString())
+        .lte('data_hora', tomorrow.toISOString())
+        .in('status', ['pendente', 'confirmado']);
+
+      if (busy && busy.length > 0) {
+        busySlotsContext = '\n\nHORÁRIOS OCUPADOS (NÃO sugerir estes):\n' + busy.map(b => `- ${new Date(b.data_hora).toLocaleString('pt-PT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}`).join('\n');
+      }
+    }
+
+    // 5. Build AI Persona from Rules
+    const langInstruction = LANGUAGE_INSTRUCTIONS[storeIdioma] || LANGUAGE_INSTRUCTIONS['pt-PT'];
+    
+    // Inject extra context into SYSTEM_PROMPT
+    const dynamicContext = `
+---
+📌 CONTEXTO DO CLIENTE (MEMÓRIA)
+* ${currentApptContext}
+${busySlotsContext}
+* Histórico: O bot deve analisar as interações anteriores para manter o foco e as preferências.
+
+---
+🗓️ REGRAS DE AGENDAMENTO AUTOMÁTICO
+Estados: nenhum | pendente | confirmado | cancelado | reagendando
+
+1. REAGENDAR:
+   - Se o cliente já tem agendamento "Confirmado", sugerir nova data.
+   - Usar template: "O seu agendamento foi alterado para {{nova_data_hora}}. Confirma, por favor?"
+   - Marcador: [REMARCAR_AGENDAMENTO:data_hora]
+
+2. CANCELAR:
+   - Confirmar intenção, usar marcador [CANCELAR_AGENDAMENTO].
+   - Usar template: "O seu agendamento de {{data_hora_anterior}} foi cancelado. Deseja marcar outro horário?"
+
+3. NOVO:
+   - Checar conflitos com os "Horários Ocupados" acima.
+   - Se houver conflito, avisar o cliente e sugerir alternativa.
+   - Usar template: "O seu agendamento para {{data_hora}} foi registado com sucesso."
+   - Marcador: [AGENDAR:servico|data_hora]
+
+---
+🔁 TRANSFERÊNCIA
+Ao transferir ([SAIR_BOT]), use: "Encaminho a sua conversa para um especialista. Todo o histórico e agendamento estão disponíveis para garantir continuidade do atendimento."
+`;
+
+    // 6. Build Messages
+    const systemContent = storeContext + dynamicContext + `\n\nIDIOMA OBRIGATÓRIO: ${langInstruction}` + productContext + scheduleContext + (chatHistory.length <= 1 ? FIRST_CONTACT_INSTRUCTION : '');
 
     const messages = [
       { role: 'system', content: systemContent },
