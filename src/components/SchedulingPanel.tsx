@@ -372,8 +372,14 @@ export default function SchedulingPanel() {
                   {ag.servico && <p className="text-[10px] text-primary font-black uppercase tracking-widest">{ag.servico}</p>}
                   {ag.cliente_telefone && <p className="text-[11px] text-muted-foreground">📱 {ag.cliente_telefone}</p>}
                 </div>
-                <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${statusColor[ag.status] || 'bg-secondary text-muted-foreground'}`}>
-                  {ag.status === 'cancelado' ? 'CANCELADO' : ag.status}
+                <span className={`text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-lg shadow-sm border ${
+                  ag.status === 'confirmado' 
+                    ? 'bg-emerald-600 text-white border-emerald-500' 
+                    : ag.status === 'cancelado' 
+                    ? 'bg-red-500/10 text-red-600 border-red-500/20 opacity-50' 
+                    : 'bg-yellow-500/10 text-yellow-600 border-yellow-500/20'
+                }`}>
+                  {ag.status === 'confirmado' ? '🟢 AGENDADO' : ag.status === 'cancelado' ? '🚫 CANCELADO' : '⏳ PENDENTE'}
                 </span>
               </div>
               
