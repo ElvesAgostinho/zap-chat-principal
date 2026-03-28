@@ -809,7 +809,7 @@ Deno.serve(async (req) => {
                     } else if (sd.action === 'cancel') {
                       const { error: cErr } = await supabase.from('agendamentos').update({ status: 'cancelado' }).eq('lead_id', leadId).eq('loja_id', storeId).neq('status', 'concluido');
                       if (!cErr) {
-                        const cMsg = `Com certeza. O agendamento foi cancelado. Se precisares de outra coisa, estou aqui! 👋`;
+                        const cMsg = `Com certeza, conforme solicitado, o seu agendamento foi cancelado com sucesso. Se precisar de agendar um novo horário ou se tiver alguma dúvida, estou aqui para ajudar! 👋`;
                         await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
                           method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
                           body: JSON.stringify({ number: phone, text: cMsg }),

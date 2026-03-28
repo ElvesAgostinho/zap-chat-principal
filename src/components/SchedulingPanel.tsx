@@ -135,7 +135,7 @@ export default function SchedulingPanel() {
     if (!error) {
       toast.success('Agendamento cancelado');
       if (ag.status === 'confirmado' || ag.status === 'pendente') {
-        const msg = `Olá ${ag.cliente_nome}. Informamos que o teu agendamento para o dia ${new Date(ag.data_hora).toLocaleDateString('pt-PT')} foi cancelado. Se precisares de ajuda para remarcar, estamos à disposição! 👋`;
+        const msg = `Olá ${ag.cliente_nome}! 👋\n\nInformamos que o teu agendamento para o dia ${new Date(ag.data_hora).toLocaleDateString('pt-PT')} foi cancelado.\n\nSe precisares de ajuda para remarcar ou se tiveres alguma questão, estamos à tua inteira disposição. Até breve! 👋`;
         sendWhatsAppNotification(ag.cliente_telefone, msg);
       }
       fetchData();

@@ -297,10 +297,10 @@ Deno.serve(async (req) => {
             scheduleContext += '\n\nATENÇÃO: Não há horários livres nos próximos 7 dias. Informe o cliente educadamente.';
           }
 
-          scheduleContext += '\n\n🚨 REGRAS CRÍTICAS DE AGENDAMENTO 🚨';
-          scheduleContext += '\n1. NUNCA aceite um horário fora do funcionamento (ex: 14:00 se a loja fecha às 13:00).';
-          scheduleContext += '\n2. Se o cliente pedir um horário ocupado ou fora do horário, diga educadamente e sugira os SLOTS DISPONÍVEIS listados acima.';
-          scheduleContext += '\n3. Quando o cliente CONFIRMAR um slot disponível: use [AGENDAR:servico_real|AAAA-MM-DDTHH:MM]';
+          scheduleContext += '\n🚨 REGRAS DE OURO: CONSULTA O CRM ANTES DE RESPONDER 🚨';
+          scheduleContext += '\n1. NUNCA sugiras ou aceites um horário que já esteja na lista de OCUPADOS ou fora do funcionamento.';
+          scheduleContext += '\n2. Se o cliente pedir um horário ocupado, informa-o educadamente e sugere os 3 próximos slots disponíveis do dia.';
+          scheduleContext += '\n3. Quando o cliente escolher um slot livre: usa OBRIGATORIAMENTE [AGENDAR:servico|AAAA-MM-DDTHH:MM]';
           scheduleContext += '\n   Exemplo: "Um momento, já marco aqui... 📅 [AGENDAR:Manicure|2026-03-28T10:00]"';
           scheduleContext += '\n4. Se quiser REMARCAR: use [REMARCAR_AGENDAMENTO:AAAA-MM-DDTHH:MM]';
           scheduleContext += '\n   Exemplo: "Claro, já actualizo aqui... 📅 [REMARCAR_AGENDAMENTO:2026-03-29T14:00]"';
