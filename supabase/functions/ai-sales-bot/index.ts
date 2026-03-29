@@ -66,6 +66,7 @@ Deno.serve(async (req) => {
 * PROVA SOCIAL: "Este modelo é bastante procurado."
 * ESCASSEZ: "Temos poucas unidades disponíveis."
 * UPSELL: Sugerir produtos adicionais de forma natural.
+* CATÁLOGO ONLINE: Sempre que o cliente pedir para ver mais opções, perguntar o que mais vendem, ou pedir a lista completa de produtos, deves SEMPRE enviar o link do catálogo: {{catalogo_url}}
 
 ---
 📸 ENVIO DE IMAGENS (REGRA CRÍTICA - TOLERÂNCIA ZERO)
@@ -144,9 +145,11 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 1. Get store products Context (RAG + Fallback)
+    // 1. Get store products Context (RAG + Catálogo Completo)
     let productContext = '';
-    let allProducts: any[] = [];
+    let ragProducts: any[] = [];
+    let generalProducts: any[] = [];
+
     if (store_id) {
       try {
         const embedResponse = await fetch('https://api.openai.com/v1/embeddings', {
@@ -158,22 +161,45 @@ Deno.serve(async (req) => {
         if (embedResponse.ok) {
           const embedResult = await embedResponse.json();
           const query_embedding = embedResult.data[0].embedding;
-          const { data: ragProducts } = await supabase.rpc('match_produtos', {
-            query_embedding, match_threshold: 0.3, match_count: 5, p_loja_id: store_id
+          const { data } = await supabase.rpc('match_produtos', {
+            query_embedding, match_threshold: 0.25, match_count: 3, p_loja_id: store_id
           });
-          if (ragProducts && ragProducts.length > 0) allProducts = ragProducts;
+          if (data && data.length > 0) ragProducts = data;
         }
       } catch (e) {
-        console.log('RAG Error, falling back to full list:', e);
+        console.log('RAG Error:', e);
       }
 
-      if (allProducts.length === 0) {
-        const { data: products } = await supabase.from('produtos').select('nome, preco, descricao, estoque, imagem').eq('loja_id', store_id).limit(20);
-        allProducts = products || [];
-      }
+      // Buscar catálogo geral sempre (para o bot saber "o que mais vendem")
+      const { data: allProds } = await supabase
+        .from('produtos')
+        .select('nome, preco, descricao, estoque')
+        .eq('loja_id', store_id)
+        .limit(25);
+        
+      if (allProds) generalProducts = allProds;
 
-      if (allProducts.length > 0) {
-        productContext = '\n\nCATÁLOGO DE PRODUTOS:\n' + allProducts.map(p => `- ${p.nome} | Kz ${p.preco} | ${(p.estoque ?? 1) > 0 ? 'Disponível' : 'Esgotado'}`).join('\n');
+      if (generalProducts.length > 0) {
+        let text = '\n\nCATÁLOGO DE PRODUTOS DA LOJA:\n';
+        
+        // Se houver matches relevantes à pergunta, dá-lhes destaque com a descrição completa
+        if (ragProducts.length > 0) {
+          text += '🎯 PRODUTOS MAIS RELEVANTES PARA A PERGUNTA:\n';
+          text += ragProducts.map(p => `- ${p.nome} | Kz ${p.preco} | ${(p.estoque ?? 1) > 0 ? 'Disponível' : 'Esgotado'} | Detalhes: ${p.descricao || 'N/A'}`).join('\n');
+          text += '\n\n📦 OUTROS PRODUTOS DISPONÍVEIS NA LOJA (Resumo):\n';
+        } else {
+          text += '📦 TODOS OS PRODUTOS DISPONÍVEIS (Resumo):\n';
+        }
+
+        // Coloca a lista geral como resumo (apenas as informações base para o bot conhecer e recomendar)
+        const ragIds = new Set(ragProducts.map(p => p.id));
+        const rem = generalProducts.filter(p => !ragIds.has(p.id));
+        
+        if (rem.length > 0) {
+          text += rem.map(p => `- ${p.nome} | Kz ${p.preco} | ${(p.estoque ?? 1) > 0 ? 'Disponível' : 'Esgotado'} | Resumo: ${(p.descricao || '').substring(0, 60)}...`).join('\n');
+        }
+
+        productContext = text;
       }
     }
 
@@ -371,11 +397,12 @@ Ao transferir ([SAIR_BOT]), use: "Encaminho a sua conversa para um especialista.
 
     // Fallback automático: se o bot menciona produto na resposta mas esqueceu o marcador
     let finalProducts = productsMatch?.map((m: string) => m.split(':')[1].replace(']','').trim()) || [];
-    if (finalProducts.length === 0 && message_text && allProducts.length > 0) {
+    const combinedProducts = [...(typeof ragProducts !== 'undefined' ? ragProducts : []), ...(typeof generalProducts !== 'undefined' ? generalProducts : [])];
+    if (finalProducts.length === 0 && message_text && combinedProducts.length > 0) {
       const photoWords = ['foto', 'imagem', 'ver', 'mostrar', 'mostra', 'fotografia', 'envia', 'envi'];
       const userWantsPhoto = photoWords.some(w => (message_text || '').toLowerCase().includes(w));
       if (userWantsPhoto) {
-        for (const p of allProducts) {
+        for (const p of combinedProducts) {
           if (rawReply.toLowerCase().includes(p.nome.toLowerCase())) {
             finalProducts.push(p.nome);
             if (finalProducts.length >= 3) break;
