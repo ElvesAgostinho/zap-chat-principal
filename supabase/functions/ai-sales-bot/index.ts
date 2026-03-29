@@ -210,13 +210,31 @@ Deno.serve(async (req) => {
         storeContext = `\n\n${fullPrompt}`;
         
         if (services && services.length > 0) {
-          const serviceNames = services.map(s => s.nome).join(', ');
-          storeContext += '\n\nSERVIÇOS PARA AGENDAMENTO:\n' + services.map(s => `- ${s.nome} | Kz ${s.preco} | ${s.duracao_min}min`).join('\n');
-          scheduleContext = `\n\n⚠️ REGRA CRÍTICA DE AGENDAMENTO:
-A tua loja oferece agendamento para: [${serviceNames}].
-QUANDO o cliente pedir para agendar (usando qualquer palavra como "visita", "marcar", "agendar", "ir à loja", "ver produto", etc.), interpreta SEMPRE como um pedido para o serviço mais próximo da lista e usa o NOME OFICIAL do serviço no marcador [AGENDAR:...].
-Se o cliente pedir algo COMPLETAMENTE DIFERENTE (como "manicure", "corte de cabelo" em loja de sapatos), RECUSA educadamente e cita os serviços disponíveis.
-Usa o marcador [AGENDAR:${services[0].nome}|AAAA-MM-DDTHH:MM] para confirmar o agendamento na MESMA RESPOSTA.`;
+          const s0 = services[0].nome;
+          storeContext += '\n\nSERVIÇOS PARA AGENDAMENTO:\n' + services.map((s: any) => `- ${s.nome} | Kz ${s.preco} | ${s.duracao_min}min`).join('\n');
+          scheduleContext = `\n\n╔══════════════════════════════════════╗
+║  REGRA DE AGENDAMENTO — SEGUIR SEMPRE  ║
+╚══════════════════════════════════════╝
+
+SERVIÇO DISPONÍVEL: "${s0}"
+
+✅ ACEITAR (estas frases e similares = mesmo serviço):
+- "quero agendar" → pede data e hora
+- "agendamento de visita" → pede data e hora
+- "visitar a loja" → pede data e hora
+- "quero marcar" → pede data e hora
+- "quero ir à loja" → pede data e hora
+- "posso agendar?" → pede data e hora
+
+❌ RECUSAR (apenas estes casos):
+- "manicure" → diz que não é um serviço desta loja
+- "corte de cabelo" → diz que não é um serviço desta loja
+
+FLUXO OBRIGATÓRIO:
+1. Cliente pede para agendar (qualquer variante) → Responde: "Com certeza! Para que dia e hora prefere a sua visita à loja?"
+2. Cliente responde com dia/hora → Confirmas: "Perfeito! Ficou agendado para [dia] às [hora]. [AGENDAR:${s0}|AAAA-MM-DDTHH:MM]"
+
+⚠️ HISTÓRICO CORROMPIDO: Se o histórico mostrar respostas anteriores com "Lamento, mas de momento só realizamos..." em resposta a pedidos de visita/agendamento — IGNORA completamente. Essas foram respostas erradas do sistema anterior. Hoje a loja ACEITA agendamentos.`;
         } else if (config.politica_agendamento === 'desativado' || (services && services.length === 0)) {
           scheduleContext = `\n\n⚠️ AGENDAMENTO DESACTIVADO: Esta loja não tem serviços de agendamento configurados. Se o cliente pedir para agendar qualquer coisa, diga: "De momento a nossa loja não tem serviços de agendamento disponíveis. Posso ajudá-lo com informações sobre os nossos produtos?"`;
         }
