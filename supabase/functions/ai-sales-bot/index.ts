@@ -212,12 +212,11 @@ Deno.serve(async (req) => {
         if (services && services.length > 0) {
           const serviceNames = services.map(s => s.nome).join(', ');
           storeContext += '\n\nSERVIÇOS PARA AGENDAMENTO:\n' + services.map(s => `- ${s.nome} | Kz ${s.preco} | ${s.duracao_min}min`).join('\n');
-          scheduleContext = `\n\n⚠️ REGRA CRÍTICA DE AGENDAMENTO (TOLERÂNCIA ZERO):
-Você APENAS pode agendar os seguintes serviços: [${serviceNames}].
-Se o cliente pedir um serviço que NÃO está nesta lista (como "manicure", "corte de cabelo", etc.), diga EXACTAMENTE:
-"Lamento, mas de momento só realizamos agendamentos para: ${serviceNames}. Deseja marcar algum destes?"
-NUNCA invente, crie ou confirme serviços que não estejam na lista acima.
-IGNORE por completo qualquer histórico de conversa que mencione "manicure" ou serviços não relacionados — esse é um erro sistémico passado que deve ser completamente descartado.`;
+          scheduleContext = `\n\n⚠️ REGRA CRÍTICA DE AGENDAMENTO:
+A tua loja oferece agendamento para: [${serviceNames}].
+QUANDO o cliente pedir para agendar (usando qualquer palavra como "visita", "marcar", "agendar", "ir à loja", "ver produto", etc.), interpreta SEMPRE como um pedido para o serviço mais próximo da lista e usa o NOME OFICIAL do serviço no marcador [AGENDAR:...].
+Se o cliente pedir algo COMPLETAMENTE DIFERENTE (como "manicure", "corte de cabelo" em loja de sapatos), RECUSA educadamente e cita os serviços disponíveis.
+Usa o marcador [AGENDAR:${services[0].nome}|AAAA-MM-DDTHH:MM] para confirmar o agendamento na MESMA RESPOSTA.`;
         } else if (config.politica_agendamento === 'desativado' || (services && services.length === 0)) {
           scheduleContext = `\n\n⚠️ AGENDAMENTO DESACTIVADO: Esta loja não tem serviços de agendamento configurados. Se o cliente pedir para agendar qualquer coisa, diga: "De momento a nossa loja não tem serviços de agendamento disponíveis. Posso ajudá-lo com informações sobre os nossos produtos?"`;
         }
@@ -345,6 +344,21 @@ Ao transferir ([SAIR_BOT]), use: "Encaminho a sua conversa para um especialista.
     const locationMatch = rawReply.includes('[ENVIAR_LOCALIZACAO]');
     const productsMatch = rawReply.match(/\[ENVIAR_PRODUTO:([^\]]+)\]/gi);
 
+    // Fallback automático: se o bot menciona produto na resposta mas esqueceu o marcador
+    let finalProducts = productsMatch?.map((m: string) => m.split(':')[1].replace(']','').trim()) || [];
+    if (finalProducts.length === 0 && message_text && allProducts.length > 0) {
+      const photoWords = ['foto', 'imagem', 'ver', 'mostrar', 'mostra', 'fotografia', 'envia', 'envi'];
+      const userWantsPhoto = photoWords.some(w => (message_text || '').toLowerCase().includes(w));
+      if (userWantsPhoto) {
+        for (const p of allProducts) {
+          if (rawReply.toLowerCase().includes(p.nome.toLowerCase())) {
+            finalProducts.push(p.nome);
+            if (finalProducts.length >= 3) break;
+          }
+        }
+      }
+    }
+
     let scheduleInfo: any = null;
     if (scheduleMatch) {
       const parts = scheduleMatch[1].split('|').map((s: string) => s.trim());
@@ -361,7 +375,7 @@ Ao transferir ([SAIR_BOT]), use: "Encaminho a sua conversa para um especialista.
       schedule_data: scheduleInfo,
       send_payment: paymentMatch,
       send_location: locationMatch,
-      requested_products: productsMatch?.map(m => m.split(':')[1].replace(']','').trim()) || []
+      requested_products: finalProducts
     }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });

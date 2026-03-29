@@ -312,17 +312,17 @@ Deno.serve(async (req: any) => {
 
       if (!storeId) return new Response(JSON.stringify({ ok: false, error: 'no_store' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
-      // 🛑 BLOQUEIO DE DUPLICADOS (Idempotência)
+      // 🛑 BLOQUEIO DE DUPLICADOS — INSERT-first elimina race conditions
       if (messageId && !fromMe) {
         try {
-          const { data: existing } = await supabase.from('webhook_logs').select('message_id').eq('message_id', messageId).maybeSingle();
-          if (existing) {
-            console.log(`[webhook] Mensagem duplicada ignorada: ${messageId}`);
+          const { error: dupError } = await supabase.from('webhook_logs').insert({ message_id: messageId });
+          if (dupError) {
+            // 23505 = unique_violation: outro processo já está a tratar esta mensagem
+            console.log(`[webhook] Mensagem duplicada bloqueada: ${messageId}`);
             return new Response(JSON.stringify({ ok: true, status: 'duplicated' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
           }
-          await supabase.from('webhook_logs').insert({ message_id: messageId });
         } catch (e) {
-          console.warn('[webhook] Tabela webhook_logs não encontrada ou erro de permissão. Ignorando idempotência.');
+          console.warn('[webhook] webhook_logs indisponível, continuando sem idempotência.');
         }
       }
 
