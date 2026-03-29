@@ -20,6 +20,16 @@ interface DashboardPanelProps {
 
 const PIPELINE_COLORS = ['hsl(215, 25%, 65%)', 'hsl(217, 91%, 60%)', 'hsl(43, 96%, 56%)', 'hsl(158, 85%, 35%)'];
 
+const slugify = (text: string) => {
+  return text
+    .toString()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)+/g, '');
+};
+
 export default function DashboardPanel({ vendas, leads, products, alertCount, onAddLead, onAddProduct }: DashboardPanelProps) {
   const { role, storeId, storeCode, storeSlug, dataFim, storeName } = useAuth();
   const isAdmin = role === 'admin';
@@ -241,12 +251,13 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
               <div className="flex flex-wrap items-center gap-3 w-full md:w-auto relative z-10">
                 <div className="flex-1 md:flex-none flex items-center gap-3 bg-secondary px-4 py-2.5 rounded-xl border border-border group min-w-[240px]">
                   <span className="text-[11px] text-muted-foreground font-medium truncate">
-                    {storeSlug ? `${window.location.host}/loja/${storeSlug}` : 'Link personalizado não definido'}
+                    {storeSlug || (storeName ? slugify(storeName) : 'Link da loja indisponível')}
                   </span>
-                  {storeSlug && (
+                  {(storeSlug || storeName) && (
                     <button
                       onClick={() => { 
-                        const url = `${window.location.origin}/loja/${storeSlug}`;
+                        const id = storeSlug || slugify(storeName || '');
+                        const url = `${window.location.origin}/loja/${id}`;
                         navigator.clipboard.writeText(url); 
                         toast.success('Link copiado!'); 
                       }}
@@ -257,24 +268,15 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
                   )}
                 </div>
                 
-                {storeSlug ? (
+                {(storeSlug || storeName) && (
                   <button
                     onClick={() => {
-                      window.open(`https://wa.me/?text=${encodeURIComponent(`Confira nosso catálogo: ${window.location.origin}/loja/${storeSlug}`)}`, '_blank');
+                      const id = storeSlug || slugify(storeName || '');
+                      window.open(`https://wa.me/?text=${encodeURIComponent(`Confira nosso catálogo: ${window.location.origin}/loja/${id}`)}`, '_blank');
                     }}
                     className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg hover:scale-105 transition-all"
                   >
                     <MessageSquare className="w-4 h-4 fill-current" /> Partilhar Link
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => {
-                      // Trigger tab change to settings if available or show instructions
-                      toast.info('Defina o nome da sua loja nas Configurações para ativar o link.');
-                    }}
-                    className="flex items-center gap-2 bg-amber-500 text-white px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg hover:scale-105 transition-all"
-                  >
-                    <AlertCircle className="w-4 h-4" /> Configurar Link
                   </button>
                 )}
               </div>

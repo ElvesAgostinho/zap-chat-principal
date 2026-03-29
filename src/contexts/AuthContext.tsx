@@ -2,6 +2,16 @@ import { createContext, useContext, useEffect, useRef, useState, ReactNode } fro
 import { supabase } from '@/integrations/supabase/client';
 import type { Session, User } from '@supabase/supabase-js';
 
+const slugify = (text: string) => {
+  return text
+    .toString()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)+/g, '');
+};
+
 export type MembershipState = 'loading' | 'linked' | 'pending' | 'rejected' | 'unlinked' | 'error' | 'super_admin';
 
 interface AuthState {
@@ -214,13 +224,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setPlano(storeData.plano);
             setStatusLoja(storeData.status_aprovacao);
             setStoreName(storeData.nome);
-            setStoreSlug(storeData.slug || null);
+            setStoreSlug(storeData.slug || slugify(storeData.nome));
             setStoreCode(storeData.codigo_unico);
-            
-            // Garantir que temos pelo menos um identificador para links
-            if (!storeData.slug && storeData.codigo_unico) {
-              console.warn("Loja sem slug definido, usando código único como fallback.");
-            }
             
             setStoreProfilePic(storeData.profile_picture_url || null);
             setStorePhone(storeData.phone || null);

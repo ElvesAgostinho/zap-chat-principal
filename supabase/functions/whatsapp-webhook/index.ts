@@ -459,7 +459,7 @@ Deno.serve(async (req: any) => {
                               status: 'pendente', 
                               cliente_nome: leadName, 
                               cliente_telefone: phone, 
-                              servico: sd.servico || 'Atendimento' 
+                              servico: sd.servico || 'Agendamento' 
                             });
                             
                             if (sErr) {
