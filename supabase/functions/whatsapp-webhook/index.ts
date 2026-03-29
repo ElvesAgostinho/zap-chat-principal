@@ -544,6 +544,34 @@ Deno.serve(async (req: any) => {
                       } catch (lErr) { console.error('[webhook] Location info error:', lErr); }
                     }
 
+                    // 4.5 Enviar Fotos de Produtos Solicitados
+                    if (botData.requested_products && botData.requested_products.length > 0) {
+                      for (const productName of botData.requested_products) {
+                        try {
+                          const { data: product } = await supabase
+                            .from('produtos')
+                            .select('nome, imagem, preco')
+                            .eq('loja_id', storeId)
+                            .ilike('nome', `%${productName}%`)
+                            .maybeSingle();
+
+                          if (product && product.imagem) {
+                            const mediaData = {
+                              number: phone,
+                              media: product.imagem,
+                              mediatype: 'image',
+                              caption: `📸 *${product.nome}*\n💰 Preço: Kz ${product.preco}\n\nDesejas agendar uma visita para ver este modelo? 😊`
+                            };
+                            await fetch(`${baseUrl}/message/sendMedia/${instanceName}`, { 
+                              method: 'POST', 
+                              headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, 
+                              body: JSON.stringify(mediaData) 
+                            });
+                          }
+                        } catch (pErr) { console.error('[webhook] Product media error:', pErr); }
+                      }
+                    }
+
                     // 5. Enviar Resposta Principal do Bot (Última Etapa)
                     if (botData.reply) {
                       await fetch(`${baseUrl}/message/sendText/${instanceName}`, { 
