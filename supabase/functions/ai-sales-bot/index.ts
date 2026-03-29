@@ -5,6 +5,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+const slugify = (text: string) => {
+  return text
+    .toString()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)+/g, '');
+};
+
 const LANGUAGE_INSTRUCTIONS: Record<string, string> = {
   'pt-AO': 'Responda em Português de Angola. Use expressões angolanas naturais. Moeda: Kz (Kwanza).',
   'pt-BR': 'Responda em Português do Brasil. Moeda: R$ (Real).',
@@ -180,13 +190,14 @@ Deno.serve(async (req) => {
         const dias = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
         const horariosText = (horarios || []).filter(h => h.ativo).map(h => `${dias[h.dia_semana]}: ${h.hora_inicio}-${h.hora_fim}`).join(', ');
 
+        const storeSlug = config.slug || slugify(config.nome || '');
         let fullPrompt = SYSTEM_PROMPT
           .replace('{{empresa_nome}}', config.nome || 'Nossa Loja')
           .replace('{{tipo_negocio}}', config.tipo_negocio || 'Geral')
           .replace('{{tom}}', config.tom_voz || 'formal')
           .replace('{{endereco}}', config.endereco || 'Solicitar')
           .replace('{{google_maps}}', config.localizacao_url || 'Solicitar')
-          .replace('{{catalogo_url}}',  `https://vendazap.ao/${config.slug || config.id}`)
+          .replace('{{catalogo_url}}',  `https://vendazap.ao/loja/${storeSlug}`)
           .replace('{{horario}}', horariosText || 'Consulte o atendente')
           .replace('{{tem_agendamento}}', (services?.length || 0) > 0 ? 'sim' : 'não')
           .replace('{{usa_agendamento}}', config.politica_agendamento || 'opcional')
@@ -194,14 +205,17 @@ Deno.serve(async (req) => {
 
         storeContext = `\n\n${fullPrompt}`;
         
-        if (services?.length) {
-           storeContext += '\n\nSERVIÇOS PARA AGENDAMENTO:\n' + services.map(s => `- ${s.nome} | Kz ${s.preco} | ${s.duracao_min}min`).join('\n');
-        }
-
-        // Logic for Free Slots (simplified)
-        if (horarios?.length && (services?.length || 0) > 0) {
-          scheduleContext = `\n\nINSTRUÇÃO DE AGENDAMENTO: Se o cliente quiser marcar, usa [AGENDAR:servico|DataTime].`;
-          // Add some free slots logic if needed (already in database, bot will suggest based on context)
+        if (services && services.length > 0) {
+          const serviceNames = services.map(s => s.nome).join(', ');
+          storeContext += '\n\nSERVIÇOS PARA AGENDAMENTO:\n' + services.map(s => `- ${s.nome} | Kz ${s.preco} | ${s.duracao_min}min`).join('\n');
+          scheduleContext = `\n\n⚠️ REGRA CRÍTICA DE AGENDAMENTO (TOLERÂNCIA ZERO):
+Você APENAS pode agendar os seguintes serviços: [${serviceNames}].
+Se o cliente pedir um serviço que NÃO está nesta lista (como "manicure", "corte de cabelo", etc.), diga EXACTAMENTE:
+"Lamento, mas de momento só realizamos agendamentos para: ${serviceNames}. Deseja marcar algum destes?"
+NUNCA invente, crie ou confirme serviços que não estejam na lista acima.
+IGNORE por completo qualquer histórico de conversa que mencione "manicure" ou serviços não relacionados — esse é um erro sistémico passado que deve ser completamente descartado.`;
+        } else if (config.politica_agendamento === 'desativado' || (services && services.length === 0)) {
+          scheduleContext = `\n\n⚠️ AGENDAMENTO DESACTIVADO: Esta loja não tem serviços de agendamento configurados. Se o cliente pedir para agendar qualquer coisa, diga: "De momento a nossa loja não tem serviços de agendamento disponíveis. Posso ajudá-lo com informações sobre os nossos produtos?"`;
         }
       }
     }

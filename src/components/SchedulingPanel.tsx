@@ -30,6 +30,16 @@ interface HorarioLoja {
   ativo: boolean;
 }
 
+interface Servico {
+  id: string;
+  loja_id: string;
+  nome: string;
+  descricao: string | null;
+  duracao_min: number;
+  preco: number;
+  ativo: boolean;
+}
+
 const DIAS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
 const DIAS_CURTOS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -37,11 +47,14 @@ export default function SchedulingPanel() {
   const { storeId, role } = useAuth();
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([]);
   const [horarios, setHorarios] = useState<HorarioLoja[]>([]);
+  const [servicos, setServicos] = useState<Servico[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
+  const [showServices, setShowServices] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [form, setForm] = useState({ cliente_nome: '', cliente_telefone: '', servico: '', data_hora: '', duracao_min: 60, notas: '' });
+  const [newService, setNewService] = useState({ nome: '', preco: 0, duracao_min: 60 });
   const [editingAgendamento, setEditingAgendamento] = useState<Agendamento | null>(null);
   const [instanceName, setInstanceName] = useState<string | null>(null);
 
@@ -51,14 +64,17 @@ export default function SchedulingPanel() {
     const [
       { data: ag }, 
       { data: hr },
+      { data: sv },
       { data: storeData }
     ] = await Promise.all([
       (supabase as any).from('agendamentos').select('*').eq('loja_id', storeId).order('data_hora', { ascending: true }),
       (supabase as any).from('horarios_loja').select('*').eq('loja_id', storeId),
+      (supabase as any).from('servicos_loja').select('*').eq('loja_id', storeId).eq('ativo', true),
       supabase.from('lojas').select('instance_name').eq('id', storeId).single()
     ]);
     setAgendamentos(ag || []);
     setHorarios(hr || []);
+    setServicos(sv || []);
     if (storeData) setInstanceName(storeData.instance_name);
     setLoading(false);
   };
@@ -182,6 +198,30 @@ export default function SchedulingPanel() {
     toast.success(`Horário de ${DIAS[dia]} salvo`);
   };
 
+  const handleAddService = async () => {
+    if (!storeId || !newService.nome) return;
+    const { error } = await (supabase as any).from('servicos_loja').insert({
+      loja_id: storeId,
+      nome: newService.nome,
+      preco: newService.preco,
+      duracao_min: newService.duracao_min,
+      ativo: true
+    });
+    if (!error) {
+      toast.success('Serviço adicionado!');
+      setNewService({ nome: '', preco: 0, duracao_min: 60 });
+      fetchData();
+    }
+  };
+
+  const handleDeleteService = async (id: string) => {
+    const { error } = await (supabase as any).from('servicos_loja').update({ ativo: false }).eq('id', id);
+    if (!error) {
+      toast.success('Serviço removido');
+      fetchData();
+    }
+  };
+
   const goDay = (dir: number) => {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() + dir);
@@ -234,10 +274,16 @@ export default function SchedulingPanel() {
         </div>
         <div className="flex gap-2">
           {role === 'admin' && (
-            <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowConfig(!showConfig)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium ${showConfig ? 'bg-primary text-primary-foreground' : 'bg-secondary text-foreground'}`}>
-              <Clock className="w-3.5 h-3.5 inline mr-1" />Horários
-            </motion.button>
+            <>
+              <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setShowServices(!showServices); setShowConfig(false); }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${showServices ? 'bg-primary text-primary-foreground' : 'bg-secondary text-foreground'}`}>
+                <Plus className="w-3.5 h-3.5 inline mr-1" />Serviços
+              </motion.button>
+              <motion.button whileTap={{ scale: 0.95 }} onClick={() => { setShowConfig(!showConfig); setShowServices(false); }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium ${showConfig ? 'bg-primary text-primary-foreground' : 'bg-secondary text-foreground'}`}>
+                <Clock className="w-3.5 h-3.5 inline mr-1" />Horários
+              </motion.button>
+            </>
           )}
           <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowNew(!showNew)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium">
@@ -336,6 +382,44 @@ export default function SchedulingPanel() {
                 </div>
               );
             })}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showServices && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+            className="bg-card rounded-2xl shadow-card p-4 space-y-4 overflow-hidden border border-border">
+            <h3 className="text-sm font-semibold text-foreground">Gerir Serviços Oferecidos</h3>
+            
+            <div className="space-y-2">
+              {servicos.map(s => (
+                <div key={s.id} className="flex items-center justify-between p-2.5 rounded-xl bg-secondary/30 border border-border/50">
+                  <div className="flex-1">
+                    <p className="text-xs font-bold text-foreground">{s.nome}</p>
+                    <p className="text-[10px] text-muted-foreground">Kz {s.preco} • {s.duracao_min} min</p>
+                  </div>
+                  <button onClick={() => handleDeleteService(s.id)} className="p-1.5 text-destructive hover:bg-destructive/10 rounded-lg transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+              {servicos.length === 0 && <p className="text-[11px] text-muted-foreground italic text-center py-2">Nenhum serviço configurado.</p>}
+            </div>
+
+            <div className="pt-2 border-t border-border mt-2 space-y-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-primary">Novo Serviço</p>
+              <div className="grid grid-cols-1 gap-2">
+                <Input placeholder="Nome (ex: Visita à Loja)" value={newService.nome} onChange={e => setNewService(s => ({ ...s, nome: e.target.value }))} className="text-xs h-8" />
+                <div className="grid grid-cols-2 gap-2">
+                  <Input type="number" placeholder="Preço (Kz)" value={newService.preco} onChange={e => setNewService(s => ({ ...s, preco: parseFloat(e.target.value) || 0 }))} className="text-xs h-8" />
+                  <Input type="number" placeholder="Minutos" value={newService.duracao_min} onChange={e => setNewService(s => ({ ...s, duracao_min: parseInt(e.target.value) || 60 }))} className="text-xs h-8" />
+                </div>
+                <motion.button whileTap={{ scale: 0.95 }} onClick={handleAddService} className="w-full py-2 rounded-lg bg-primary text-primary-foreground text-[11px] font-bold">
+                  Adicionar Serviço
+                </motion.button>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

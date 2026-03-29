@@ -312,6 +312,20 @@ Deno.serve(async (req: any) => {
 
       if (!storeId) return new Response(JSON.stringify({ ok: false, error: 'no_store' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 
+      // 🛑 BLOQUEIO DE DUPLICADOS (Idempotência)
+      if (messageId && !fromMe) {
+        try {
+          const { data: existing } = await supabase.from('webhook_logs').select('message_id').eq('message_id', messageId).maybeSingle();
+          if (existing) {
+            console.log(`[webhook] Mensagem duplicada ignorada: ${messageId}`);
+            return new Response(JSON.stringify({ ok: true, status: 'duplicated' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+          }
+          await supabase.from('webhook_logs').insert({ message_id: messageId });
+        } catch (e) {
+          console.warn('[webhook] Tabela webhook_logs não encontrada ou erro de permissão. Ignorando idempotência.');
+        }
+      }
+
       let persistedMediaUrl: string | null = null;
       let persistedMediaType: string | null = media?.type || null;
       const rawUrlString = EVOLUTION_API_URL ? EVOLUTION_API_URL.replace(/\/+$/, '') : '';
