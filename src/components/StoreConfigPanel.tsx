@@ -151,7 +151,23 @@ export default function StoreConfigPanel() {
                 placeholder="ex: minha-marca"
               />
             </div>
-            <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">Use este link para divulgar seu catálogo. Ex: crm.topconsultores.pt/loja/{config.slug || '...'}</p>
+            <div className="flex items-center justify-between mt-2 ml-1 bg-secondary/80 px-3 py-2 rounded-lg border border-border shadow-sm">
+              <p className="text-[11px] text-muted-foreground font-medium truncate flex-1">
+                Link Público: <span className="text-foreground ml-1">{window.location.host}/loja/{config.slug || '...'}</span>
+              </p>
+              <button
+                onClick={() => {
+                  const url = `${window.location.origin}/loja/${config.slug || '...'}`;
+                  navigator.clipboard.writeText(url);
+                  toast.success('Link do catálogo copiado! ✅');
+                }}
+                className="ml-3 p-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-all flex items-center justify-center shrink-0 border border-primary/20"
+                title="Copiar Link"
+                type="button"
+              >
+                <Globe className="w-3.5 h-3.5 mr-1.5" /> Copiar
+              </button>
+            </div>
           </div>
           <div><label className="text-[11px] uppercase tracking-wide text-muted-foreground">Telefone de Contato</label><Input value={config.telefone} onChange={e => setConfig(p => ({ ...p, telefone: e.target.value }))} /></div>
           <div><label className="text-[11px] uppercase tracking-wide text-muted-foreground">Endereço Físico</label><Input value={config.endereco} onChange={e => setConfig(p => ({ ...p, endereco: e.target.value }))} /></div>
