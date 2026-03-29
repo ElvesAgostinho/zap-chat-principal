@@ -452,8 +452,19 @@ Deno.serve(async (req: any) => {
                             const pastMsg = `Lamento, mas não consigo fazer marcações para o passado. Escolha outro horário? 🕒`;
                             await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: pastMsg }) });
                           } else if (sd.action === 'create') {
-                            const { error: sErr } = await supabase.from('agendamentos').insert({ lead_id: leadId, loja_id: storeId, data_hora: isoDate, status: 'pendente', cliente_nome: leadName, cliente_whatsapp: phone, servico: sd.servico || 'Atendimento' });
-                            if (!sErr) {
+                            const { error: sErr } = await supabase.from('agendamentos').insert({ 
+                              lead_id: leadId, 
+                              loja_id: storeId, 
+                              data_hora: isoDate, 
+                              status: 'pendente', 
+                              cliente_nome: leadName, 
+                              cliente_telefone: phone, 
+                              servico: sd.servico || 'Atendimento' 
+                            });
+                            
+                            if (sErr) {
+                              console.error('[webhook] Erro ao criar agendamento:', sErr);
+                            } else {
                               await supabase.from('notificacoes').insert({ loja_id: storeId, lead_id: leadId, tipo: 'agendamento', titulo: '📅 Novo Agendamento', mensagem: `${leadName} agendou para ${targetDate.toLocaleString('pt-PT')}.`, link: '/schedule' });
                               const confMsg = `📅 *Agendamento Registado!*\n\nServiço: ${sd.servico || 'Atendimento'}\nData: ${targetDate.toLocaleDateString('pt-PT')}\nHora: ${targetDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}\n\nObrigado! A nossa equipa entrará em contacto se for necessário algum ajuste. 😊`;
                               await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: confMsg }) });

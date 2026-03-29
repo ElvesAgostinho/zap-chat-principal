@@ -214,7 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setPlano(storeData.plano);
             setStatusLoja(storeData.status_aprovacao);
             setStoreName(storeData.nome);
-            setStoreSlug(storeData.slug || storeData.codigo_unico);
+            setStoreSlug(storeData.slug || null);
             setStoreCode(storeData.codigo_unico);
             
             // Garantir que temos pelo menos um identificador para links
