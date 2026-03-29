@@ -249,23 +249,27 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
               </div>
               
               <div className="flex flex-wrap items-center gap-3 w-full md:w-auto relative z-10">
-                <div className="flex-1 md:flex-none flex items-center justify-between gap-3 bg-secondary/80 px-4 py-2.5 rounded-xl border border-border group min-w-[240px] shadow-sm">
-                  <span className="text-[12px] text-foreground font-semibold truncate flex-1">
-                    {window.location.host}/loja/{storeSlug || (storeName ? slugify(storeName) : '...')}
-                  </span>
-                  <button
-                    onClick={() => { 
-                      const id = storeSlug || slugify(storeName || '');
-                      const url = `${window.location.origin}/loja/${id}`;
-                      navigator.clipboard.writeText(url); 
-                      toast.success('Link copiado para a área de transferência! ✅'); 
-                    }}
-                    className="p-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-all ml-auto flex-shrink-0 border border-primary/20 shadow-sm flex items-center justify-center"
-                    title="Copiar link"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
-                </div>
+              <div className="flex-1 md:flex-none flex items-center justify-between gap-3 bg-secondary/80 px-4 py-2.5 rounded-xl border border-border group min-w-[240px] shadow-sm">
+                <span className="text-[12px] text-foreground font-semibold truncate flex-1">
+                  {window.location.host}/loja/{storeSlug || (storeName ? slugify(storeName) : 'pendente')}
+                </span>
+                <button
+                  onClick={() => { 
+                    const id = storeSlug || (storeName ? slugify(storeName) : '');
+                    if (!id) {
+                      toast.error('Preencha o Nome da Loja nas configurações primeiro!');
+                      return;
+                    }
+                    const url = `${window.location.origin}/loja/${id}`;
+                    navigator.clipboard.writeText(url); 
+                    toast.success('Link copiado para a área de transferência! ✅'); 
+                  }}
+                  className="p-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-all ml-auto flex-shrink-0 border border-primary/20 shadow-sm flex items-center justify-center"
+                  title="Copiar link"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+              </div>
                 
                 {(storeSlug || storeName) && (
                   <button

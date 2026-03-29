@@ -19,6 +19,11 @@ const IDIOMAS = [
 interface PaymentMethod { id?: string; tipo: string; detalhes: string; is_active: boolean; }
 interface DeliveryZone { id?: string; zona: string; taxa: number; is_active: boolean; }
 
+const slugify = (text: string) => {
+  if (!text) return '';
+  return text.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+};
+
 interface Config { 
   nomeLoja: string; 
   telefone: string; 
@@ -153,11 +158,16 @@ export default function StoreConfigPanel() {
             </div>
             <div className="flex items-center justify-between mt-2 ml-1 bg-secondary/80 px-3 py-2 rounded-lg border border-border shadow-sm">
               <p className="text-[11px] text-muted-foreground font-medium truncate flex-1">
-                Link Público: <span className="text-foreground ml-1">{window.location.host}/loja/{config.slug || '...'}</span>
+                Link Público: <span className="text-foreground ml-1">{window.location.host}/loja/{config.slug || (config.nomeLoja ? slugify(config.nomeLoja) : 'pendente')}</span>
               </p>
               <button
                 onClick={() => {
-                  const url = `${window.location.origin}/loja/${config.slug || '...'}`;
+                  const id = config.slug || (config.nomeLoja ? slugify(config.nomeLoja) : '');
+                  if (!id) {
+                    toast.error('Preencha o Nome da Loja primeiro.');
+                    return;
+                  }
+                  const url = `${window.location.origin}/loja/${id}`;
                   navigator.clipboard.writeText(url);
                   toast.success('Link do catálogo copiado! ✅');
                 }}

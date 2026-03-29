@@ -317,9 +317,12 @@ Deno.serve(async (req: any) => {
         try {
           const { error: dupError } = await supabase.from('webhook_logs').insert({ message_id: messageId });
           if (dupError) {
-            // 23505 = unique_violation: outro processo já está a tratar esta mensagem
-            console.log(`[webhook] Mensagem duplicada bloqueada: ${messageId}`);
-            return new Response(JSON.stringify({ ok: true, status: 'duplicated' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            if (dupError.code === '23505') {
+              console.log(`[webhook] Mensagem duplicada bloqueada: ${messageId}`);
+              return new Response(JSON.stringify({ ok: true, status: 'duplicated' }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+            } else {
+              console.warn(`[webhook] Ignorando erro do webhook_logs: ${dupError.message}`);
+            }
           }
         } catch (e) {
           console.warn('[webhook] webhook_logs indisponível, continuando sem idempotência.');

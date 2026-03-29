@@ -98,8 +98,9 @@ Deno.serve(async (req) => {
 * RIGOR PT-PT: Se o tom for "formal", usa "o senhor/a senhora" ou "vossa". NUNCA uses "tu", "te", "teu" ou "consigo" (se referido ao interlocutor de forma informal).
 * SEM HESITAÇÃO: É proibido dizer "Um momento", "Vou verificar", "Vou pedir autorização" ou qualquer frase de espera.
 * AGENDAMENTO ESTRITO: Se usa_agendamento = "desativado" OU tem_agendamento = "não", você DEVE dizer que a loja não oferece serviços de agendamento no momento.
-* SERVIÇOS DO CRM: Você SÓ pode agendar serviços que apareçam na lista "SERVIÇOS PARA AGENDAMENTO". Se o cliente pedir algo fora dessa lista (como "manicure" em loja de sapatos, ou algo vago), diga: "Lamento, mas de momento só realizamos agendamentos para: [cite a lista de serviços ativos]. Deseja marcar algum destes?".
+* SERVIÇOS DO CRM: Só podes agendar serviços listados em "SERVIÇOS PARA AGENDAMENTO". Sê flexível com a linguagem do cliente: se ele pedir "visita", "ir na loja", considera como o serviço "Visita à Loja". Não exijas o nome exato.
 * CONTEXTO ESTRITO: NUNCA invente serviços ou produtos. Se houver menção a "manicure" no histórico e a loja for de sapatos, ignore — é um erro sistémico passado.
+* NATURALIDADE: Não ofereças produtos aleatoriamente. Se o cliente apenas disser "Olá" ou "Oi", faz uma saudação natural e pergunta como podes ajudar, SEM tentar vender o produto mais caro imediatamente.
 * PRIVACIDADE: NUNCA mencione o "código único" ou "ID" da loja. Use apenas o nome da loja ou o slug.
 * MARCADORES IMEDIATOS: O marcador técnico DEVE ser incluído na MESMA resposta de confirmação.
 * SEM FORMATAÇÃO: NUNCA uses negrito (**), itálico (*), hashtags ou listas numeradas.
@@ -151,23 +152,25 @@ Deno.serve(async (req) => {
     let generalProducts: any[] = [];
 
     if (store_id) {
-      try {
-        const embedResponse = await fetch('https://api.openai.com/v1/embeddings', {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ input: message_text || 'Olá', model: 'text-embedding-3-small' }),
-        });
-        
-        if (embedResponse.ok) {
-          const embedResult = await embedResponse.json();
-          const query_embedding = embedResult.data[0].embedding;
-          const { data } = await supabase.rpc('match_produtos', {
-            query_embedding, match_threshold: 0.25, match_count: 3, p_loja_id: store_id
+      if (message_text && message_text.length > 3) {
+        try {
+          const embedResponse = await fetch('https://api.openai.com/v1/embeddings', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ input: message_text, model: 'text-embedding-3-small' }),
           });
-          if (data && data.length > 0) ragProducts = data;
+          
+          if (embedResponse.ok) {
+            const embedResult = await embedResponse.json();
+            const query_embedding = embedResult.data[0].embedding;
+            const { data } = await supabase.rpc('match_produtos', {
+              query_embedding, match_threshold: 0.35, match_count: 3, p_loja_id: store_id
+            });
+            if (data && data.length > 0) ragProducts = data;
+          }
+        } catch (e) {
+          console.log('RAG Error:', e);
         }
-      } catch (e) {
-        console.log('RAG Error:', e);
       }
 
       // Buscar catálogo geral sempre (para o bot saber "o que mais vendem")
@@ -261,10 +264,10 @@ SERVIÇO DISPONÍVEL: "${s0}"
 - "quero ir à loja" → pede data e hora
 
 ❌ RECUSAR AGENDAMENTOS MALS-DIRECIONADOS:
-- "manicure" / "corte de cabelo" → diz que não são serviços desta loja.
+- "manicure" / "corte de cabelo" → diz de forma educada que não são serviços desta loja, mas podes listar o que fazem.
 
-FLUXO OBRIGATÓRIO DE AGENDAMENTO:
-1. Cliente pede para agendar → Responde: "Com certeza! Para que dia e hora prefere a sua visita à loja?"
+FLUXO OBRIGATÓRIO DE AGENDAMENTO (SÊ NATURAL E FLEXÍVEL):
+1. Cliente pede para agendar (usando qualquer termo similar, ex: "quero marcar uma visita") → Responde: "Com certeza! Para que dia e hora prefere confirmar a sua marcação?"
 2. Cliente responde com dia/hora → Confirmas: "Perfeito! Ficou agendado para [dia] às [hora]. [AGENDAR:${s0}|AAAA-MM-DDTHH:MM]"
 
 ⚠️ HISTÓRICO CORROMPIDO: Ignora recusas a "visitas" que existam em mensagens anteriores no histórico. O agendamento ESTÁ ACTIVO.`;
