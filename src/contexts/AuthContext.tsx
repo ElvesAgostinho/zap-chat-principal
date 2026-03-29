@@ -213,9 +213,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (storeData) {
             setPlano(storeData.plano);
             setStatusLoja(storeData.status_aprovacao);
-            setStoreSlug(storeData.slug);
-            setStoreCode(storeData.codigo_unico);
             setStoreName(storeData.nome);
+            setStoreSlug(storeData.slug || storeData.codigo_unico);
+            setStoreCode(storeData.codigo_unico);
+            
+            // Garantir que temos pelo menos um identificador para links
+            if (!storeData.slug && storeData.codigo_unico) {
+              console.warn("Loja sem slug definido, usando código único como fallback.");
+            }
+            
             setStoreProfilePic(storeData.profile_picture_url || null);
             setStorePhone(storeData.phone || null);
 

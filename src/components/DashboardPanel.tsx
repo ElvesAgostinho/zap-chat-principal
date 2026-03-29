@@ -219,60 +219,62 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
 
       {activeTab === 'geral' ? (
         <div className="space-y-8">
-          {/* Store Link Banner */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="relative overflow-hidden group p-6 rounded-2xl bg-muted/30 border border-border shadow-sm flex flex-col md:flex-row items-center justify-between gap-6"
-          >
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-50" />
-            
-            <div className="flex items-center gap-6 relative z-10">
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary flex-shrink-0 shadow-glow">
-                <Globe className="w-7 h-7" />
+          {/* Store Link Banner - Only show for store owners/agents, not super admins */}
+          {storeId && (role !== 'super_admin') && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="relative overflow-hidden group p-6 rounded-2xl bg-muted/30 border border-border shadow-sm flex flex-col md:flex-row items-center justify-between gap-6"
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-50" />
+              
+              <div className="flex items-center gap-6 relative z-10">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary flex-shrink-0 shadow-glow">
+                  <Globe className="w-7 h-7" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-foreground text-lg font-display">Hub Comercial Ativo 🚀</h3>
+                  <p className="text-sm text-muted-foreground font-medium max-w-md">Capture leads e pedidos automaticamente através do seu catálogo digital premium.</p>
+                </div>
               </div>
-              <div>
-                <h3 className="font-bold text-foreground text-lg font-display">Hub Comercial Ativo 🚀</h3>
-                <p className="text-sm text-muted-foreground font-medium max-w-md">Capture leads e pedidos automaticamente através do seu catálogo digital premium.</p>
-              </div>
-            </div>
-            
-            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto relative z-10">
-              <div className="flex-1 md:flex-none flex items-center gap-3 bg-secondary px-4 py-2.5 rounded-xl border border-border group min-w-[240px]">
-                <span className="text-[11px] text-muted-foreground font-medium truncate">
-                  {window.location.host}/loja/{(storeSlug || storeCode) || '...'}
-                </span>
+              
+              <div className="flex flex-wrap items-center gap-3 w-full md:w-auto relative z-10">
+                <div className="flex-1 md:flex-none flex items-center gap-3 bg-secondary px-4 py-2.5 rounded-xl border border-border group min-w-[240px]">
+                  <span className="text-[11px] text-muted-foreground font-medium truncate">
+                    {window.location.host}/loja/{(storeSlug || storeCode) || 'carregando...'}
+                  </span>
+                  <button
+                    onClick={() => { 
+                      const identifier = storeSlug || storeCode;
+                      if (!identifier) {
+                        toast.error('O link da loja está a ser gerado. Por favor, aguarde ou atualize a página.');
+                        return;
+                      }
+                      const url = `${window.location.origin}/loja/${identifier}`;
+                      navigator.clipboard.writeText(url); 
+                      toast.success('Link copiado!'); 
+                    }}
+                    className="p-1.5 hover:bg-white/10 rounded-lg transition-colors ml-auto"
+                  >
+                    <Copy className="w-3.5 h-3.5 text-primary" />
+                  </button>
+                </div>
                 <button
-                  onClick={() => { 
+                  onClick={() => {
                     const identifier = storeSlug || storeCode;
                     if (!identifier) {
-                      toast.error('Identificador da loja não encontrado.');
+                      toast.error('Identificador da loja não disponível de momento.');
                       return;
                     }
-                    const url = `${window.location.origin}/loja/${identifier}`;
-                    navigator.clipboard.writeText(url); 
-                    toast.success('Link copiado!'); 
+                    window.open(`https://wa.me/?text=${encodeURIComponent(`Confira nosso catálogo: ${window.location.origin}/loja/${identifier}`)}`, '_blank');
                   }}
-                  className="p-1.5 hover:bg-white/10 rounded-lg transition-colors ml-auto"
+                  className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg hover:scale-105 transition-all"
                 >
-                  <Copy className="w-3.5 h-3.5 text-primary" />
+                  <MessageSquare className="w-4 h-4 fill-current" /> Partilhar Link
                 </button>
               </div>
-              <button
-                onClick={() => {
-                  const identifier = storeSlug || storeCode;
-                  if (!identifier) {
-                    toast.error('Identificador da loja não encontrado.');
-                    return;
-                  }
-                  window.open(`https://wa.me/?text=${encodeURIComponent(`Confira nosso catálogo: ${window.location.origin}/loja/${identifier}`)}`, '_blank');
-                }}
-                className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-xl font-bold text-xs shadow-lg hover:scale-105 transition-all"
-              >
-                <MessageSquare className="w-4 h-4 fill-current" /> Partilhar Link
-              </button>
-            </div>
-          </motion.div>
+            </motion.div>
+          )}
 
           {/* Stats Grid */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
