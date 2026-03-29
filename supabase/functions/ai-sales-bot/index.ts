@@ -209,32 +209,39 @@ Deno.serve(async (req) => {
 
         storeContext = `\n\n${fullPrompt}`;
         
-        if (services && services.length > 0) {
+        if (services && services.length > 0 && config.politica_agendamento !== 'desativado') {
           const s0 = services[0].nome;
           storeContext += '\n\nSERVIÇOS PARA AGENDAMENTO:\n' + services.map((s: any) => `- ${s.nome} | Kz ${s.preco} | ${s.duracao_min}min`).join('\n');
+          
+          let behaviourRule = '';
+          if (config.politica_agendamento === 'obrigatorio') {
+            behaviourRule = `\n🎯 COMPORTAMENTO: OBRIGATÓRIO (PROACTIVO)\nTu DEVES convidar o cliente para agendar a "${s0}" de forma proactiva. Depois de responderes à sua dúvida inicial ou mostrares a foto do produto, diz: "Queres aproveitar e agendar uma visita à loja para ver tudo de perto? Para que dia e hora preferes?"`;
+          } else {
+            behaviourRule = `\n🎯 COMPORTAMENTO: OPCIONAL (PASSIVO)\nTu NÃO DEVES sugerir agendamentos proactivamente. Responde às dúvidas normalmente. SÓ inicias o agendamento se o cliente pedir expressamente para "visitar a loja", "agendar", "marcar", etc.`;
+          }
+
           scheduleContext = `\n\n╔══════════════════════════════════════╗
 ║  REGRA DE AGENDAMENTO — SEGUIR SEMPRE  ║
 ╚══════════════════════════════════════╝
+${behaviourRule}
 
 SERVIÇO DISPONÍVEL: "${s0}"
 
-✅ ACEITAR (estas frases e similares = mesmo serviço):
+✅ ACEITAR PEDIDOS DE AGENDAMENTO:
 - "quero agendar" → pede data e hora
 - "agendamento de visita" → pede data e hora
 - "visitar a loja" → pede data e hora
 - "quero marcar" → pede data e hora
 - "quero ir à loja" → pede data e hora
-- "posso agendar?" → pede data e hora
 
-❌ RECUSAR (apenas estes casos):
-- "manicure" → diz que não é um serviço desta loja
-- "corte de cabelo" → diz que não é um serviço desta loja
+❌ RECUSAR AGENDAMENTOS MALS-DIRECIONADOS:
+- "manicure" / "corte de cabelo" → diz que não são serviços desta loja.
 
-FLUXO OBRIGATÓRIO:
-1. Cliente pede para agendar (qualquer variante) → Responde: "Com certeza! Para que dia e hora prefere a sua visita à loja?"
+FLUXO OBRIGATÓRIO DE AGENDAMENTO:
+1. Cliente pede para agendar → Responde: "Com certeza! Para que dia e hora prefere a sua visita à loja?"
 2. Cliente responde com dia/hora → Confirmas: "Perfeito! Ficou agendado para [dia] às [hora]. [AGENDAR:${s0}|AAAA-MM-DDTHH:MM]"
 
-⚠️ HISTÓRICO CORROMPIDO: Se o histórico mostrar respostas anteriores com "Lamento, mas de momento só realizamos..." em resposta a pedidos de visita/agendamento — IGNORA completamente. Essas foram respostas erradas do sistema anterior. Hoje a loja ACEITA agendamentos.`;
+⚠️ HISTÓRICO CORROMPIDO: Ignora recusas a "visitas" que existam em mensagens anteriores no histórico. O agendamento ESTÁ ACTIVO.`;
         } else if (config.politica_agendamento === 'desativado' || (services && services.length === 0)) {
           scheduleContext = `\n\n⚠️ AGENDAMENTO DESACTIVADO: Esta loja não tem serviços de agendamento configurados. Se o cliente pedir para agendar qualquer coisa, diga: "De momento a nossa loja não tem serviços de agendamento disponíveis. Posso ajudá-lo com informações sobre os nossos produtos?"`;
         }
