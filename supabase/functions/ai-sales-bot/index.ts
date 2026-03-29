@@ -201,7 +201,7 @@ Deno.serve(async (req) => {
           .replace('{{tom}}', config.tom_voz || 'formal')
           .replace('{{endereco}}', config.endereco || 'Solicitar')
           .replace('{{google_maps}}', config.localizacao_url || 'Solicitar')
-          .replace('{{catalogo_url}}',  `https://vendazap.ao/loja/${storeSlug}`)
+          .replace('{{catalogo_url}}', `https://crm.topconsultores.pt/loja/${storeSlug}`)
           .replace('{{horario}}', horariosText || 'Consulte o atendente')
           .replace('{{tem_agendamento}}', (services?.length || 0) > 0 ? 'sim' : 'não')
           .replace('{{usa_agendamento}}', config.politica_agendamento || 'opcional')

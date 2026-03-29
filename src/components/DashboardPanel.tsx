@@ -251,13 +251,13 @@ export default function DashboardPanel({ vendas, leads, products, alertCount, on
               <div className="flex flex-wrap items-center gap-3 w-full md:w-auto relative z-10">
                 <div className="flex-1 md:flex-none flex items-center gap-3 bg-secondary px-4 py-2.5 rounded-xl border border-border group min-w-[240px]">
                   <span className="text-[11px] text-muted-foreground font-medium truncate flex-1">
-                    vendazap.ao/loja/{storeSlug || (storeName ? slugify(storeName) : '...')}
+                    {window.location.host}/loja/{storeSlug || (storeName ? slugify(storeName) : '...')}
                   </span>
                   {(storeSlug || storeName) && (
                     <button
                       onClick={() => { 
                         const id = storeSlug || slugify(storeName || '');
-                        const url = `https://vendazap.ao/loja/${id}`;
+                        const url = `${window.location.origin}/loja/${id}`;
                         navigator.clipboard.writeText(url); 
                         toast.success('Link copiado! ✅'); 
                       }}
