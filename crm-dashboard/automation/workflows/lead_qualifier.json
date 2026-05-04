@@ -1,0 +1,72 @@
+{
+    "name": "Lead Qualification Agent",
+    "nodes": [
+        {
+            "parameters": {
+                "httpMethod": "POST",
+                "path": "lead-capture",
+                "options": {}
+            },
+            "id": "1",
+            "name": "Webhook Lead Capture",
+            "type": "n8n-nodes-base.webhook",
+            "typeVersion": 1,
+            "position": [
+                100,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "model": "llama3-8b-8192",
+                "options": {}
+            },
+            "id": "2",
+            "name": "Groq Lead Scoring",
+            "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+            "typeVersion": 1,
+            "position": [
+                300,
+                300
+            ]
+        },
+        {
+            "parameters": {
+                "table": "leads",
+                "data": "={{ $json }}"
+            },
+            "id": "3",
+            "name": "Supabase Update",
+            "type": "n8n-nodes-base.supabase",
+            "typeVersion": 1,
+            "position": [
+                500,
+                300
+            ]
+        }
+    ],
+    "connections": {
+        "Webhook Lead Capture": {
+            "main": [
+                [
+                    {
+                        "node": "Groq Lead Scoring",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Groq Lead Scoring": {
+            "main": [
+                [
+                    {
+                        "node": "Supabase Update",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    }
+}

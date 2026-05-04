@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autonomous CRM | AI Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="logo">
+                <span class="logo-icon">🤖</span>
+                <h2>Antigravity CRM</h2>
+            </div>
+            <nav>
+                <ul>
+                    <li class="active"><span>📊</span> Dashboard</li>
+                    <li><span>👤</span> Leads</li>
+                    <li><span>⚙️</span> Automações</li>
+                    <li><span>📈</span> Relatórios</li>
+                    <li style="margin-top: auto; border-top: 1px solid var(--glass-border); padding-top: 1rem;">
+                        <a href="https://sua-instancia-evolution.com/manager" target="_blank" style="text-decoration: none; color: #25d366; display: flex; align-items: center; gap: 10px; font-weight: 600;">
+                            <span>🔗</span> Evolution Manager
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </aside>
+
+        <main class="content">
+            <header>
+                <h1>Visão Geral do Funil Autônomo</h1>
+                <div class="user-profile">
+                    <span class="status-badge">AI Active</span>
+                </div>
+            </header>
+
+            <section class="stats-grid">
+                <div class="stat-card">
+                    <h3>Leads Totais</h3>
+                    <p class="stat-val">0</p>
+                    <span class="stat-trend">+0% este mês</span>
+                </div>
+                <div class="stat-card">
+                    <h3>Qualificados (IA)</h3>
+                    <p class="stat-val">0</p>
+                    <span class="stat-trend">+0% este mês</span>
+                </div>
+                <div class="stat-card">
+                    <h3>Horas Humanas Salvas</h3>
+                    <p class="stat-val">0h</p>
+                    <span class="stat-trend">Eficiência 100%</span>
+                </div>
+            </section>
+
+            <section class="leads-table-container">
+                <div class="table-header">
+                    <h2>Últimos Leads Qualificados</h2>
+                </div>
+                <table class="leads-table">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>Empresa</th>
+                            <th>Score IA</th>
+                            <th>Status</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leads-body">
+                        <!-- Leads serão inseridos aqui via JS -->
+                        <tr>
+                            <td colspan="5" style="text-align:center; padding: 2rem;">Aguardando dados do Supabase...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
