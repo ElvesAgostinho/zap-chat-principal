@@ -13,6 +13,7 @@ import {
   ReactFlowProvider,
   useReactFlow,
   Node,
+  Panel,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { MessageSquare, Zap, GitBranch, Clock, Image as ImageIcon, CheckCircle, Save, Loader2, Trash2, MessageCircle, Tag, HelpCircle, Webhook, Shuffle, ArrowRightCircle, BellRing, X } from 'lucide-react';
@@ -114,7 +115,7 @@ function DnDPanel() {
   );
 }
 
-function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChange }: any) {
+function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChange, children }: any) {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const { screenToFlowPosition } = useReactFlow();
@@ -248,6 +249,7 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
           className="bg-slate-50"
         >
           <Controls position="top-left" style={{ margin: '16px' }} />
+          {children}
           <MiniMap 
             nodeColor={(node) => {
               switch (node.type) {
@@ -563,24 +565,6 @@ export default function WorkflowBuilder({ automationId, initialNodes, initialEdg
 
   return (
     <div className="w-full h-full flex flex-col bg-slate-50 relative">
-      {/* Action Buttons */}
-      <div className="absolute bottom-6 right-6 z-40 flex gap-3">
-        <button 
-          onClick={() => setShowHelpModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 border border-slate-200 transition-colors shadow-sm"
-        >
-          <HelpCircle className="w-4 h-4 text-sky-500" />
-          Ajuda
-        </button>
-        <button 
-          onClick={saveFlow}
-          className="flex items-center gap-2 px-5 py-2.5 bg-sky-500 text-white rounded-xl font-bold text-sm hover:bg-sky-600 transition-colors shadow-md"
-        >
-          <Save className="w-4 h-4" />
-          {isSaving ? 'A Gravar...' : 'Gravar Flow'}
-        </button>
-      </div>
-      
       <div className="flex-1 w-full h-full flex flex-row relative z-10">
         <ReactFlowProvider>
           <DnDPanel />
@@ -591,7 +575,24 @@ export default function WorkflowBuilder({ automationId, initialNodes, initialEdg
             setEdges={setEdges} 
             onNodesChange={onNodesChange} 
             onEdgesChange={onEdgesChange} 
-          />
+          >
+            <Panel position="top-right" className="flex gap-3 m-4 z-50">
+              <button 
+                onClick={() => setShowHelpModal(true)}
+                className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 border border-slate-200 transition-colors shadow-sm"
+              >
+                <HelpCircle className="w-4 h-4 text-sky-500" />
+                Ajuda
+              </button>
+              <button 
+                onClick={saveFlow}
+                className="flex items-center gap-2 px-5 py-2.5 bg-sky-500 text-white rounded-xl font-bold text-sm hover:bg-sky-600 transition-colors shadow-md"
+              >
+                <Save className="w-4 h-4" />
+                {isSaving ? 'A Gravar...' : 'Gravar Flow'}
+              </button>
+            </Panel>
+          </FlowArea>
         </ReactFlowProvider>
       </div>
 
