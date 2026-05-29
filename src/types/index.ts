@@ -31,6 +31,8 @@ export interface Lead {
   atendente_id?: string | null;
   segmento?: string | null;
   criado_em: string;
+  valor_estimado?: number | null;
+  ultima_atividade?: string | null;
 }
 
 export interface Venda {
