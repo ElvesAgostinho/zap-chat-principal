@@ -146,39 +146,7 @@ export default function StoreConfigPanel() {
             <h3 className="font-semibold text-foreground">Identidade da Loja</h3>
           </div>
           <div><label className="text-[11px] uppercase tracking-wide text-muted-foreground">Nome da Loja</label><Input value={config.nomeLoja} onChange={e => setConfig(p => ({ ...p, nomeLoja: e.target.value }))} /></div>
-          <div>
-            <label className="text-[11px] uppercase tracking-wide text-muted-foreground">Link da Loja (Slug Personalizado)</label>
-            <div className="flex items-center gap-2">
-              <div className="bg-secondary px-3 py-2 rounded-lg text-xs font-mono text-muted-foreground shrink-0 border border-border/50">/loja/</div>
-              <Input 
-                value={config.slug} 
-                onChange={e => setConfig(p => ({ ...p, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') }))} 
-                placeholder="ex: minha-marca"
-              />
-            </div>
-            <div className="flex items-center justify-between mt-2 ml-1 bg-secondary/80 px-3 py-2 rounded-lg border border-border shadow-sm">
-              <p className="text-[11px] text-muted-foreground font-medium truncate flex-1">
-                Link Público: <span className="text-foreground ml-1">{window.location.host}/loja/{config.slug || (config.nomeLoja ? slugify(config.nomeLoja) : 'pendente')}</span>
-              </p>
-              <button
-                onClick={() => {
-                  const id = config.slug || (config.nomeLoja ? slugify(config.nomeLoja) : '');
-                  if (!id) {
-                    toast.error('Preencha o Nome da Loja primeiro.');
-                    return;
-                  }
-                  const url = `${window.location.origin}/loja/${id}`;
-                  navigator.clipboard.writeText(url);
-                  toast.success('Link do catálogo copiado! ✅');
-                }}
-                className="ml-3 p-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-md transition-all flex items-center justify-center shrink-0 border border-primary/20"
-                title="Copiar Link"
-                type="button"
-              >
-                <Globe className="w-3.5 h-3.5 mr-1.5" /> Copiar
-              </button>
-            </div>
-          </div>
+
           <div><label className="text-[11px] uppercase tracking-wide text-muted-foreground">Telefone de Contato</label><Input value={config.telefone} onChange={e => setConfig(p => ({ ...p, telefone: e.target.value }))} /></div>
           <div><label className="text-[11px] uppercase tracking-wide text-muted-foreground">Endereço Físico</label><Input value={config.endereco} onChange={e => setConfig(p => ({ ...p, endereco: e.target.value }))} /></div>
         </motion.div>
@@ -187,108 +155,7 @@ export default function StoreConfigPanel() {
 
 
 
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card p-5 rounded-2xl shadow-card space-y-3 border border-border/50">
-        <div className="flex items-center gap-2"><CreditCard className="w-5 h-5 text-primary" /><h3 className="font-semibold text-foreground">Pagamentos</h3></div>
-        
-        <div className="space-y-2">
-          {config.formasPagamento.map((p, i) => (
-            <div key={i} className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl border border-border/50">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-foreground">{p.tipo}</p>
-                <p className="text-[11px] text-muted-foreground truncate">{p.detalhes || 'Nenhum detalhe'}</p>
-              </div>
-              <button 
-                onClick={() => setConfig(c => ({ ...c, formasPagamento: c.formasPagamento.filter((_, idx) => idx !== i) }))} 
-                className="ml-2 p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                title="Remover"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
-        </div>
 
-        <div className="p-4 bg-secondary/30 rounded-2xl space-y-3 border border-dashed border-border">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Adicionar Nova Forma</p>
-          <div className="grid grid-cols-2 gap-2">
-            <Input 
-              value={newPayment.tipo} 
-              onChange={e => setNewPayment(p => ({ ...p, tipo: e.target.value }))} 
-              placeholder="Ex: IBAN" 
-              className="text-xs h-9" 
-            />
-            <Input 
-              value={newPayment.detalhes} 
-              onChange={e => setNewPayment(p => ({ ...p, detalhes: e.target.value }))} 
-              placeholder="Ex: AO06 0055..." 
-              className="text-xs h-9" 
-            />
-          </div>
-          <button 
-            onClick={() => {
-              if (newPayment.tipo.trim()) {
-                setConfig(c => ({ ...c, formasPagamento: [...c.formasPagamento, { tipo: newPayment.tipo.trim(), detalhes: newPayment.detalhes.trim(), is_active: true }] }));
-                setNewPayment({ tipo: '', detalhes: '' });
-              }
-            }} 
-            className="w-full h-9 flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-glow"
-          >
-            <Plus className="w-3.5 h-3.5" /> Adicionar Pagamento
-          </button>
-        </div>
-      </motion.div>
-
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card p-5 rounded-2xl shadow-card space-y-3 border border-border/50">
-        <div className="flex items-center gap-2"><MapPin className="w-5 h-5 text-primary" /><h3 className="font-semibold text-foreground">Zonas de Entrega</h3></div>
-        
-        <div className="space-y-2">
-          {config.zonasEntrega.map((z, i) => (
-            <div key={i} className="flex items-center justify-between p-3 bg-secondary/50 rounded-xl border border-border/50">
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-foreground">{z.zona}</p>
-                <p className="text-[11px] text-primary">{z.taxa ? `${z.taxa.toLocaleString()} Kz` : 'Entrega Grátis'}</p>
-              </div>
-              <button 
-                onClick={() => setConfig(c => ({ ...c, zonasEntrega: c.zonasEntrega.filter((_, idx) => idx !== i) }))} 
-                className="ml-2 p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
-                title="Remover"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
-        </div>
-
-        <div className="p-4 bg-secondary/30 rounded-2xl space-y-3 border border-dashed border-border">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Adicionar Nova Zona</p>
-          <div className="grid grid-cols-2 gap-2">
-            <Input 
-              value={newZone.zona} 
-              onChange={e => setNewZone(p => ({ ...p, zona: e.target.value }))} 
-              placeholder="Ex: Talatona" 
-              className="text-xs h-9" 
-            />
-            <Input 
-              type="number"
-              value={newZone.taxa} 
-              onChange={e => setNewZone(p => ({ ...p, taxa: e.target.value }))} 
-              placeholder="Taxa (Kz)" 
-              className="text-xs h-9" 
-            />
-          </div>
-          <button 
-            onClick={() => {
-              if (newZone.zona.trim()) {
-                setConfig(c => ({ ...c, zonasEntrega: [...c.zonasEntrega, { zona: newZone.zona.trim(), taxa: Number(newZone.taxa) || 0, is_active: true }] }));
-                setNewZone({ zona: '', taxa: '' });
-              }
-            }} 
-            className="w-full h-9 flex items-center justify-center gap-2 rounded-xl bg-primary text-primary-foreground font-bold text-xs shadow-glow"
-          >
-            <Plus className="w-3.5 h-3.5" /> Adicionar Zona
-          </button>
-        </div>
-      </motion.div>
 
 
 

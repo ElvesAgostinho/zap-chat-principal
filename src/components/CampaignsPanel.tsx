@@ -178,30 +178,7 @@ export default function CampaignsPanel({ storeId }: CampaignsPanelProps) {
         </motion.button>
       </div>
 
-      {sentCampaigns.length > 0 && (
-        <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider px-2">Histórico de Transmissões</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {sentCampaigns.map(c => (
-              <div key={c.id} className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span className="text-xs font-bold">{c.enviados}/{c.destinatarios} Entregues</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-[10px] font-medium text-slate-400">
-                    <Clock className="w-3 h-3" />
-                    {new Date(c.data_envio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                  </div>
-                </div>
-                <div className="p-3 bg-slate-50 rounded-xl">
-                  <p className="text-xs text-slate-600 line-clamp-3 italic">"{c.conteudo}"</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
