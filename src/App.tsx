@@ -12,6 +12,7 @@ import LoginPage from "./pages/LoginPage";
 import AdminPanel from "./pages/AdminPanel";
 import SuperAdminPanel from "./pages/SuperAdminPanel";
 import SignupPage from "./pages/SignupPage";
+import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import PendingApprovalScreen from "./components/PendingApprovalScreen";
 import SuspendedScreen from "./components/SuspendedScreen";
@@ -32,7 +33,7 @@ function ProtectedRoute({ children, adminOnly = false, superAdminOnly = false }:
   }
 
   if (!user) return <Navigate to="/login" replace />;
-  if (superAdminOnly && !isSuperAdmin) return <Navigate to="/" replace />;
+  if (superAdminOnly && !isSuperAdmin) return <Navigate to="/app" replace />;
   
   // If store account was deleted by admin
   if (!isSuperAdmin && statusLoja === 'eliminado') {
@@ -49,7 +50,7 @@ function ProtectedRoute({ children, adminOnly = false, superAdminOnly = false }:
     return <SuspendedScreen />;
   }
 
-  if (adminOnly && role !== 'admin' && !isSuperAdmin) return <Navigate to="/" replace />;
+  if (adminOnly && role !== 'admin' && !isSuperAdmin) return <Navigate to="/app" replace />;
 
   return <>{children}</>;
 }
@@ -67,10 +68,11 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" replace /> : <LoginPage />} />
-      <Route path="/signup" element={user ? <Navigate to="/" replace /> : <SignupPage />} />
+      <Route path="/login" element={user ? <Navigate to="/app" replace /> : <LoginPage />} />
+      <Route path="/signup" element={user ? <Navigate to="/app" replace /> : <SignupPage />} />
+      <Route path="/" element={<LandingPage />} />
       <Route
-        path="/"
+        path="/app"
         element={
           user ? (
             <ProtectedRoute>

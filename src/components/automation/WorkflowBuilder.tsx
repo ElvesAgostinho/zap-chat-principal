@@ -77,7 +77,7 @@ function DnDPanel() {
         <p className="text-[10px] text-slate-500 mt-1">Arraste para a área de trabalho</p>
       </div>
       
-      <div className="flex flex-col gap-3 pb-8">
+      <div className="flex flex-col gap-3 pb-24">
         {menuItems.map((item) => (
           <div
             key={item.type}
