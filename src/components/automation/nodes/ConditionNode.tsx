@@ -54,6 +54,6 @@ export default function ConditionNode({ id, data }: { id: string, data: any }) {
         className="w-3 h-3 bg-red-500 border-2 border-white rounded-full right-[-7px] top-[70%]"
       />
       <div className="absolute right-[-20px] top-[66%] text-[10px] font-bold text-red-600">Não</div>
-    </div>
+    </>
   );
 }
