@@ -185,18 +185,7 @@ export default function StoreConfigPanel() {
       )}
 
 
-      {/* Idioma */}
-      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card p-5 rounded-2xl shadow-card space-y-3">
-        <div className="flex items-center gap-2"><Globe className="w-5 h-5 text-primary" /><h3 className="font-semibold text-foreground">Idioma do Bot</h3></div>
-        <div className="grid grid-cols-1 gap-2">
-          {IDIOMAS.map(lang => (
-            <button key={lang.value} onClick={() => setConfig(p => ({ ...p, idioma: lang.value }))}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm text-left transition-all ${config.idioma === lang.value ? 'bg-primary/10 ring-2 ring-primary font-medium text-foreground' : 'bg-secondary text-muted-foreground hover:bg-secondary/80'}`}>
-              {lang.label}
-            </button>
-          ))}
-        </div>
-      </motion.div>
+
 
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card p-5 rounded-2xl shadow-card space-y-3 border border-border/50">
         <div className="flex items-center gap-2"><CreditCard className="w-5 h-5 text-primary" /><h3 className="font-semibold text-foreground">Pagamentos</h3></div>
