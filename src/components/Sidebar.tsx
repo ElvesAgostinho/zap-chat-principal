@@ -84,21 +84,7 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
 
 
 
-  const toggleDark = () => {
-    const next = !isDark;
-    setIsDark(next);
-    document.documentElement.classList.toggle('dark', next);
-    localStorage.setItem('theme', next ? 'dark' : 'light');
-  };
-
-  // Initialize dark mode from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('theme');
-    if (saved === 'dark') {
-      document.documentElement.classList.add('dark');
-      setIsDark(true);
-    }
-  }, []);
+  // Removed dark mode logic to enforce Manychat light theme
 
   const navGroups = getNavGroups(alertCount, orderCount, chatCount, showAdmin, plano);
 

@@ -358,7 +358,7 @@ export default function ChatWorkspace({ leadId }: { leadId: string }) {
         </AnimatePresence>
 
         {/* Messages area with dynamic height */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 bg-[url('https://i.imgur.com/3q14Uud.png')] bg-repeat bg-center relative scroll-smooth overflow-x-hidden" style={{ backgroundSize: '400px', opacity: 0.95 }}>
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 chat-bg bg-repeat bg-center relative scroll-smooth overflow-x-hidden" style={{ backgroundSize: '400px', opacity: 0.95 }}>
           {loading && <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-sky-500" /></div>}
           {!loading && messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full opacity-30 select-none grayscale translate-y-[-10%]">

@@ -42,65 +42,6 @@
     --whatsapp-mid: 201 100% 36%;
   }
 
-  .dark {
-    --background: 222 95% 3%; /* #020617 */
-    --foreground: 210 40% 98%; /* #F8FAFC (Soft White) */
-
-    --card: 222 47% 11%; /* #0F172A (Carbon Blue) */
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 158 64% 52%; /* #34D399 (Neon sky Soft) */
-    --primary-foreground: 222 47% 5%;
-
-    --secondary: 215 33% 17%; /* #1E293B (Hover Dark & Inactive Filter Bg) */
-    --secondary-foreground: 215 20% 65%; /* #94A3B8 */
-
-    --muted: 215 33% 12%;
-    --muted-foreground: 215 20% 65%; /* #94A3B8 */
-
-    --accent: 215 33% 15%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62% 30%;
-    --destructive-foreground: 210 20% 98%;
-
-    --border: 215 33% 17%; /* #1E293B */
-    --input: 215 33% 17%;
-    --ring: 158 64% 52%;
-
-    --whatsapp-dark: 158 64% 15%;
-    --whatsapp-mid: 158 64% 52%;
-    --whatsapp-light: 158 64% 70%;
-    --whatsapp-bubble-sent: 158 64% 15%;
-    --whatsapp-bubble-received: 215 33% 12%;
-    --whatsapp-bg: 222 95% 2%;
-    --badge-red: 0 84% 60%;
-
-    --header-sky: 222 47% 4%;
-    --header-foreground: 210 40% 98%;
-
-    --shadow-card: 0 10px 25px rgba(0, 0, 0, 0.4);
-    --shadow-elevated: 0 30px 60px -12px rgba(0, 0, 0, 0.9);
-    --shadow-glow: 0 0 20px rgba(52, 211, 153, 0.05);
-
-    --sidebar-background: 222 47% 5%; /* Adjusted for depth */
-    --sidebar-foreground: 215 20% 85%;
-    --sidebar-primary: 158 64% 52%;
-    --sidebar-primary-foreground: 222 47% 5%;
-    --sidebar-accent: 215 33% 12%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 215 33% 10%;
-    --sidebar-ring: 158 64% 52%;
-
-    --chart-1: 139 100% 57%;
-    --chart-2: 258 91% 66%;
-    --chart-3: 43 90% 60%;
-    --chart-4: 349 80% 62%;
-    --chart-5: 262 75% 62%;
-  }
 }
 
 /* Force light mode contrast for neutral text, icons and titles */
@@ -113,18 +54,7 @@ body {
   background-color: #F8FAFC !important; /* Extremely light grey/blue like Manychat workspace */
 }
 
-.dark::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0.02;
-  pointer-events: none;
-  z-index: 9999;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
-}
+
 
 
 /* Removed complex dark forcing */
@@ -166,11 +96,7 @@ body {
   border: 1px solid #10B981;
 }
 
-.dark .status-badge-active {
-  background-color: #065F46;
-  color: #34D399;
-  border: 1px solid #34D399;
-}
+
 
 /* Notificações (Badge Number 1) */
 .notification-badge {
@@ -178,10 +104,7 @@ body {
   color: #FFFFFF;
 }
 
-.dark .notification-badge {
-  background-color: #059669;
-  color: #FFFFFF;
-}
+
 
 /* Status Livre */
 .status-badge-livre {
@@ -190,11 +113,7 @@ body {
   border: 1px solid #E2E8F0;
 }
 
-.dark .status-badge-livre {
-  background-color: #1E293B;
-  color: #94A3B8;
-  border: 1px solid #1E293B;
-}
+
 
 /* Filtros Enterprise */
 .filter-active {
@@ -203,11 +122,7 @@ body {
   border: 1px solid #10B981;
 }
 
-.dark .filter-active {
-  background-color: #065F46;
-  color: #34D399;
-  border: 1px solid #34D399;
-}
+
 
 .filter-inactive {
   background-color: #FFFFFF;
@@ -215,11 +130,7 @@ body {
   border: 1px solid #E2E8F0;
 }
 
-.dark .filter-inactive {
-  background-color: #1E293B;
-  color: #94A3B8;
-  border: 1px solid #1E293B;
-}
+
 
 @layer base {
   * {
@@ -240,10 +151,7 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='0.04'%3E%3Cpath d='M12 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 30a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm30-30a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 30a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm-15 15a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0-30a2 2 0 1 1 0-4 2 2 0 0 1 0 4z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
 }
 
-.dark .chat-bg {
-  background-color: hsl(var(--whatsapp-bg));
-  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M12 6a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 30a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm30-30a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0 30a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm-15 15a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm0-30a2 2 0 1 1 0-4 2 2 0 0 1 0 4z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-}
+
 
 @layer utilities {
   .shadow-card {
