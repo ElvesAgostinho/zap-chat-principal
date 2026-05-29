@@ -15,7 +15,7 @@ import {
   Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { MessageSquare, Zap, GitBranch, Clock, Image as ImageIcon, CheckCircle, Save, Loader2 } from 'lucide-react';
+import { MessageSquare, Zap, GitBranch, Clock, Image as ImageIcon, CheckCircle, Save, Loader2, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -353,9 +353,23 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
               </p>
             </div>
             
+            {selectedNode.type !== 'triggerNode' && (
+              <button 
+                onClick={() => {
+                  setNodes((nds: any) => nds.filter((n: any) => n.id !== selectedNode.id));
+                  setEdges((eds: any) => eds.filter((e: any) => e.source !== selectedNode.id && e.target !== selectedNode.id));
+                  setSelectedNode(null);
+                }}
+                className="w-full py-2.5 bg-rose-50 text-rose-600 font-bold text-xs uppercase tracking-wider rounded-xl mt-4 hover:bg-rose-100 transition-colors flex items-center justify-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Apagar Bloco
+              </button>
+            )}
+            
             <button 
               onClick={() => setSelectedNode(null)}
-              className="w-full py-2.5 bg-slate-100 text-slate-700 font-bold text-xs uppercase tracking-wider rounded-xl mt-4 hover:bg-slate-200 transition-colors"
+              className="w-full py-2.5 bg-slate-100 text-slate-700 font-bold text-xs uppercase tracking-wider rounded-xl mt-2 hover:bg-slate-200 transition-colors"
             >
               Fechar Painel
             </button>
