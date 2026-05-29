@@ -84,13 +84,14 @@ export default function AutomationPanel() {
   if (selectedFlow) {
     return (
       <div className="w-full h-[calc(100vh-220px)] min-h-[600px] rounded-2xl overflow-hidden border border-slate-200 shadow-sm animate-fade-in flex flex-col bg-white">
-        <div className="h-14 border-b border-slate-200 flex items-center px-4 shrink-0 bg-slate-50 gap-4">
+        <div className="h-16 border-b border-slate-200 flex items-center px-4 shrink-0 bg-slate-50 gap-4">
           <button 
             onClick={() => { setSelectedFlow(null); fetchAutomations(); }}
-            className="p-2 hover:bg-slate-200 rounded-full transition-colors"
+            className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200 rounded-lg transition-colors border border-transparent hover:border-slate-300"
           >
-            <ArrowLeft className="w-5 h-5 text-slate-600" />
+            <ArrowLeft className="w-4 h-4" /> Voltar
           </button>
+          <div className="h-8 w-px bg-slate-300"></div>
           <div>
             <h2 className="font-bold text-slate-800">{selectedFlow.nome}</h2>
             <p className="text-[10px] text-slate-500 uppercase tracking-widest">
