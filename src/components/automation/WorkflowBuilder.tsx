@@ -247,7 +247,7 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
           fitViewOptions={{ padding: 0.2, maxZoom: 1 }}
           className="bg-slate-50"
         >
-
+          <Controls position="top-left" style={{ margin: '16px' }} />
           <MiniMap 
             nodeColor={(node) => {
               switch (node.type) {
