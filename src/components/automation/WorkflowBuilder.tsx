@@ -79,7 +79,7 @@ function DnDPanel() {
     { type: 'conditionNode', label: 'Condição', icon: GitBranch, color: 'text-amber-500', bg: 'bg-amber-50', desc: 'Divide o fluxo (Sim ou Não)' },
     { type: 'randomizerNode', label: 'Teste A/B', icon: Shuffle, color: 'text-fuchsia-500', bg: 'bg-fuchsia-50', desc: 'Divide os leads aleatoriamente (50/50)' },
     { type: 'delayNode', label: 'Atraso', icon: Clock, color: 'text-slate-500', bg: 'bg-slate-50', desc: 'Pausa o envio por minutos/dias' },
-    { type: 'actionNode', label: 'Acção CRM', icon: Tag, color: 'text-amber-500', bg: 'bg-amber-50', desc: 'Adiciona tags ou atualiza status' },
+    { type: 'actionNode', label: 'Acção CRM', icon: Tag, color: 'text-amber-500', bg: 'bg-amber-50', desc: 'Adiciona etiquetas ou atualiza etapa' },
     { type: 'notifyNode', label: 'Notificar', icon: BellRing, color: 'text-rose-500', bg: 'bg-rose-50', desc: 'Alerta a tua equipa no painel' },
     { type: 'webhookNode', label: 'Webhook', icon: Webhook, color: 'text-purple-500', bg: 'bg-purple-50', desc: 'Envia dados para APIs externas ou Make' },
     { type: 'jumpNode', label: 'Ir para Fluxo', icon: ArrowRightCircle, color: 'text-teal-500', bg: 'bg-teal-50', desc: 'Ligar a outra automação' },
@@ -120,6 +120,7 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
   const { screenToFlowPosition } = useReactFlow();
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -175,8 +176,8 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
       
       let label = defaultLabel;
       if (type === 'messageNode') label = 'Nova Mensagem';
-      if (type === 'conditionNode') label = 'Se Contém Tag';
-      if (type === 'actionNode') label = 'Adicionar Tag';
+      if (type === 'conditionNode') label = 'Se Tem Etiqueta';
+      if (type === 'actionNode') label = 'Adicionar Etiqueta';
       if (type === 'inputNode') label = 'Qual é o seu nome?';
       if (type === 'notifyNode') label = 'Lead quente precisa de atenção!';
       if (type === 'webhookNode') label = 'Webhook Request';
@@ -423,15 +424,15 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
                   value={(selectedNode.data.actionType as string) || 'add_tag'}
                   onChange={(e) => {
                     updateNodeData('actionType', e.target.value);
-                    const typeLabel = e.target.value === 'add_tag' ? 'Adicionar Tag' : e.target.value === 'remove_tag' ? 'Remover Tag' : 'Mudar Status';
+                    const typeLabel = e.target.value === 'add_tag' ? 'Adicionar Etiqueta' : e.target.value === 'remove_tag' ? 'Remover Etiqueta' : 'Mudar Etapa do Cliente';
                     updateNodeLabel(`${typeLabel}: ${(selectedNode.data.actionValue as string) || ''}`);
                   }}
                 >
-                  <option value="add_tag">Adicionar Tag</option>
-                  <option value="remove_tag">Remover Tag</option>
-                  <option value="change_status">Mudar Status (Etapa)</option>
+                  <option value="add_tag">Adicionar Etiqueta</option>
+                  <option value="remove_tag">Remover Etiqueta</option>
+                  <option value="change_status">Mudar Etapa do Cliente</option>
                 </select>
-                <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Valor</label>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Qual o nome da etiqueta ou etapa?</label>
                 <input 
                   type="text"
                   className="w-full border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -439,10 +440,10 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
                   onChange={(e) => {
                     updateNodeData('actionValue', e.target.value);
                     const typeValue = (selectedNode.data.actionType as string) || 'add_tag';
-                    const typeLabel = typeValue === 'add_tag' ? 'Adicionar Tag' : typeValue === 'remove_tag' ? 'Remover Tag' : 'Mudar Status';
+                    const typeLabel = typeValue === 'add_tag' ? 'Adicionar Etiqueta' : typeValue === 'remove_tag' ? 'Remover Etiqueta' : 'Mudar Etapa';
                     updateNodeLabel(`${typeLabel}: ${e.target.value}`);
                   }}
-                  placeholder="Ex: interessado, negociacao, etc"
+                  placeholder="Ex: interessado, comprou_hoje"
                 />
               </div>
             )}
@@ -456,18 +457,18 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
                   value={(selectedNode.data.conditionType as string) || 'has_tag'}
                   onChange={(e) => updateNodeData('conditionType', e.target.value)}
                 >
-                  <option value="has_tag">Tem a Tag</option>
-                  <option value="no_tag">Não tem a Tag</option>
-                  <option value="phone_exists">Telefone Existe</option>
-                  <option value="match_exact">Resposta é exata a</option>
-                  <option value="match_contains">Resposta contém</option>
+                  <option value="has_tag">Tem a Etiqueta</option>
+                  <option value="no_tag">Não tem a Etiqueta</option>
+                  <option value="phone_exists">Já guardámos o Telefone</option>
+                  <option value="match_exact">A mensagem do cliente for igual a</option>
+                  <option value="match_contains">A mensagem do cliente tiver a palavra</option>
                 </select>
                 <input 
                   type="text"
                   className="w-full border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                   value={(selectedNode.data.conditionValue as string) || ''}
                   onChange={(e) => updateNodeData('conditionValue', e.target.value)}
-                  placeholder="Ex: VIP ou '1'"
+                  placeholder="Ex: VIP, ou '1', ou 'preço'"
                 />
               </div>
             )}
@@ -565,6 +566,13 @@ export default function WorkflowBuilder({ automationId, initialNodes, initialEdg
       {/* Top Header/Toolbar */}
       <div className="absolute top-4 right-6 z-20 flex gap-2">
         <button 
+          onClick={() => setShowHelpModal(true)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 border border-slate-200 transition-colors shadow-sm"
+        >
+          <HelpCircle className="w-4 h-4 text-sky-500" />
+          Ajuda
+        </button>
+        <button 
           onClick={saveFlow}
           className="flex items-center gap-2 px-5 py-2.5 bg-sky-500 text-white rounded-xl font-bold text-sm hover:bg-sky-600 transition-colors shadow-md"
         >
@@ -586,6 +594,66 @@ export default function WorkflowBuilder({ automationId, initialNodes, initialEdg
           />
         </ReactFlowProvider>
       </div>
+
+      {/* Help Modal */}
+      {showHelpModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col relative animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
+              <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                <HelpCircle className="text-sky-500" />
+                Guia das Automações
+              </h2>
+              <button onClick={() => setShowHelpModal(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded-lg transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="overflow-y-auto p-6 space-y-6 text-slate-600 text-sm">
+              <div className="space-y-2">
+                <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><Zap className="text-amber-500 w-4 h-4" /> 1. Gatilho (O Início)</h3>
+                <p>Todas as automações começam com um Gatilho. Aqui defines qual é a <strong>palavra-chave</strong> que o cliente tem de escrever no WhatsApp para que este fluxo comece (ex: "oi", "preço").</p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><MessageSquare className="text-sky-500 w-4 h-4" /> 2. Nova Mensagem</h3>
+                <p>Envia um texto simples ao cliente. Podes usar a variável <code>{'{'}{'{'}nome{'}'}{'}'}</code> para chamar o cliente pelo nome. Podes encadear várias mensagens de seguida.</p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><ImageIcon className="text-indigo-500 w-4 h-4" /> 3. Mídia (Imagens / Áudio)</h3>
+                <p>Faz o upload de uma imagem, PDF ou vídeo. Se carregares um áudio <code>.ogg</code>, ele será enviado como "Áudio Gravado na Hora" no WhatsApp do cliente.</p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><Tag className="text-amber-500 w-4 h-4" /> 4. Acção CRM (Etiquetas e Etapas)</h3>
+                <p>Nó invisível para o cliente, mas essencial para a tua organização. Usa-o para:</p>
+                <ul className="list-disc pl-5 space-y-1">
+                  <li><strong>Adicionar Etiqueta:</strong> Marca o cliente com uma palavra (ex: VIP, Interessado).</li>
+                  <li><strong>Remover Etiqueta:</strong> Tira uma etiqueta antiga.</li>
+                  <li><strong>Mudar Etapa do Cliente:</strong> Move o contacto automaticamente no teu quadro Kanban (Pipeline) sem tu mexeres um dedo!</li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><GitBranch className="text-amber-500 w-4 h-4" /> 5. Condição (Bifurcações)</h3>
+                <p>Manda a conversa para caminhos diferentes! Exemplo: "Se a mensagem do cliente for igual a 1, vai para o caminho SIM (cima). Se não for, vai para o caminho NÃO (baixo)".</p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><Clock className="text-slate-500 w-4 h-4" /> 6. Atraso (Follow-up Mágico)</h3>
+                <p>Coloca o fluxo em pausa. Podes definir para esperar 2 horas, e de seguida ligas a uma mensagem do tipo: <em>"Ainda tens interesse?"</em>. Excelente para recuperar clientes que pararam de responder.</p>
+              </div>
+            </div>
+            
+            <div className="bg-slate-50 p-4 border-t border-slate-100 flex justify-end">
+              <button onClick={() => setShowHelpModal(false)} className="px-6 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm hover:bg-slate-700 transition-colors">
+                Entendi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

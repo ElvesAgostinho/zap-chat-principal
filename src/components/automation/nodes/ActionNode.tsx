@@ -27,7 +27,7 @@ export default function ActionNode({ id, data }: { id: string, data: any }) {
           <span className="text-xs font-bold text-amber-700 uppercase tracking-wider">Acção no CRM</span>
         </div>
         <div className="p-4 bg-white">
-          <p className="text-sm font-medium text-slate-700">{data.label || 'Adicionar Tag: VIP'}</p>
+          <p className="text-sm font-medium text-slate-700">{data.label || 'Adicionar Etiqueta: VIP'}</p>
         </div>
       </div>
       <Handle 

@@ -27,7 +27,7 @@ export default function ConditionNode({ id, data }: { id: string, data: any }) {
       </div>
       
       <div className="p-4 bg-white">
-        <p className="text-sm font-medium text-slate-700">{data.label || 'Se o contacto tem a Tag "VIP"'}</p>
+        <p className="text-sm font-medium text-slate-700">{data.label || 'Se o contacto tem a Etiqueta "VIP"'}</p>
       </div>
 
       {/* Input */}
