@@ -3,6 +3,8 @@ import { Users, Zap, MessageSquare, Target, Clock, ArrowUpRight, TrendingUp } fr
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { Lead } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from 'react';
 
 interface DashboardPanelProps {
   leads: Lead[];
@@ -10,34 +12,68 @@ interface DashboardPanelProps {
 }
 
 export default function DashboardPanel({ leads, alertCount }: DashboardPanelProps) {
-  const { storeName } = useAuth();
+  const { storeName, storeId } = useAuth();
+  const [activeAutomations, setActiveAutomations] = useState(0);
+  const [totalMessages, setTotalMessages] = useState(0);
   
-  const clientCount = leads.filter(l => l.status === 'cliente').length;
-  const activeAutomations = 3; // Placeholder for now
+  const clientCount = leads.filter(l => l.status === 'cliente' || l.status === 'comprado' || l.status === 'vendido').length;
   
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!storeId) return;
+      
+      const { count: autoCount } = await supabase
+        .from('automacoes')
+        .select('*', { count: 'exact', head: true })
+        .eq('loja_id', storeId)
+        .eq('ativo', true);
+        
+      if (autoCount !== null) setActiveAutomations(autoCount);
+
+      const { count: msgCount } = await supabase
+        .from('mensagens')
+        .select('*', { count: 'exact', head: true })
+        .eq('loja_id', storeId);
+        
+      if (msgCount !== null) setTotalMessages(msgCount);
+    };
+
+    fetchStats();
+  }, [storeId]);
+
   const stats = [
-    { icon: Users, label: 'Contactos Totais', value: leads.length, color: 'text-primary', bg: 'bg-primary/10', trend: 12 },
-    { icon: Target, label: 'Clientes Convertidos', value: clientCount, color: 'text-blue-500', bg: 'bg-blue-500/10', trend: 5 },
+    { icon: Users, label: 'Contactos Totais', value: leads.length, color: 'text-primary', bg: 'bg-primary/10', trend: 0 },
+    { icon: Target, label: 'Clientes Convertidos', value: clientCount, color: 'text-blue-500', bg: 'bg-blue-500/10', trend: 0 },
     { icon: Zap, label: 'Automações Activas', value: activeAutomations, color: 'text-amber-500', bg: 'bg-amber-500/10', trend: 0 },
-    { icon: MessageSquare, label: 'Mensagens Trocadas', value: '1.2k', color: 'text-indigo-500', bg: 'bg-indigo-500/10', trend: 20 },
+    { icon: MessageSquare, label: 'Mensagens Trocadas', value: totalMessages, color: 'text-indigo-500', bg: 'bg-indigo-500/10', trend: 0 },
   ];
 
-  // Mock data for charts - in real app, derive from leads/sales over time
-  const growthData = [
-    { name: 'Seg', leads: 4 },
-    { name: 'Ter', leads: 7 },
-    { name: 'Qua', leads: 5 },
-    { name: 'Qui', leads: 12 },
-    { name: 'Sex', leads: 18 },
-    { name: 'Sáb', leads: 25 },
-    { name: 'Dom', leads: Math.max(10, leads.length) },
-  ];
+  // Calculate real growth data for the last 7 days
+  const today = new Date();
+  const last7Days = Array.from({ length: 7 }).map((_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - (6 - i));
+    return d;
+  });
+
+  const growthData = last7Days.map(date => {
+    const dateStr = date.toISOString().split('T')[0]; // "YYYY-MM-DD"
+    const count = leads.filter(l => {
+      if (!l.criado_em) return false;
+      return l.criado_em.split('T')[0] === dateStr;
+    }).length;
+    
+    return {
+      name: date.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', ''),
+      leads: count
+    };
+  });
 
   const funnelData = [
-    { name: 'Novos', value: leads.filter(l => !l.status || l.status === 'novo').length || 10 },
-    { name: 'Interessados', value: leads.filter(l => l.status === 'interessado').length || 7 },
-    { name: 'Em Negociação', value: leads.filter(l => l.status === 'aguardando').length || 5 },
-    { name: 'Fechados', value: clientCount || 3 },
+    { name: 'Novos', value: leads.filter(l => !l.status || l.status === 'novo').length },
+    { name: 'Interessados', value: leads.filter(l => l.status === 'interessado').length },
+    { name: 'Em Negociação', value: leads.filter(l => l.status === 'aguardando').length },
+    { name: 'Fechados', value: clientCount },
   ];
 
   const COLORS = ['#3b82f6', '#f59e0b', '#a855f7', '#10b981'];
