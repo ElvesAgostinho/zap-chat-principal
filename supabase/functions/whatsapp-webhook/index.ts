@@ -369,7 +369,121 @@ Deno.serve(async (req: any) => {
           const textForEscalation = messageText || '';
           const escalation = detectEscalation(textForEscalation);
 
-          if (escalation.reason === 'purchase_intent') await supabase.from('leads').update({ status: 'interessado' }).eq('id', leadId);
+          // --------------------------------------------------------------------------------
+          // AUTOMATION ENGINE (ZAP CHAT FLOWS)
+          // --------------------------------------------------------------------------------
+          let automationExecuted = false;
+          
+          const { data: activeAutomations } = await supabase
+            .from('automacoes')
+            .select('*')
+            .eq('loja_id', storeId)
+            .eq('ativo', true);
+            
+          if (activeAutomations && activeAutomations.length > 0) {
+            const matchedAuto = activeAutomations.find((a: any) => {
+              if (!a.trigger_keyword) return false;
+              const kws = a.trigger_keyword.split(',').map((k: string) => k.trim().toLowerCase());
+              const msgLower = textForEscalation.toLowerCase();
+              return kws.some((kw: string) => msgLower.includes(kw));
+            });
+
+            if (matchedAuto) {
+              automationExecuted = true;
+              console.log(`[webhook] Executando Automação: ${matchedAuto.nome}`);
+              
+              const nodes = matchedAuto.nodes || [];
+              const edges = matchedAuto.edges || [];
+              
+              const triggerNode = nodes.find((n: any) => n.type === 'triggerNode');
+              
+              if (triggerNode) {
+                let currentNodeId = triggerNode.id;
+                
+                const getNextNode = (sourceId: string) => {
+                  const edge = edges.find((e: any) => e.source === sourceId);
+                  if (edge) return nodes.find((n: any) => n.id === edge.target);
+                  return null;
+                };
+
+                let nextNode = getNextNode(currentNodeId);
+                
+                while (nextNode) {
+                  if (nextNode.type === 'messageNode') {
+                    const msgText = nextNode.data?.label || '';
+                    if (msgText) {
+                      await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
+                        body: JSON.stringify({ number: phone, text: msgText }),
+                      });
+                      await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: msgText, tipo: 'enviada', is_bot: true, loja_id: storeId });
+                    }
+                  } 
+                  else if (nextNode.type === 'mediaNode') {
+                    const mediaUrl = nextNode.data?.mediaUrl;
+                    if (mediaUrl) {
+                      const isImage = mediaUrl.match(/\\.(jpeg|jpg|gif|png)$/i);
+                      await fetch(`${baseUrl}/message/sendMedia/${instanceName}`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
+                        body: JSON.stringify({ number: phone, mediatype: isImage ? 'image' : 'document', media: mediaUrl }),
+                      });
+                      await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: '[Mídia da Automação]', media_url: mediaUrl, media_type: isImage ? 'image' : 'document', tipo: 'enviada', is_bot: true, loja_id: storeId });
+                    }
+                  }
+                  else if (nextNode.type === 'actionNode') {
+                    const actionLabel = String(nextNode.data?.label || '');
+                    if (actionLabel.toLowerCase().includes('tag')) {
+                      const newTag = actionLabel.replace(/adicionar\\s*tag:?/i, '').trim() || 'automacao';
+                      const { data: leadData } = await supabase.from('leads').select('tags').eq('id', leadId).single();
+                      const existingTags = leadData?.tags || [];
+                      if (!existingTags.includes(newTag)) {
+                        await supabase.from('leads').update({ tags: [...existingTags, newTag] }).eq('id', leadId);
+                      }
+                    }
+                  }
+                  else if (nextNode.type === 'conditionNode') {
+                    const conditionType = nextNode.data?.conditionType;
+                    const conditionValue = nextNode.data?.conditionValue;
+                    let conditionMet = false;
+                    
+                    const { data: leadData } = await supabase.from('leads').select('tags, telefone').eq('id', leadId).single();
+                    if (conditionType === 'has_tag') {
+                      conditionMet = (leadData?.tags || []).includes(conditionValue);
+                    } else if (conditionType === 'no_tag') {
+                      conditionMet = !(leadData?.tags || []).includes(conditionValue);
+                    } else if (conditionType === 'phone_exists') {
+                      conditionMet = !!leadData?.telefone;
+                    }
+                    
+                    const trueEdge = edges.find((e: any) => e.source === nextNode.id && String(e.sourceHandle).includes('true'));
+                    const falseEdge = edges.find((e: any) => e.source === nextNode.id && String(e.sourceHandle).includes('false'));
+                    
+                    let targetEdge = conditionMet ? trueEdge : falseEdge;
+                    if (!targetEdge) targetEdge = edges.find((e: any) => e.source === nextNode.id);
+                    
+                    if (targetEdge) {
+                      nextNode = nodes.find((n: any) => n.id === targetEdge.target);
+                      continue; 
+                    } else {
+                      nextNode = null;
+                      break;
+                    }
+                  }
+                  else if (nextNode.type === 'delayNode') {
+                    console.warn(`[webhook] Delay Node encontrado. Execução interrompida no Delay (requer cron job na v2).`);
+                    break;
+                  }
+                  
+                  nextNode = getNextNode(nextNode.id);
+                  await new Promise(r => setTimeout(r, 600)); // Sleep para não dar spam na API
+                }
+              }
+            }
+          }
+          // --------------------------------------------------------------------------------
+
+          if (!automationExecuted) {
+            if (escalation.reason === 'purchase_intent') await supabase.from('leads').update({ status: 'interessado' }).eq('id', leadId);
 
           if (escalation.shouldEscalate && escalation.reason) {
             await supabase.from('leads').update({ controle_conversa: 'humano', precisa_humano: true, bot_enabled: false }).eq('id', leadId);

@@ -1,258 +1,158 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Plus, Play, Pause, Trash2, Clock, MessageSquare, Send, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
-
-interface Automation {
-  id: string;
-  nome: string;
-  evento: string;
-  atraso_dias: number;
-  mensagem: string;
-  is_active: boolean;
-}
+import { Automacao } from '@/types';
+import { Bot, Plus, ArrowLeft, Play, Square, Trash2, Edit2 } from 'lucide-react';
+import WorkflowBuilder from './automation/WorkflowBuilder';
 
 export default function AutomationPanel() {
   const { storeId } = useAuth();
-  const [automations, setAutomations] = useState<Automation[]>([]);
+  const [automations, setAutomations] = useState<Automacao[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAdd, setShowAdd] = useState(false);
+  const [selectedFlow, setSelectedFlow] = useState<Automacao | null>(null);
 
-  // Form State
-  const [nome, setNome] = useState('');
-  const [evento, setEvento] = useState('pos_venda');
-  const [atraso, setAtraso] = useState('1');
-  const [mensagem, setMensagem] = useState('');
+  useEffect(() => {
+    if (storeId) fetchAutomations();
+  }, [storeId]);
 
   const fetchAutomations = async () => {
-    if (!storeId) return;
     setLoading(true);
-    const { data, error } = await (supabase as any)
-      .from('campanhas_automaticas')
+    const { data, error } = await supabase
+      .from('automacoes')
       .select('*')
       .eq('loja_id', storeId)
       .order('criado_em', { ascending: false });
     
-    if (error) {
-      toast.error('Erro ao carregar automações');
-    } else {
-      setAutomations(data || []);
+    if (!error && data) {
+      setAutomations(data);
     }
     setLoading(false);
   };
 
-  useEffect(() => {
-    fetchAutomations();
-  }, [storeId]);
-
-  const handleCreate = async () => {
-    if (!nome || !mensagem || !storeId) return;
-
-    const { error } = await (supabase as any)
-      .from('campanhas_automaticas')
-      .insert({
-        loja_id: storeId,
-        nome,
-        evento,
-        atraso_dias: parseInt(atraso),
-        mensagem,
-        is_active: true
-      });
-
-    if (error) {
-      toast.error('Erro ao criar automação');
-    } else {
-      toast.success('Automação criada!');
-      setShowAdd(false);
-      setNome(''); setMensagem('');
-      fetchAutomations();
+  const createNewAutomation = async () => {
+    if (!storeId) return;
+    const { data, error } = await supabase
+      .from('automacoes')
+      .insert([{ loja_id: storeId, nome: 'Nova Automação', ativo: false }])
+      .select()
+      .single();
+    
+    if (!error && data) {
+      setAutomations([data, ...automations]);
+      setSelectedFlow(data);
     }
   };
 
-  const toggleActive = async (id: string, current: boolean) => {
-    const { error } = await (supabase as any)
-      .from('campanhas_automaticas')
-      .update({ is_active: !current })
-      .eq('id', id);
-
-    if (error) toast.error('Erro ao atualizar');
-    else fetchAutomations();
+  const toggleStatus = async (e: React.MouseEvent, auto: Automacao) => {
+    e.stopPropagation();
+    const newStatus = !auto.ativo;
+    await supabase.from('automacoes').update({ ativo: newStatus }).eq('id', auto.id);
+    setAutomations(prev => prev.map(a => a.id === auto.id ? { ...a, ativo: newStatus } : a));
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Excluir esta automação?')) return;
-    const { error } = await (supabase as any)
-      .from('campanhas_automaticas')
-      .delete()
-      .eq('id', id);
-
-    if (error) toast.error('Erro ao excluir');
-    else fetchAutomations();
+  const deleteAutomation = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (!window.confirm('Eliminar esta automação para sempre?')) return;
+    await supabase.from('automacoes').delete().eq('id', id);
+    setAutomations(prev => prev.filter(a => a.id !== id));
   };
 
-  const eventLabels: Record<string, string> = {
-    'pos_venda': 'Pós-Venda (Agradecimento)',
-    'reativacao': 'Reativação (30 dias sem compra)',
-    'abandono_carrinho': 'Recuperação de Carrinho',
-    'boas_vindas': 'Boas-vindas (Novo Lead)'
-  };
+  if (selectedFlow) {
+    return (
+      <div className="w-full h-[calc(100vh-80px)] rounded-2xl overflow-hidden border border-slate-200 shadow-sm animate-fade-in flex flex-col bg-white">
+        <div className="h-14 border-b border-slate-200 flex items-center px-4 shrink-0 bg-slate-50 gap-4">
+          <button 
+            onClick={() => { setSelectedFlow(null); fetchAutomations(); }}
+            className="p-2 hover:bg-slate-200 rounded-full transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5 text-slate-600" />
+          </button>
+          <div>
+            <h2 className="font-bold text-slate-800">{selectedFlow.nome}</h2>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest">
+              {selectedFlow.ativo ? '🟢 Activo' : '⚪ Inactivo'}
+            </p>
+          </div>
+        </div>
+        <div className="flex-1 w-full h-full relative">
+          <WorkflowBuilder automationId={selectedFlow.id} initialNodes={selectedFlow.nodes} initialEdges={selectedFlow.edges} />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-display text-lg flex items-center gap-2">
-            <Zap className="w-5 h-5 text-primary" />
-            Automações de Marketing
-          </h2>
-          <p className="text-xs text-muted-foreground">Mensagens automáticas para engajar seus clientes</p>
+          <h2 className="text-2xl font-bold text-slate-800">Fluxos de Automação</h2>
+          <p className="text-slate-500 text-sm mt-1">Cria chatbots e sequências automatizadas estilo Manychat.</p>
         </div>
         <button 
-          onClick={() => setShowAdd(true)}
-          className="bg-primary text-primary-foreground px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-glow hover:scale-105 transition-all"
+          onClick={createNewAutomation}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-sky-500 text-white text-sm font-bold shadow-md hover:bg-sky-600 transition-all"
         >
-          <Plus className="w-4 h-4" />
-          Nova Automação
+          <Plus className="w-4 h-4" /> Novo Fluxo
         </button>
       </div>
 
-      <AnimatePresence>
-        {showAdd && (
-          <motion.div 
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="bg-card rounded-2xl p-5 border border-primary/20 shadow-elevated overflow-hidden"
-          >
-            <h3 className="text-sm font-bold mb-4">Configurar Nova Automação</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Nome da Campanha</label>
-                <input 
-                  value={nome} 
-                  onChange={e => setNome(e.target.value)}
-                  placeholder="Ex: Agradecimento de Compra"
-                  className="w-full px-4 py-2.5 rounded-xl bg-secondary focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Gatilho (Trigger)</label>
-                <select 
-                  value={evento}
-                  onChange={e => setEvento(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-secondary focus:outline-none focus:ring-2 focus:ring-primary/30 appearance-none"
-                >
-                  {Object.entries(eventLabels).map(([val, label]) => (
-                    <option key={val} value={val}>{label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Atraso (Dias)</label>
-                <input 
-                  type="number"
-                  value={atraso} 
-                  onChange={e => setAtraso(e.target.value)}
-                  className="w-full px-4 py-2.5 rounded-xl bg-secondary focus:outline-none focus:ring-2 focus:ring-primary/30"
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5 mb-6">
-              <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">Mensagem do WhatsApp</label>
-              <textarea 
-                value={mensagem}
-                onChange={e => setMensagem(e.target.value)}
-                placeholder="Olá {{nome}}, obrigado por comprar conosco! Esperamos que goste do produto."
-                className="w-full px-4 py-3 rounded-xl bg-secondary focus:outline-none focus:ring-2 focus:ring-primary/30 h-32 resize-none"
-              />
-              <p className="text-[10px] text-muted-foreground px-1 italic">Use {"{{nome}}"} para personalizar com o nome do cliente.</p>
-            </div>
-            <div className="flex gap-2">
-              <button 
-                onClick={handleCreate}
-                className="flex-1 bg-primary text-primary-foreground py-3 rounded-xl font-bold uppercase text-xs tracking-widest shadow-glow"
-              >
-                Ativar Automação
-              </button>
-              <button 
-                onClick={() => setShowAdd(false)}
-                className="px-6 py-3 rounded-xl bg-muted text-muted-foreground font-bold text-xs uppercase"
-              >
-                Cancelar
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {automations.map(auto => (
-          <motion.div 
-            key={auto.id}
-            layout
-            className={`bg-card p-5 rounded-2xl border transition-all ${auto.is_active ? 'border-border/60' : 'border-dashed border-muted bg-muted/20 grayscale'}`}
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${auto.is_active ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-                  <MessageSquare className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-bold text-foreground">{auto.nome}</h4>
-                  <p className="text-[10px] text-muted-foreground flex items-center gap-1">
-                    <Clock className="w-3 h-3" />
-                    Envia em {auto.atraso_dias} dia(s) após {auto.evento.replace('_', ' ')}
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <button 
-                  onClick={() => toggleActive(auto.id, auto.is_active)}
-                  className={`p-2 rounded-lg transition-colors ${auto.is_active ? 'bg-amber-500/10 text-amber-600 hover:bg-amber-500/20' : 'bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20'}`}
-                >
-                  {auto.is_active ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                </button>
-                <button 
-                  onClick={() => handleDelete(auto.id)}
-                  className="p-2 rounded-lg bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-
-            <div className="bg-secondary/40 p-3 rounded-xl mb-4">
-              <p className="text-xs text-muted-foreground italic line-clamp-2">"{auto.mensagem}"</p>
-            </div>
-
-            <div className="flex items-center justify-between pt-2 border-t border-border/40">
-              <div className="flex items-center gap-4">
-                <div className="text-center">
-                  <p className="text-[9px] text-muted-foreground uppercase font-bold mb-0.5">Enviados</p>
-                  <p className="text-xs font-bold tabular-nums">124</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-[9px] text-muted-foreground uppercase font-bold mb-0.5">Retenção</p>
-                  <p className="text-xs font-bold text-emerald-600">12%</p>
-                </div>
-              </div>
-              <button className="text-[10px] font-bold text-primary flex items-center gap-1 hover:underline">
-                Ver Logs <ChevronRight className="w-3 h-3" />
-              </button>
-            </div>
-          </motion.div>
-        ))}
-
-        {!loading && automations.length === 0 && !showAdd && (
-          <div className="col-span-full py-12 flex flex-col items-center justify-center text-muted-foreground bg-muted/20 rounded-3xl border border-dashed border-border/60">
-            <Zap className="w-8 h-8 mb-3 opacity-20" />
-            <p className="text-sm font-medium">Nenhuma automação ativa</p>
-            <p className="text-xs opacity-60">Crie sua primeira campanha para começar</p>
+      {loading ? (
+        <div className="animate-pulse space-y-4">
+          {[1, 2, 3].map(i => <div key={i} className="h-24 bg-slate-100 rounded-2xl"></div>)}
+        </div>
+      ) : automations.length === 0 ? (
+        <div className="bg-white border border-slate-200 p-12 rounded-3xl text-center shadow-sm flex flex-col items-center justify-center">
+          <div className="w-20 h-20 bg-sky-50 rounded-full flex items-center justify-center mb-6">
+            <Bot className="w-10 h-10 text-sky-500" />
           </div>
-        )}
-      </div>
+          <h3 className="text-xl font-bold text-slate-800 mb-2">Sem automações criadas</h3>
+          <p className="text-slate-500 max-w-md mx-auto mb-8">
+            Começa a automatizar o teu atendimento. Cria fluxos de boas vindas, respostas a palavras-chave ou carrinhos abandonados.
+          </p>
+          <button onClick={createNewAutomation} className="px-6 py-3 bg-sky-500 text-white rounded-xl font-bold shadow-md hover:bg-sky-600 transition-colors">
+            Criar Primeiro Fluxo
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {automations.map(auto => (
+            <div 
+              key={auto.id} 
+              onClick={() => setSelectedFlow(auto)}
+              className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group flex flex-col relative overflow-hidden"
+            >
+              <div className={`absolute top-0 left-0 w-full h-1 ${auto.ativo ? 'bg-sky-500' : 'bg-slate-200'}`} />
+              
+              <div className="flex justify-between items-start mb-4 mt-2">
+                <div className={`p-3 rounded-xl ${auto.ativo ? 'bg-sky-50 text-sky-600' : 'bg-slate-100 text-slate-400'}`}>
+                  <Bot className="w-6 h-6" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={(e) => toggleStatus(e, auto)} className={`p-2 rounded-lg transition-colors ${auto.ativo ? 'bg-sky-50 text-sky-600 hover:bg-sky-100' : 'bg-slate-100 text-slate-400 hover:bg-slate-200'}`} title={auto.ativo ? 'Desativar' : 'Activar'}>
+                    {auto.ativo ? <Square className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                  </button>
+                  <button onClick={(e) => deleteAutomation(e, auto.id)} className="p-2 rounded-lg bg-rose-50 text-rose-500 hover:bg-rose-100 hover:text-rose-600 transition-colors shadow-sm" title="Eliminar Automação">
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              <h3 className="font-bold text-slate-800 text-lg mb-1 group-hover:text-sky-600 transition-colors">
+                {auto.nome}
+              </h3>
+              
+              <div className="flex items-center gap-2 mt-auto pt-4">
+                <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider ${auto.ativo ? 'bg-sky-100 text-sky-700' : 'bg-slate-100 text-slate-500'}`}>
+                  {auto.ativo ? 'A Correr' : 'Pausado'}
+                </span>
+                <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                  <Edit2 className="w-3 h-3" /> Editar Flow
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
