@@ -109,6 +109,10 @@
   --muted-foreground: 215 25% 15%;
 }
 
+body {
+  background-color: #F8FAFC !important; /* Extremely light grey/blue like Manychat workspace */
+}
+
 .dark::before {
   content: "";
   position: fixed;
@@ -123,11 +127,7 @@
 }
 
 
-/* Force contrast on text-white EXCEPT when inside primary/destructive/sky containers or gradients */
-:root:not(.dark) .text-white:not(.force-dark, .force-dark *, .bg-primary *, .bg-destructive *, .bg-orange-500 *, .bg-sky-500 *, .gradient-primary *, .bg-primary, .bg-destructive, .bg-orange-500, .bg-sky-500, .gradient-primary, .shadow-glow *) {
-  color: hsl(var(--foreground)) !important;
-}
-
+/* Removed complex dark forcing */
 :root:not(.dark) .bg-black\/40 {
   background-color: rgba(0, 0, 0, 0.05) !important;
 }
@@ -270,22 +270,22 @@
     display: none;
   }
   .glass-card {
-    @apply bg-white/5 backdrop-blur-xl border border-white/10;
+    @apply bg-white border border-slate-200 shadow-sm rounded-xl;
   }
   .glass-card-neon {
-    @apply bg-white/5 backdrop-blur-xl border border-sky-500/20 shadow-glow;
+    @apply bg-white border border-sky-200 shadow-sm rounded-xl;
   }
   .gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));
+    background: hsl(var(--primary));
   }
   .gradient-neon {
-    background: linear-gradient(135deg, #24FF6B, #8B5CF6);
+    background: hsl(var(--primary));
   }
   .gradient-header {
-    background: linear-gradient(135deg, hsl(var(--background)), transparent);
+    background: transparent;
   }
   .gradient-sidebar {
-    background: linear-gradient(180deg, hsl(var(--sidebar-background)), transparent);
+    background: transparent;
   }
 
   /* Custom scrollbar */

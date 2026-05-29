@@ -76,17 +76,13 @@ const getNavGroups = (
 
 export default function Sidebar({ active, onChange, alertCount = 0, orderCount = 0, chatCount = 0, showAdmin = false, onSearch, storeName }: SidebarProps) {
   const { signOut, userName, plano, storeProfilePic, storePhone, role } = useAuth();
-  const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window !== 'undefined' && window.innerWidth < 1024) return true;
-    return localStorage.getItem('sidebar_collapsed') === 'true';
-  });
-  const [isDark, setIsDark] = useState(() => document.documentElement.classList.contains('dark'));
+  // Always collapsed on desktop for Manychat clone
+  const collapsed = true;
+  const [isDark, setIsDark] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
 
-  useEffect(() => {
-    localStorage.setItem('sidebar_collapsed', String(collapsed));
-  }, [collapsed]);
+
 
   const toggleDark = () => {
     const next = !isDark;
@@ -119,80 +115,44 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
   const p = (plano || '').toLowerCase();
 
   const sidebarContent = (
-    <div className="flex flex-col h-full bg-sidebar-background/80 backdrop-blur-xl">
+    <div className="flex flex-col h-full bg-white border-r border-slate-200">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-6 h-20 border-b border-white/5 flex-shrink-0 mb-4">
-        <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center flex-shrink-0 shadow-[0_0_25px_rgba(52,211,153,0.3)] border border-white/20">
-          <Zap className="w-6 h-6 text-primary-foreground" />
+      <div className="flex items-center justify-center h-20 border-b border-slate-100 flex-shrink-0 mb-4">
+        <div className="w-10 h-10 rounded-xl bg-[#0ea5e9] flex items-center justify-center flex-shrink-0 shadow-sm">
+          <Zap className="w-5 h-5 text-white" />
         </div>
-        <AnimatePresence mode="wait">
-          {!collapsed && (
-            <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              transition={{ duration: 0.2 }}
-              className="overflow-hidden whitespace-nowrap flex-1"
-            >
-              <h1 className="text-[16px] font-bold text-foreground leading-tight tracking-tight truncate font-display">{storeName || 'CRM TOP'}</h1>
-              <p className="text-[9px] text-primary/80 font-black uppercase tracking-[0.2em] leading-none mt-1">Enterprise Hub</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* Nav groups */}
-      <nav className="flex-1 overflow-y-auto scrollbar-none px-4 space-y-6 pb-6">
+      <nav className="flex-1 overflow-y-auto scrollbar-none px-3 space-y-4 pb-6 mt-2">
         {navGroups.map(group => (
-          <div key={group.label} className="space-y-1">
-            <AnimatePresence>
-              {!collapsed && (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-[10px] uppercase font-bold tracking-[0.2em] px-3 mb-2 text-muted-foreground/50 sidebar-group-label"
-                >
-                  {group.label}
-                </motion.p>
-              )}
-            </AnimatePresence>
-            <div className="space-y-0.5">
+          <div key={group.label} className="space-y-1 relative group/nav">
+            <div className="space-y-2">
               {group.items.map(item => {
                 const isActive = active === item.id;
                 return (
                   <button
                     key={item.id}
                     onClick={() => handleTabChange(item)}
-                    className={`w-full flex items-center gap-3 rounded-xl transition-all duration-300 group relative
-                      ${collapsed ? 'justify-center py-3' : 'px-3 py-2.5'}
+                    className={`w-full flex items-center justify-center rounded-xl py-3 transition-all duration-200 relative
                       ${isActive
-                        ? 'bg-primary/10 text-primary'
+                        ? 'bg-sky-50 text-[#0ea5e9]'
                         : item.locked 
-                        ? 'text-muted-foreground/30 cursor-not-allowed'
-                        : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.03]'
+                        ? 'text-slate-300 cursor-not-allowed'
+                        : 'text-slate-400 hover:text-slate-700 hover:bg-slate-50'
                       }`}
-                    title={collapsed ? (item.locked ? `${item.label} (BLOQUEADO)` : item.label) : undefined}
+                    title={item.label}
                   >
                     {isActive && (
                       <motion.div 
                         layoutId="active-nav-indicator"
-                        className="absolute left-[-4px] w-1.5 h-6 rounded-full bg-primary shadow-[0_0_15px_rgba(52,211,153,0.5)]" 
+                        className="absolute left-0 top-1 bottom-1 w-1 rounded-r-full bg-[#0ea5e9]" 
                       />
                     )}
-                    <item.icon className={`w-[18px] h-[18px] flex-shrink-0 transition-transform duration-300 ${isActive ? 'text-primary' : 'group-hover:scale-110'}`} strokeWidth={isActive ? 2.5 : 2} />
-                    <AnimatePresence>
-                      {!collapsed && (
-                        <motion.span
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className={`text-[13px] font-semibold overflow-hidden whitespace-nowrap flex-1 text-left sidebar-item-text ${isActive ? 'text-primary' : ''}`}
-                        >
-                          {item.label}
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-                    {(item.badge ?? 0) > 0 && !collapsed && (
-                      <span className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[9px] font-black flex items-center justify-center px-1 shadow-glow">
+                    <item.icon className={`w-[22px] h-[22px] flex-shrink-0 transition-transform ${isActive ? 'scale-110' : ''}`} strokeWidth={isActive ? 2.5 : 2} />
+                    
+                    {(item.badge ?? 0) > 0 && (
+                      <span className="absolute top-1.5 right-1.5 min-w-[16px] h-[16px] rounded-full bg-[#0ea5e9] text-white text-[9px] font-bold flex items-center justify-center px-1 border-2 border-white shadow-sm">
                         {(item.badge ?? 0) > 99 ? '99+' : item.badge}
                       </span>
                     )}
@@ -205,97 +165,38 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
       </nav>
 
       {/* Bottom section */}
-      <div className="border-t border-white/5 px-4 py-6 space-y-4 flex-shrink-0">
-        {/* Upgrade Call to Action */}
-        {/* Upgrade Call to Action - Only show if not on Enterprise */}
-        {p !== 'enterprise' && !collapsed && (
-          <button
-            onClick={() => setUpgradeOpen(true)}
-            className="w-full mb-2 p-3.5 rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-sky-600 text-primary-foreground flex flex-col gap-1 hover:brightness-110 transition-all shadow-glow group border border-white/10"
-          >
-            <div className="flex items-center justify-between w-full">
-              <span className="text-[9px] font-black uppercase tracking-widest opacity-80">Plano {plano || 'Iniciante'}</span>
-              <Rocket className="w-3 h-3 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-            </div>
-            <span className="text-[13px] font-bold text-left font-display">Expandir Limites</span>
-          </button>
-        )}
+      <div className="border-t border-slate-100 px-3 py-4 space-y-4 flex-shrink-0 flex flex-col items-center">
         
         {/* User Card */}
-        <div className={`p-1 rounded-2xl bg-white/[0.03] border border-white/5 transition-all
-          ${collapsed ? 'mb-2' : ''}`}
-        >
+        <div className="flex flex-col gap-3 items-center w-full">
           {/* WhatsApp Info */}
           {(storeProfilePic || storePhone) && (
-            <div className={`flex items-center gap-3 w-full p-2 ${collapsed ? 'justify-center p-1' : 'border-b border-white/5 mb-1'}`}>
+            <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 shadow-sm border border-slate-200" title={storePhone ? `+${storePhone}` : 'WhatsApp'}>
               {storeProfilePic ? (
-                <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 shadow-sm border border-sky-500/30">
-                  <img src={storeProfilePic} alt="WhatsApp Avatar" className="w-full h-full object-cover" />
-                </div>
+                <img src={storeProfilePic} alt="WhatsApp Avatar" className="w-full h-full object-cover" />
               ) : (
-                <div className="w-8 h-8 rounded-xl bg-sky-500/10 flex items-center justify-center flex-shrink-0 border border-sky-500/20">
-                  <span className="text-sky-500"><Zap className="w-4 h-4" /></span>
-                </div>
-              )}
-              {!collapsed && (
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-bold text-sky-500 truncate flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse" />
-                    WhatsApp Ativo
-                  </p>
-                  <p className="text-[9px] text-muted-foreground font-mono mt-0.5 truncate">{storePhone ? `+${storePhone}` : 'Conectado'}</p>
+                <div className="w-full h-full bg-[#0ea5e9]/10 flex items-center justify-center">
+                  <Zap className="w-4 h-4 text-[#0ea5e9]" />
                 </div>
               )}
             </div>
           )}
 
-          <div className="flex flex-col gap-1">
-             {/* Mode toggle inside card */}
-            <button
-              onClick={toggleDark}
-              className={`w-full flex items-center gap-3 rounded-xl transition-all duration-200
-                ${collapsed ? 'justify-center p-2' : 'px-2 py-2'}
-                text-muted-foreground hover:text-foreground hover:bg-white/5`}
-              title={isDark ? 'Modo claro' : 'Modo escuro'}
-            >
-              {isDark ? <Sun className="w-[16px] h-[16px]" /> : <Moon className="w-[16px] h-[16px]" />}
-              {!collapsed && <span className="text-[12px] font-medium">{isDark ? 'Tema Claro' : 'Tema Escuro'}</span>}
-            </button>
-
-            {/* User Info */}
-            {!collapsed && (
-              <div className="flex items-center gap-3 w-full p-2">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-sky-600 flex items-center justify-center flex-shrink-0 shadow-sm border border-white/20">
-                  <span className="text-primary-foreground text-[10px] font-black tracking-tighter">{initials}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[12px] font-bold text-foreground truncate">{userName || 'Admin'}</p>
-                  <p className="text-[9px] text-muted-foreground uppercase tracking-widest font-medium mt-0.5">{role === 'admin' ? 'Administrador' : 'Funcionário'}</p>
-                </div>
-                
-                <button
-                  onClick={signOut}
-                  className="p-1.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
-                  title="Sair"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            )}
+          <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center flex-shrink-0 shadow-sm" title={userName || 'Perfil'}>
+            <span className="text-white text-[10px] font-bold">{initials}</span>
           </div>
-        </div>
-
-        {/* Collapse toggle */}
-        {!mobileOpen && (
+          
           <button
-            onClick={() => setCollapsed(!collapsed)}
-            className="hidden lg:flex w-full items-center justify-center gap-2 rounded-xl py-1 text-muted-foreground hover:text-foreground transition-all group"
+            onClick={signOut}
+            className="p-2 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors w-full flex justify-center"
+            title="Sair"
           >
-            <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/5 border border-white/5 shadow-sm group-hover:border-white/10 transition-colors">
-              {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-            </div>
+            <LogOut className="w-4 h-4" />
           </button>
-        )}
+        </div>
+      </div>
+
+
       </div>
     </div>
   );
@@ -342,9 +243,9 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
 
       {/* Desktop sidebar */}
       <motion.aside
-        animate={{ width: collapsed ? 68 : 260 }}
-        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="hidden lg:flex fixed top-0 left-0 bottom-0 z-40 bg-sidebar-background border-r border-sidebar-border flex-col"
+        initial={false}
+        animate={{ width: 80 }}
+        className="hidden lg:flex fixed top-0 left-0 bottom-0 z-40 bg-white border-r border-slate-200 flex-col"
       >
         {sidebarContent}
       </motion.aside>

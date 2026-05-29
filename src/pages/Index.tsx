@@ -262,13 +262,12 @@ export default function Index() {
       />
 
       <main 
-        className="transition-all duration-500 ease-in-out min-h-screen"
-        style={{ marginLeft: sidebarCollapsed ? '68px' : '260px' }}
+        className="transition-all duration-500 ease-in-out min-h-screen bg-[#F8FAFC]"
+        style={{ marginLeft: '80px' }}
       >
-        <div className={activeTab === 'chat' ? "h-screen flex flex-col pt-16 lg:pt-0" : "max-w-6xl mx-auto px-6 py-8 pt-20 lg:pt-8"}>
-          {/* Unified Header */}
+        <div className={activeTab === 'chat' ? "h-screen flex flex-col pt-0" : "w-full px-8 py-8"}>
           {activeTab !== 'chat' && (
-            <header className="mb-12 flex items-end justify-between border-b border-white/5 pb-8">
+            <header className="mb-8 flex items-end justify-between border-b border-slate-200 pb-6">
               <motion.div
                 key={activeTab}
                 initial={{ opacity: 0, x: -10 }}
@@ -277,16 +276,22 @@ export default function Index() {
                 className="flex items-end justify-between w-full"
               >
                 <div>
-                  <h1 className="text-5xl font-bold tracking-tight text-foreground mb-3 font-display">{authStoreName || 'CRM TOP'}</h1>
-                  <div className="flex items-center gap-4">
-                    <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-[10px] font-black uppercase tracking-[0.2em] border border-primary/20 shadow-glow">
-                        Official Hub
-                    </span>
-                    <div className="h-4 w-[1px] bg-border/50 mx-1" />
-                    <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-[0.3em]">
-                        {TAB_TITLES[activeTab]}
-                    </p>
-                  </div>
+                  <h1 className="text-3xl font-bold text-slate-900 tracking-tight font-display flex items-center gap-3">
+                    {activeTab === 'dashboard' && 'Dashboard'}
+                    {activeTab === 'clients' && 'Contatos'}
+                    {activeTab === 'campaigns' && 'Broadcasts'}
+                    {activeTab === 'automation' && 'Automação'}
+                    {activeTab === 'settings' && 'Configurações'}
+                    {activeTab === 'admin' && 'Admin Panel'}
+                  </h1>
+                  <p className="text-slate-500 font-medium mt-1">
+                    {activeTab === 'dashboard' && 'Visão geral do seu negócio'}
+                    {activeTab === 'clients' && 'Gerencie sua lista de leads e clientes'}
+                    {activeTab === 'campaigns' && 'Envie mensagens em massa'}
+                    {activeTab === 'automation' && 'Crie fluxos de conversa automáticos'}
+                    {activeTab === 'settings' && 'Configure seu sistema'}
+                    {activeTab === 'admin' && 'Gestão avançada da loja'}
+                  </p>
                 </div>
                 
                 <div className="flex items-center gap-4 mb-2">
