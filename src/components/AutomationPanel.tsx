@@ -59,7 +59,7 @@ export default function AutomationPanel() {
 
   if (selectedFlow) {
     return (
-      <div className="w-full h-[calc(100vh-80px)] rounded-2xl overflow-hidden border border-slate-200 shadow-sm animate-fade-in flex flex-col bg-white">
+      <div className="w-full h-[calc(100vh-220px)] min-h-[600px] rounded-2xl overflow-hidden border border-slate-200 shadow-sm animate-fade-in flex flex-col bg-white">
         <div className="h-14 border-b border-slate-200 flex items-center px-4 shrink-0 bg-slate-50 gap-4">
           <button 
             onClick={() => { setSelectedFlow(null); fetchAutomations(); }}
