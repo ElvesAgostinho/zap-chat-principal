@@ -134,11 +134,11 @@ export default function Sidebar({ active, onChange, chatCount = 0, showAdmin = f
                 const isActive = active === item.id;
                 return (
                   <div key={item.id} className="relative flex items-center w-full group">
-                    {/* Active Indicator floating slightly off the edge */}
+                    {/* Active Indicator on the very edge */}
                     {isActive && (
                       <motion.div 
                         layoutId="active-sidebar-indicator"
-                        className="absolute -left-[10px] top-1/2 -translate-y-1/2 w-1 h-7 rounded-full bg-[#0ea5e9]" 
+                        className="absolute -left-3 top-1/2 -translate-y-1/2 w-1.5 h-8 rounded-r-full bg-[#0ea5e9]" 
                       />
                     )}
                     

@@ -68,9 +68,9 @@ Deno.serve(async (req) => {
         else if (nextNode.type === 'mediaNode') {
           const mediaUrl = nextNode.data?.mediaUrl;
           if (mediaUrl) {
-            const isImage = mediaUrl.match(/\.(jpeg|jpg|gif|png)$/i);
-            const isAudio = mediaUrl.match(/\.(ogg|mp3|wav|m4a|aac)$/i);
-            const isVideo = mediaUrl.match(/\.(mp4|mov|avi|mkv)$/i);
+            const isImage = mediaUrl.match(/\.(jpeg|jpg|gif|png)(\?.*)?$/i);
+            const isAudio = mediaUrl.match(/\.(ogg|mp3|wav|m4a|aac)(\?.*)?$/i);
+            const isVideo = mediaUrl.match(/\.(mp4|mov|avi|mkv)(\?.*)?$/i);
             
             let mType = 'document';
             if (isImage) mType = 'image';
@@ -80,10 +80,17 @@ Deno.serve(async (req) => {
             const options: any = { delay: 1500 };
             if (isAudio) options.presence = 'recording';
 
-            await fetch(`${baseUrl}/message/sendMedia/${instanceName}`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
-              body: JSON.stringify({ number: phone, mediatype: mType, media: mediaUrl, options }),
-            });
+              if (isAudio) {
+                await fetch(`${baseUrl}/message/sendWhatsAppAudio/${instanceName}`, {
+                  method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
+                  body: JSON.stringify({ number: phone, audio: mediaUrl, delay: 1500, encoding: true }),
+                });
+              } else {
+                await fetch(`${baseUrl}/message/sendMedia/${instanceName}`, {
+                  method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
+                  body: JSON.stringify({ number: phone, mediatype: mType, media: mediaUrl, options }),
+                });
+              }
             await supabase.from('mensagens').insert({ lead_id: lead.id, lead_nome: lead.nome, conteudo: '[Mídia da Automação]', media_url: mediaUrl, media_type: mType, tipo: 'enviada', is_bot: true, loja_id: store.id });
           }
         }
