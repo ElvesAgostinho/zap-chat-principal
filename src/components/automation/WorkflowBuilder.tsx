@@ -15,7 +15,7 @@ import {
   Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { MessageSquare, Zap, GitBranch, Clock, Image as ImageIcon, CheckCircle, Save, Loader2, Trash2, MessageCircle, Tag } from 'lucide-react';
+import { MessageSquare, Zap, GitBranch, Clock, Image as ImageIcon, CheckCircle, Save, Loader2, Trash2, MessageCircle, Tag, HelpCircle, Webhook, Shuffle, ArrowRightCircle, BellRing } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const WhatsAppIcon = ({ size = 14, className = "" }) => (
@@ -32,6 +32,11 @@ import ActionNode from './nodes/ActionNode';
 import DelayNode from './nodes/DelayNode';
 import ConditionNode from './nodes/ConditionNode';
 import MediaNode from './nodes/MediaNode';
+import InputNode from './nodes/InputNode';
+import WebhookNode from './nodes/WebhookNode';
+import RandomizerNode from './nodes/RandomizerNode';
+import JumpNode from './nodes/JumpNode';
+import NotifyNode from './nodes/NotifyNode';
 
 const nodeTypes: NodeTypes = {
   triggerNode: TriggerNode,
@@ -40,6 +45,11 @@ const nodeTypes: NodeTypes = {
   delayNode: DelayNode,
   conditionNode: ConditionNode,
   mediaNode: MediaNode,
+  inputNode: InputNode,
+  webhookNode: WebhookNode,
+  randomizerNode: RandomizerNode,
+  jumpNode: JumpNode,
+  notifyNode: NotifyNode,
 };
 
 const defaultNodes = [
@@ -65,9 +75,14 @@ function DnDPanel() {
     { type: 'triggerNode', label: 'Gatilho Inicial', icon: WhatsAppIcon, color: 'text-[#25D366]', bg: 'bg-[#25D366]/10', desc: 'Inicia o fluxo com palavra-chave ou evento' },
     { type: 'messageNode', label: 'Mensagem', icon: MessageSquare, color: 'text-blue-500', bg: 'bg-blue-50', desc: 'Envia uma mensagem de texto simples' },
     { type: 'mediaNode', label: 'Media', icon: ImageIcon, color: 'text-pink-500', bg: 'bg-pink-50', desc: 'Envia imagens, vídeos ou documentos (pdf)' },
+    { type: 'inputNode', label: 'Pedir Input', icon: HelpCircle, color: 'text-indigo-500', bg: 'bg-indigo-50', desc: 'Guarda a resposta do cliente numa variável' },
     { type: 'conditionNode', label: 'Condição', icon: GitBranch, color: 'text-amber-500', bg: 'bg-amber-50', desc: 'Divide o fluxo (Sim ou Não)' },
-    { type: 'delayNode', label: 'Atraso Inteligente', icon: Clock, color: 'text-slate-500', bg: 'bg-slate-50', desc: 'Pausa o envio por minutos, horas ou dias' },
-    { type: 'actionNode', label: 'Acção no CRM', icon: Tag, color: 'text-amber-500', bg: 'bg-amber-50', desc: 'Adiciona tags ou atualiza o status do lead' },
+    { type: 'randomizerNode', label: 'Teste A/B', icon: Shuffle, color: 'text-fuchsia-500', bg: 'bg-fuchsia-50', desc: 'Divide os leads aleatoriamente (50/50)' },
+    { type: 'delayNode', label: 'Atraso', icon: Clock, color: 'text-slate-500', bg: 'bg-slate-50', desc: 'Pausa o envio por minutos/dias' },
+    { type: 'actionNode', label: 'Acção CRM', icon: Tag, color: 'text-amber-500', bg: 'bg-amber-50', desc: 'Adiciona tags ou atualiza status' },
+    { type: 'notifyNode', label: 'Notificar', icon: BellRing, color: 'text-rose-500', bg: 'bg-rose-50', desc: 'Alerta a tua equipa no painel' },
+    { type: 'webhookNode', label: 'Webhook', icon: Webhook, color: 'text-purple-500', bg: 'bg-purple-50', desc: 'Envia dados para APIs externas ou Make' },
+    { type: 'jumpNode', label: 'Ir para Fluxo', icon: ArrowRightCircle, color: 'text-teal-500', bg: 'bg-teal-50', desc: 'Ligar a outra automação' },
   ];
 
   return (
@@ -162,6 +177,11 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
       if (type === 'messageNode') label = 'Nova Mensagem';
       if (type === 'conditionNode') label = 'Se Contém Tag';
       if (type === 'actionNode') label = 'Adicionar Tag';
+      if (type === 'inputNode') label = 'Qual é o seu nome?';
+      if (type === 'notifyNode') label = 'Lead quente precisa de atenção!';
+      if (type === 'webhookNode') label = 'Webhook Request';
+      if (type === 'randomizerNode') label = 'A/B Test';
+      if (type === 'jumpNode') label = 'Saltar Fluxo';
 
       const newNode = {
         id: getId(),
@@ -236,6 +256,11 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
                 case 'actionNode': return '#f97316';
                 case 'conditionNode': return '#f59e0b';
                 case 'mediaNode': return '#ec4899';
+                case 'inputNode': return '#6366f1';
+                case 'webhookNode': return '#a855f7';
+                case 'randomizerNode': return '#d946ef';
+                case 'jumpNode': return '#14b8a6';
+                case 'notifyNode': return '#f43f5e';
                 default: return '#cbd5e1';
               }
             }} 
@@ -255,17 +280,19 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
           <div className="space-y-4">
             
             {/* COMMON LABEL */}
-            {selectedNode.type !== 'delayNode' && (
+            {!['delayNode', 'randomizerNode', 'webhookNode', 'jumpNode'].includes(selectedNode.type) && (
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
-                  {selectedNode.type === 'messageNode' ? 'Mensagem' : 'Conteúdo Principal'}
+                  {selectedNode.type === 'messageNode' ? 'Mensagem' : 
+                   selectedNode.type === 'inputNode' ? 'Pergunta a fazer' : 
+                   selectedNode.type === 'notifyNode' ? 'Mensagem de Alerta' : 'Conteúdo Principal'}
                 </label>
-                {selectedNode.type === 'messageNode' ? (
+                {selectedNode.type === 'messageNode' || selectedNode.type === 'notifyNode' || selectedNode.type === 'inputNode' ? (
                   <textarea 
                     className="w-full border border-slate-200 rounded-xl p-3 text-sm min-h-[120px] focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y"
                     value={selectedNode.data.label as string}
                     onChange={(e) => updateNodeLabel(e.target.value)}
-                    placeholder="Escreve a tua mensagem aqui..."
+                    placeholder="Escreve o texto aqui..."
                   />
                 ) : (
                   <input 
@@ -276,6 +303,82 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
                     placeholder="Escreve o texto ou configuração..."
                   />
                 )}
+              </div>
+            )}
+
+            {/* INPUT SPECIFIC */}
+            {selectedNode.type === 'inputNode' && (
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Guardar resposta em</label>
+                <input 
+                  type="text"
+                  className="w-full border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono"
+                  value={(selectedNode.data.variable as string) || ''}
+                  onChange={(e) => updateNodeData('variable', e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_'))}
+                  placeholder="ex: email_cliente, nome_empresa"
+                />
+              </div>
+            )}
+
+            {/* WEBHOOK SPECIFIC */}
+            {selectedNode.type === 'webhookNode' && (
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Método HTTP</label>
+                  <select
+                    className="w-full border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    value={(selectedNode.data.method as string) || 'POST'}
+                    onChange={(e) => updateNodeData('method', e.target.value)}
+                  >
+                    <option value="POST">POST (Enviar dados)</option>
+                    <option value="GET">GET (Buscar dados)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Webhook URL</label>
+                  <input 
+                    type="url"
+                    className="w-full border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono"
+                    value={(selectedNode.data.url as string) || ''}
+                    onChange={(e) => updateNodeData('url', e.target.value)}
+                    placeholder="https://sua-api.com/webhook"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* RANDOMIZER SPECIFIC */}
+            {selectedNode.type === 'randomizerNode' && (
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Divisão de Tráfego (Caminho A)</label>
+                <div className="flex gap-2 items-center">
+                  <input 
+                    type="range"
+                    min="1" max="99"
+                    className="flex-1"
+                    value={(selectedNode.data.splitA as number) || 50}
+                    onChange={(e) => updateNodeData('splitA', Number(e.target.value))}
+                  />
+                  <span className="text-sm font-bold text-slate-700 w-12 text-right">{(selectedNode.data.splitA as number) || 50}%</span>
+                </div>
+                <p className="text-[10px] text-slate-500 mt-2">
+                  Caminho A: {(selectedNode.data.splitA as number) || 50}%<br/>
+                  Caminho B: {100 - ((selectedNode.data.splitA as number) || 50)}%
+                </p>
+              </div>
+            )}
+
+            {/* JUMP SPECIFIC */}
+            {selectedNode.type === 'jumpNode' && (
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Fluxo de Destino</label>
+                <input 
+                  type="text"
+                  className="w-full border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  value={(selectedNode.data.flowName as string) || ''}
+                  onChange={(e) => updateNodeData('flowName', e.target.value)}
+                  placeholder="Nome exato do fluxo (ex: Boas Vindas)"
+                />
               </div>
             )}
 
