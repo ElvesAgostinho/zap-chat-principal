@@ -15,7 +15,7 @@ import {
   Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { MessageSquare, Zap, GitBranch, Clock, Image as ImageIcon, CheckCircle, Save, Loader2, Trash2, MessageCircle, Tag, HelpCircle, Webhook, Shuffle, ArrowRightCircle, BellRing } from 'lucide-react';
+import { MessageSquare, Zap, GitBranch, Clock, Image as ImageIcon, CheckCircle, Save, Loader2, Trash2, MessageCircle, Tag, HelpCircle, Webhook, Shuffle, ArrowRightCircle, BellRing, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const WhatsAppIcon = ({ size = 14, className = "" }) => (
