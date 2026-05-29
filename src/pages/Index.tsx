@@ -226,8 +226,57 @@ export default function Index() {
                 <Plus className="w-4 h-4" /> Novo Lead
               </button>
             </div>
-            <div className="space-y-3">
-              {leads.map(l => <LeadCard key={l.id} lead={l} />)}
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-medium">
+                  <tr>
+                    <th className="px-6 py-4">Nome do Contato</th>
+                    <th className="px-6 py-4">Telefone</th>
+                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4">Etiqueta/Interesse</th>
+                    <th className="px-6 py-4">Criado em</th>
+                    <th className="px-6 py-4 text-right">Ação</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {leads.map(l => (
+                    <tr key={l.id} className="hover:bg-slate-50 transition-colors group cursor-pointer" onClick={() => navigate(`/chat?lead=${l.id}`)}>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center font-bold text-xs">
+                            {l.nome ? l.nome.charAt(0).toUpperCase() : '?'}
+                          </div>
+                          <span className="font-bold text-slate-800">{l.nome || 'Sem Nome'}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-slate-500">{l.telefone}</td>
+                      <td className="px-6 py-4">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600">
+                          {l.status || 'NOVO'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-slate-500">
+                        {l.interesse ? (
+                          <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-600 border border-blue-100">
+                            {l.interesse}
+                          </span>
+                        ) : '--'}
+                      </td>
+                      <td className="px-6 py-4 text-slate-500 text-xs">
+                        {l.criado_em ? new Date(l.criado_em).toLocaleDateString() : '--'}
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button className="text-sky-500 hover:text-sky-700 font-medium text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                          Conversar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {leads.length === 0 && (
+                 <div className="p-8 text-center text-slate-500 text-sm">Nenhum lead encontrado.</div>
+              )}
             </div>
           </div>
         );
