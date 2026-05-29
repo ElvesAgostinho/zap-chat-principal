@@ -563,8 +563,8 @@ export default function WorkflowBuilder({ automationId, initialNodes, initialEdg
 
   return (
     <div className="w-full h-full flex flex-col bg-slate-50 relative">
-      {/* Top Header/Toolbar */}
-      <div className="absolute top-4 right-6 z-20 flex gap-2">
+      {/* Action Buttons */}
+      <div className="absolute bottom-6 right-6 z-40 flex gap-3">
         <button 
           onClick={() => setShowHelpModal(true)}
           className="flex items-center gap-2 px-4 py-2.5 bg-white text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 border border-slate-200 transition-colors shadow-sm"

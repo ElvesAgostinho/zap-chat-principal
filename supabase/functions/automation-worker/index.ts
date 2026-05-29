@@ -68,12 +68,23 @@ Deno.serve(async (req) => {
         else if (nextNode.type === 'mediaNode') {
           const mediaUrl = nextNode.data?.mediaUrl;
           if (mediaUrl) {
-            const isImage = mediaUrl.match(/\\.(jpeg|jpg|gif|png)$/i);
+            const isImage = mediaUrl.match(/\.(jpeg|jpg|gif|png)$/i);
+            const isAudio = mediaUrl.match(/\.(ogg|mp3|wav|m4a|aac)$/i);
+            const isVideo = mediaUrl.match(/\.(mp4|mov|avi|mkv)$/i);
+            
+            let mType = 'document';
+            if (isImage) mType = 'image';
+            else if (isAudio) mType = 'audio';
+            else if (isVideo) mType = 'video';
+
+            const options: any = { delay: 1500 };
+            if (isAudio) options.presence = 'recording';
+
             await fetch(`${baseUrl}/message/sendMedia/${instanceName}`, {
               method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
-              body: JSON.stringify({ number: phone, mediatype: isImage ? 'image' : 'document', media: mediaUrl, options: { delay: 1500 } }),
+              body: JSON.stringify({ number: phone, mediatype: mType, media: mediaUrl, options }),
             });
-            await supabase.from('mensagens').insert({ lead_id: lead.id, lead_nome: lead.nome, conteudo: '[Mídia da Automação]', media_url: mediaUrl, media_type: isImage ? 'image' : 'document', tipo: 'enviada', is_bot: true, loja_id: store.id });
+            await supabase.from('mensagens').insert({ lead_id: lead.id, lead_nome: lead.nome, conteudo: '[Mídia da Automação]', media_url: mediaUrl, media_type: mType, tipo: 'enviada', is_bot: true, loja_id: store.id });
           }
         }
         else if (nextNode.type === 'actionNode') {
