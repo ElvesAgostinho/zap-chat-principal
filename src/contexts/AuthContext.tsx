@@ -283,10 +283,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    const scheduleResolve = (nextSession: Session | null) => {
+    const scheduleResolve = (nextSession: Session | null, forceLoading = false) => {
       const version = ++versionRef.current;
-      setLoading(true);
-      setMembershipState('loading');
+      
+      // Only show loading screen if we don't have a session yet or explicitly requested
+      if (forceLoading || !nextSession) {
+        setLoading(true);
+        setMembershipState('loading');
+      }
 
       window.setTimeout(() => {
         if (!mounted) return;
@@ -296,7 +300,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted || event === 'INITIAL_SESSION') return;
-      scheduleResolve(nextSession);
+      // Don't force loading state on standard token refresh events
+      const isSignOut = event === 'SIGNED_OUT';
+      scheduleResolve(nextSession, isSignOut);
     });
 
     // BUG-02 + BUG-06 fix: Listen for real-time changes on the user's membership row.
@@ -378,7 +384,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (!mounted) return;
         window.clearTimeout(initFallback);
-        scheduleResolve(data.session);
+        scheduleResolve(data.session, true);
         void setupRealtime();
       } catch (error) {
         if (!mounted) return;
