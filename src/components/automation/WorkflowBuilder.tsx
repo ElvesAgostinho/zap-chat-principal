@@ -478,7 +478,7 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
             {selectedNode.type === 'mediaNode' && (
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Anexo</label>
-                <input type="file" ref={fileRef} onChange={handleMediaUpload} className="hidden" accept="image/*,application/pdf" />
+                <input type="file" ref={fileRef} onChange={handleMediaUpload} className="hidden" accept="image/*,video/*,audio/*,application/pdf" />
                 <button 
                   onClick={() => fileRef.current?.click()}
                   disabled={uploadingMedia}

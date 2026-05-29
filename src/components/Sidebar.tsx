@@ -134,17 +134,18 @@ export default function Sidebar({ active, onChange, chatCount = 0, showAdmin = f
                 const isActive = active === item.id;
                 return (
                   <div key={item.id} className="relative flex items-center w-full group">
-                    {/* Active Indicator on the very edge */}
+                    {/* Active Indicator floating slightly off the edge */}
                     {isActive && (
                       <motion.div 
                         layoutId="active-sidebar-indicator"
-                        className="absolute -left-3 top-1/2 -translate-y-1/2 w-1.5 h-8 rounded-r-full bg-[#0ea5e9]" 
+                        className="absolute -left-[10px] top-1/2 -translate-y-1/2 w-1 h-7 rounded-full bg-[#0ea5e9]" 
                       />
                     )}
                     
                     <button
                       onClick={() => handleTabChange(item)}
-                      className={`w-full flex items-center p-3 rounded-2xl transition-all duration-200
+                      className={`flex items-center transition-all duration-200
+                        ${isExpanded ? 'w-full p-3 rounded-2xl' : 'w-[44px] h-[44px] rounded-full justify-center mx-auto'}
                         ${isActive
                           ? 'bg-[#f0f9ff] text-[#0ea5e9]'
                           : item.locked 
@@ -154,7 +155,7 @@ export default function Sidebar({ active, onChange, chatCount = 0, showAdmin = f
                       title={!isExpanded ? item.label : undefined}
                     >
                       <div className="flex items-center justify-center min-w-[24px]">
-                        <item.icon className={`w-5 h-5 transition-transform ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} strokeWidth={isActive ? 2.5 : 2} />
+                        <item.icon className={`w-[22px] h-[22px] transition-transform ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} strokeWidth={isActive ? 2.5 : 2} />
                       </div>
                       
                       <AnimatePresence>
