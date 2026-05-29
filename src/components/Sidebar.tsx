@@ -195,9 +195,6 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
           </button>
         </div>
       </div>
-
-
-      </div>
     </div>
   );
 
