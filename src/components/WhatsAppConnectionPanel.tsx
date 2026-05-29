@@ -132,7 +132,7 @@ export default function WhatsAppConnectionPanel() {
       <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card p-6 rounded-3xl border border-border shadow-soft space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm ${status === 'connected' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 'bg-primary/10 text-primary border border-primary/20'}`}>
+            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm ${status === 'connected' ? 'bg-sky-500/10 text-sky-500 border border-sky-500/20' : 'bg-primary/10 text-primary border border-primary/20'}`}>
               <MessageSquare className="w-5 h-5" />
             </div>
             <div>
@@ -151,9 +151,9 @@ export default function WhatsAppConnectionPanel() {
         <div className="flex items-center gap-3 px-4 py-3 bg-secondary/30 rounded-2xl border border-border/50">
           {status === 'connected' ? (
             <>
-              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-              <span className="text-sm font-bold text-emerald-600">Dispositivo Conectado</span>
-              <CheckCircle2 className="w-4 h-4 text-emerald-500 ml-auto" />
+              <div className="w-2.5 h-2.5 rounded-full bg-sky-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+              <span className="text-sm font-bold text-sky-600">Dispositivo Conectado</span>
+              <CheckCircle2 className="w-4 h-4 text-sky-500 ml-auto" />
             </>
           ) : status === 'loading' || status === 'qr_loading' ? (
             <>

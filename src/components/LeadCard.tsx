@@ -8,7 +8,7 @@ const sourceLabel: Record<string, string> = { whatsapp: 'WhatsApp', instagram: '
 const statusColors: Record<string, string> = {
   novo: 'bg-blue-50 text-blue-700',
   interessado: 'bg-amber-50 text-amber-700',
-  cliente: 'bg-emerald-50 text-emerald-700',
+  cliente: 'bg-sky-50 text-sky-700',
   comprado: 'bg-primary/10 text-primary',
   perdido: 'bg-destructive/10 text-destructive',
 };

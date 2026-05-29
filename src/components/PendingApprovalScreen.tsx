@@ -69,8 +69,8 @@ export default function PendingApprovalScreen() {
 
         <div className="space-y-4 mb-10">
           <div className="flex items-start gap-4 text-left p-4 rounded-2xl bg-muted/30 border border-border/50">
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
-              <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+            <div className="w-8 h-8 rounded-lg bg-sky-500/10 flex items-center justify-center flex-shrink-0">
+              <CheckCircle2 className="w-5 h-5 text-sky-500" />
             </div>
             <div>
               <p className="font-bold text-sm">Registo Concluído</p>

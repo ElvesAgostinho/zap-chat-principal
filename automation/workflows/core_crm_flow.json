@@ -1,0 +1,114 @@
+{
+  "name": "Zap Chat CRM - PRODUÇÃO FINAL (100% CONFIGURADO)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-webhook",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "1",
+      "name": "Webhook (WhatsApp Incoming)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://lzjbdoeufeyqrijfazoc.supabase.co/functions/v1/ai-sales-bot",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx6amJkb2V1ZmV5cXJpamZhem9jIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzQ2MjQyNiwiZXhwIjoyMDgzMDM4NDI2fQ.J0oOs002BzfNGZnkw3FesJ0rBsu0gD-47N_C-qEidOg" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "lead_id", "value": "={{$node[\"Webhook (WhatsApp Incoming)\"].json[\"data\"][\"key\"][\"remoteJid\"]}}" },
+            { "name": "message_text", "value": "={{$node[\"Webhook (WhatsApp Incoming)\"].json[\"data\"][\"message\"][\"conversation\"] || 'Mídia enviada'}}" }
+          ]
+        }
+      },
+      "id": "2",
+      "name": "Call AI Sales Bot (Supabase)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$node[\"Call AI Sales Bot (Supabase)\"].json[\"success\"]}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "3",
+      "name": "Check Success",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://evolution.topconsultores.pt/message/sendText/{{$node[\"Webhook (WhatsApp Incoming)\"].json[\"instance\"]}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "lXNRduSBn1GY3f0me7JQJFkR2VTMfgCNo0TDUmchX6gedO0o9BOPjupThv0cwsKOXUXOfcJ1q7ahphpplBVd5bQDY1CXA69nHYY2n3JpeUpbPHApQb2tWrIuj3xOg5hMJhHED3U045Mj12vKpt81IuS9CLzBlUwUkG6EHY6qUeBa6QXNPNsrjsh9JXeMfyEapuStkhi6Llt8waNE1IRJjsXA6R4ga3gRgVWXFYt3B0giAb5WSZZXWu7lzAFPkBp8" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "number", "value": "={{$node[\"Webhook (WhatsApp Incoming)\"].json[\"data\"][\"key\"][\"remoteJid\"]}}" },
+            { "name": "text", "value": "={{$node[\"Call AI Sales Bot (Supabase)\"].json[\"reply\"]}}" }
+          ]
+        }
+      },
+      "id": "4",
+      "name": "Send Reply (WhatsApp)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "action": "upsert",
+        "table": "agendamentos",
+        "data": {
+          "lead_id": "={{$node[\"Webhook (WhatsApp Incoming)\"].json[\"data\"][\"key\"][\"remoteJid\"]}}",
+          "data_hora": "={{$node[\"Call AI Sales Bot (Supabase)\"].json[\"schedule_data\"][\"data_hora\"]}}",
+          "servico": "={{$node[\"Call AI Sales Bot (Supabase)\"].json[\"schedule_data\"][\"servico\"]}}",
+          "status": "pendente"
+        }
+      },
+      "id": "5",
+      "name": "Create Appointment (Supabase DB)",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [850, 400]
+    }
+  ],
+  "connections": {
+    "Webhook (WhatsApp Incoming)": { "main": [[{ "node": "Call AI Sales Bot (Supabase)", "index": 0 }]] },
+    "Call AI Sales Bot (Supabase)": { "main": [[{ "node": "Check Success", "index": 0 }]] },
+    "Check Success": {
+      "main": [
+        [{ "node": "Send Reply (WhatsApp)", "index": 0 }],
+        []
+      ]
+    },
+    "Send Reply (WhatsApp)": { "main": [[{ "node": "Create Appointment (Supabase DB)", "index": 0 }]] }
+  }
+}

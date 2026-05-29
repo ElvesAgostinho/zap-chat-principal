@@ -251,7 +251,7 @@ export default function SuperAdminPanel() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { icon: Store, label: 'Lojas', value: stats.totalLojas, color: 'text-primary', glow: 'bg-primary/20' },
-            { icon: Users, label: 'Leads', value: stats.totalLeads, color: 'text-emerald-400', glow: 'bg-emerald-500/10' },
+            { icon: Users, label: 'Leads', value: stats.totalLeads, color: 'text-sky-400', glow: 'bg-sky-500/10' },
             { icon: ShoppingBag, label: 'Vendas', value: stats.totalVendas, color: 'text-slate-400', glow: 'bg-slate-500/10' },
             { icon: CreditCard, label: 'Pendentes', value: stats.pendingPayments, color: 'text-orange-400', glow: 'bg-orange-500/10' },
           ].map(({ icon: Icon, label, value, color, glow }) => (
@@ -374,7 +374,7 @@ export default function SuperAdminPanel() {
                   <p className="text-[11px] text-primary">{(admin as any).lojas?.nome || 'Admin do Sistema'}</p>
                   <p className="text-[10px] text-muted-foreground">{(admin as any).email}</p>
                 </div>
-                <Badge className={admin.status === 'aprovado' ? 'bg-emerald-500/10 text-emerald-600' : 'bg-orange-500/10 text-orange-600'}>
+                <Badge className={admin.status === 'aprovado' ? 'bg-sky-500/10 text-sky-600' : 'bg-orange-500/10 text-orange-600'}>
                   {admin.status.toUpperCase()}
                 </Badge>
               </div>
@@ -395,7 +395,7 @@ export default function SuperAdminPanel() {
                       <p className="text-xs font-black text-primary">{formatKz((a as any).planos?.preco || 0)}</p>
                     </div>
                     <Badge className={
-                      a.status === 'ativo' ? 'bg-emerald-500/10 text-emerald-600' :
+                      a.status === 'ativo' ? 'bg-sky-500/10 text-sky-600' :
                       a.status === 'aguardando_pagamento' ? 'bg-orange-500/10 text-orange-600' : 
                       'bg-muted-foreground/10 text-muted-foreground'
                     }>
@@ -407,7 +407,7 @@ export default function SuperAdminPanel() {
                     <div className="flex gap-2 pt-2">
                        <button 
                         onClick={() => handlePaymentAction(a.id, 'aprovar')}
-                        className="flex-1 bg-emerald-500 text-white text-[10px] font-black py-2 rounded-xl transition-all hover:bg-emerald-600"
+                        className="flex-1 bg-sky-500 text-white text-[10px] font-black py-2 rounded-xl transition-all hover:bg-sky-600"
                        >
                          APROVAR
                        </button>
@@ -439,13 +439,13 @@ export default function SuperAdminPanel() {
                         <Badge className="bg-primary/20 text-primary uppercase text-[9px] font-black tracking-widest px-2 py-0.5 border-0">
                           {getPlanDisplayName(loja.plano)}
                         </Badge>
-                        <span className={`w-2 h-2 rounded-full ${loja.instance_status === 'connected' ? 'bg-emerald-500 animate-pulse' : 'bg-muted-foreground/30'}`} />
+                        <span className={`w-2 h-2 rounded-full ${loja.instance_status === 'connected' ? 'bg-sky-500 animate-pulse' : 'bg-muted-foreground/30'}`} />
                       </div>
                       <h3 className="font-bold text-lg text-foreground">{loja.nome}</h3>
                       <p className="text-[10px] text-muted-foreground font-mono">ID: {loja.codigo_unico}</p>
                     </div>
                     <Badge className={`px-3 py-1 rounded-full text-[10px] font-black border-0 ${
-                      loja.status_aprovacao === 'ativo' ? 'bg-emerald-500/10 text-emerald-600' :
+                      loja.status_aprovacao === 'ativo' ? 'bg-sky-500/10 text-sky-600' :
                       loja.status_aprovacao === 'suspenso' ? 'bg-destructive/10 text-destructive' :
                       loja.status_aprovacao === 'eliminado' ? 'bg-red-900/30 text-red-400 line-through' :
                       'bg-orange-500/10 text-orange-600'

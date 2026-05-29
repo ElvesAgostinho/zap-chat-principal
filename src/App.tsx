@@ -7,22 +7,15 @@ import { useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 import Index from "./pages/Index";
-import DeliveryPanel from "./pages/DeliveryPanel";
 import ChatPanel from "./pages/ChatPanel";
 import LoginPage from "./pages/LoginPage";
 import AdminPanel from "./pages/AdminPanel";
 import SuperAdminPanel from "./pages/SuperAdminPanel";
 import SignupPage from "./pages/SignupPage";
-import CatalogPage from "./pages/CatalogPage";
-import LandingPage from "./pages/LandingPage";
-import TermsPage from "./pages/TermsPage";
-import PrivacyPage from "./pages/PrivacyPage";
 import NotFound from "./pages/NotFound";
 import PendingApprovalScreen from "./components/PendingApprovalScreen";
 import SuspendedScreen from "./components/SuspendedScreen";
 import DeletedAccountScreen from "./components/DeletedAccountScreen";
-import CookieConsent from "./components/CookieConsent";
-import FloatingSupportBot from "./components/FloatingSupportBot";
 import ScrollToTop from "./components/ScrollToTop";
 
 const queryClient = new QueryClient();
@@ -94,48 +87,25 @@ function AppRoutes() {
               )}
             </ProtectedRoute>
           ) : (
-            <LandingPage />
+            <Navigate to="/login" replace />
           )
         }
       />
-      <Route path="/entregas" element={<ProtectedRoute><DeliveryPanel /></ProtectedRoute>} />
       <Route path="/chat" element={<ProtectedRoute><ChatPanel /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute adminOnly><AdminPanel /></ProtectedRoute>} />
       <Route path="/super-admin" element={<ProtectedRoute superAdminOnly><SuperAdminPanel /></ProtectedRoute>} />
-      <Route path="/loja/:storeSlug" element={<CatalogPage />} />
-      <Route path="/catalogo/:storeSlug" element={<CatalogPage />} />
-      <Route path="/terms" element={<TermsPage />} />
-      <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }
 
-const SupportBotWrapper = () => {
-  const { user, loading } = useAuth();
-  const location = useLocation();
 
-  // Don't show while determining auth state to avoid "flash"
-  if (loading) return null;
-
-  // Only show the bot if the user is NOT logged in AND is on a public page
-  // This targets "clientes novos" as requested.
-  const publicPaths = ["/", "/login", "/signup"];
-  const isPublicPage = publicPaths.includes(location.pathname);
-
-  if (!user && isPublicPage) {
-    return <FloatingSupportBot />;
-  }
-
-  return null;
-};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <CookieConsent />
       <BrowserRouter>
         <ScrollToTop />
         <AuthProvider>

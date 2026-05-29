@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Send, Bot, User, Loader2, Paperclip, Image, FileText, Mic, X, Camera, UserCheck, RotateCcw, Download, Check, CheckCheck, MessageSquare, Plus, CalendarClock, Info, ChevronLeft, LayoutDashboard, History, Settings } from 'lucide-react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -38,11 +38,9 @@ function MessageMedia({ url, type }: { url: string; type: string }) {
   );
 }
 
-export default function ChatPanel() {
+export default function ChatWorkspace({ leadId }: { leadId: string }) {
   const navigate = useNavigate();
   const { storeId, user, userName } = useAuth();
-  const [searchParams] = useSearchParams();
-  const leadId = searchParams.get('lead');
 
   const [messages, setMessages] = useState<MsgRow[]>([]);
   const [leadName, setLeadName] = useState('Chat');
@@ -56,7 +54,7 @@ export default function ChatPanel() {
   const [sending, setSending] = useState(false);
   const [showAttach, setShowAttach] = useState(false);
   const [mediaPreview, setMediaPreview] = useState<{ file: File; url: string; type: string } | null>(null);
-  const [showProfile, setShowProfile] = useState(false);
+  const [showProfile, setShowProfile] = useState(true); // default to true to show profile in clone
   const [timeline, setTimeline] = useState<any[]>([]);
   const [loadingTimeline, setLoadingTimeline] = useState(false);
   const [atendenteId, setAtendenteId] = useState<string | null>(null);
@@ -299,13 +297,10 @@ export default function ChatPanel() {
   const isHumanMode = controleConversa === 'humano';
 
   return (
-    <div className="fixed inset-0 flex bg-[hsl(var(--whatsapp-bg))] overflow-hidden">
-      <div className={`flex-1 flex flex-col h-full transition-all duration-300 ${showProfile ? 'mr-[350px]' : ''}`}>
+    <div className="absolute inset-0 flex bg-white overflow-hidden">
+      <div className={`flex-1 flex flex-col h-full transition-all duration-300 ${showProfile ? 'mr-[320px]' : ''}`}>
         {/* Header - Refined with slate-950/primary for high-end look */}
-        <div className="px-6 py-4 flex items-center gap-4 flex-shrink-0 bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm z-10 transition-colors">
-          <button onClick={() => navigate(-1)} className="p-2.5 rounded-2xl text-foreground hover:bg-secondary transition-all duration-300 hover:scale-105 active:scale-95">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+        <div className="px-6 py-4 flex items-center gap-4 flex-shrink-0 bg-white/95 backdrop-blur-xl border-b border-slate-100 shadow-sm z-10 transition-colors">
           <div className="w-12 h-12 rounded-[18px] overflow-hidden bg-secondary flex items-center justify-center flex-shrink-0 border-2 border-border/50 shadow-inner group cursor-pointer transition-transform duration-500 hover:rotate-3">
             {leadFoto ? (
               <img src={leadFoto} alt={leadName} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" onError={(e) => { (e.target as any).src = ''; (e.target as any).style.display = 'none'; }} />
@@ -363,12 +358,12 @@ export default function ChatPanel() {
         </AnimatePresence>
 
         {/* Messages area with dynamic height */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 chat-bg relative scroll-smooth overflow-x-hidden">
-          {loading && <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary/50" /></div>}
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2 bg-[url('https://i.imgur.com/3q14Uud.png')] bg-repeat bg-center relative scroll-smooth overflow-x-hidden" style={{ backgroundSize: '400px', opacity: 0.95 }}>
+          {loading && <div className="flex items-center justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-sky-500" /></div>}
           {!loading && messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full opacity-30 select-none grayscale translate-y-[-10%]">
-              <MessageSquare className="w-16 h-16 mb-4 text-primary" />
-              <p className="text-sm font-bold uppercase tracking-[0.2em]">Inicie a conversa</p>
+              <MessageSquare className="w-16 h-16 mb-4 text-sky-500" />
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-700">Inicie a conversa</p>
             </div>
           )}
           {messages.map((msg, idx) => {
@@ -496,9 +491,9 @@ export default function ChatPanel() {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 bottom-0 w-[350px] bg-background border-l border-border shadow-2xl z-40 flex flex-col"
+            className="absolute right-0 top-0 bottom-0 w-[320px] bg-slate-50 border-l border-slate-100 z-40 flex flex-col"
           >
-            <div className="p-6 border-b border-border bg-card">
+            <div className="p-6 border-b border-slate-200/60 bg-white">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-black text-foreground uppercase tracking-wider text-xs">Perfil do Lead</h3>
                 <button onClick={() => setShowProfile(false)} className="p-2 rounded-xl bg-secondary text-muted-foreground hover:text-foreground">

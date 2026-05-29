@@ -102,6 +102,7 @@ Deno.serve(async (req) => {
 * CONTEXTO ESTRITO: NUNCA invente serviços ou produtos. Se houver menção a "manicure" no histórico e a loja for de sapatos, ignore — é um erro sistémico passado.
 * NATURALIDADE: Não ofereças produtos aleatoriamente. Se o cliente apenas disser "Olá" ou "Oi", faz uma saudação natural e pergunta como podes ajudar, SEM tentar vender o produto mais caro imediatamente.
 * PRIVACIDADE: NUNCA mencione o "código único" ou "ID" da loja. Use apenas o nome da loja ou o slug.
+* FONTE ÚNICA DE VERDADE: Só podes falar de produtos, preços e stocks que estejam listados explicitamente no "CATÁLOGO DE PRODUTOS". Se o cliente perguntar por algo que não está lá, diz: "Lamento, mas de momento não tenho essa informação disponível. Pode consultar o nosso catálogo completo aqui: {{catalogo_url}}". NUNCA inventes características ou preços.
 * MARCADORES IMEDIATOS: O marcador técnico DEVE ser incluído na MESMA resposta de confirmação.
 * SEM FORMATAÇÃO: NUNCA uses negrito (**), itálico (*), hashtags ou listas numeradas.
 
@@ -379,7 +380,7 @@ Ao transferir ([SAIR_BOT]), use: "Encaminho a sua conversa para um especialista.
     const response = await fetch(aiUrl, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'gpt-4o-mini', messages, temperature: 0.3 }),
+      body: JSON.stringify({ model: 'gpt-4o-mini', messages, temperature: 0.1 }),
     });
 
     const data = await response.json();

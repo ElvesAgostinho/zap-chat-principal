@@ -23,7 +23,7 @@ export default function SuspendedScreen() {
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 overflow-hidden relative">
       {/* Background Glows */}
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-500/10 rounded-full blur-[120px] animate-pulse" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[120px]" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-sky-500/10 rounded-full blur-[120px]" />
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/5 rounded-full blur-[150px]" />
 
       <motion.div
@@ -89,7 +89,7 @@ export default function SuspendedScreen() {
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => setUpgradeOpen(true)}
-              className="w-full flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-black text-sm uppercase tracking-widest shadow-lg hover:brightness-110 transition-all"
+              className="w-full flex items-center justify-center gap-2.5 px-6 py-4 rounded-2xl bg-gradient-to-r from-sky-500 to-sky-600 text-white font-black text-sm uppercase tracking-widest shadow-lg hover:brightness-110 transition-all"
             >
               <Zap className="w-5 h-5" />
               Renovar Agora — Upload PDF

@@ -6,42 +6,27 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import Sidebar from '@/components/Sidebar';
 import CommandPalette from '@/components/CommandPalette';
-import OrderCardEnhanced from '@/components/OrderCardEnhanced';
-import ProductCard from '@/components/ProductCard';
 import LeadCard from '@/components/LeadCard';
-import AddProductSheet from '@/components/AddProductSheet';
 import AddLeadSheet from '@/components/AddLeadSheet';
 import CampaignsPanel from '@/components/CampaignsPanel';
 import DashboardPanel from '@/components/DashboardPanel';
-import AlertsPanel from '@/components/AlertsPanel';
 import StoreConfigPanel from '@/components/StoreConfigPanel';
-import ConversationsPanel from '@/components/ConversationsPanel';
+import LiveChat from '@/components/chat/LiveChat';
 import AutomationPanel from '@/components/AutomationPanel';
-import DeliveryPanel from '@/components/DeliveryPanel';
-import SchedulingPanel from '@/components/SchedulingPanel';
 import NotificationsCenter from '@/components/NotificationsCenter';
-import PipelinePanel from '@/components/PipelinePanel';
-import StockPanel from '@/components/StockPanel';
 import AdminPanel from '@/pages/AdminPanel';
 import { formatCurrency } from '@/data/mock';
 import { Produto, Lead, Venda, Tab } from '@/types';
 
 const TAB_TITLES: Record<Tab, string> = {
   dashboard: 'Painel Geral',
-  orders: 'Pedidos',
   chat: 'Conversas',
   clients: 'Clientes',
-  products: 'Produtos',
-  campaigns: 'Campanhas',
-  alerts: 'Alertas',
+  campaigns: 'Broadcasts',
   settings: 'Configurações',
   admin: 'Administração',
-  schedule: 'Agenda',
-  pipeline: 'Pipeline',
-  stock: 'Estoque',
   automation: 'Automação Zap',
-  delivery: 'Logística',
-};
+} as Record<Tab, string>;
 
 export default function Index() {
   const navigate = useNavigate();
@@ -62,8 +47,6 @@ export default function Index() {
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [agents, setAgents] = useState<{id: string, nome: string}[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
-  const [showAddProduct, setShowAddProduct] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<Produto | null>(null);
   const [showAddLead, setShowAddLead] = useState(false);
   const [alertCount, setAlertCount] = useState(0);
   const { storeName: authStoreName, storeCode: authStoreCode, storeSlug: authStoreSlug } = useAuth();
@@ -229,69 +212,11 @@ export default function Index() {
       case 'dashboard':
         return (
           <DashboardPanel 
-            vendas={vendas} 
             leads={leads} 
-            products={products} 
             alertCount={alertCount} 
-            onAddLead={() => setShowAddLead(true)}
-            onAddProduct={() => setShowAddProduct(true)}
           />
         );
-      case 'orders':
-        return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-3 gap-4">
-              <div className="bg-card p-5 rounded-3xl shadow-card border border-border/50 stat-card">
-                <DollarSign className="w-6 h-6 text-emerald-600 dark:text-emerald-400 mb-3" />
-                <p className="text-2xl font-bold text-foreground tabular-nums">{formatCurrency(totalSales)}</p>
-                <p className="text-metadata text-[10px] mt-1">Vendas Totais</p>
-              </div>
-              <div className="bg-card p-5 rounded-3xl shadow-card border border-border/50 stat-card">
-                <Clock className="w-6 h-6 text-amber-500 mb-3" />
-                <p className="text-2xl font-bold text-foreground tabular-nums">{pendingCount}</p>
-                <p className="text-metadata text-[10px] mt-1">Pendentes</p>
-              </div>
-              <div className="bg-card p-5 rounded-3xl shadow-card border border-border/50 stat-card">
-                <ShoppingBag className="w-6 h-6 text-primary mb-3" />
-                <p className="text-2xl font-bold text-foreground tabular-nums">{vendas?.length || 0}</p>
-                <p className="text-metadata text-[10px] mt-1">Total Pedidos</p>
-              </div>
-            </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between px-1">
-                <h3 className="text-metadata">{vendas?.length || 0} Pedidos localizados</h3>
-              </div>
-              {vendas && vendas.length > 0 ? (
-                vendas.map(v => <OrderCardEnhanced key={v.id} venda={v} onOpenChat={(lid) => navigate(`/chat?lead=${lid}`)} />)
-              ) : (
-                <div className="bg-card p-10 rounded-3xl border border-dashed border-border flex flex-col items-center justify-center text-center">
-                  <ShoppingBag className="w-12 h-12 text-muted-foreground/30 mb-4" />
-                  <p className="text-muted-foreground font-medium">Nenhum pedido encontrado</p>
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      case 'chat': return <ConversationsPanel initialLeads={leads} initialAgents={agents} messages={messages} />;
-      case 'delivery': return <DeliveryPanel initialVendas={(vendas || []).filter(v => v.status_entrega !== 'entregue')} />;
-      case 'alerts': return <AlertsPanel initialLeads={(leads || []).filter(l => l.precisa_humano)} />;
-      case 'schedule': return <SchedulingPanel />;
-      case 'pipeline': return <PipelinePanel leads={leads || []} />;
-      case 'stock': return <StockPanel products={products || []} onUpdate={fetchAll} onAddProduct={() => { setEditingProduct(null); setShowAddProduct(true); }} onDeleteProduct={(id) => supabase.from('produtos').delete().eq('id', id).then(fetchAll)} onEditProduct={(p) => { setEditingProduct(p); setShowAddProduct(true); }} />;
-      case 'products':
-        return (
-          <div className="space-y-5">
-            <div className="flex items-center justify-between">
-              <h3 className="text-metadata">{products.length} itens no catálogo</h3>
-              <button onClick={() => setShowAddProduct(true)} className="flex items-center gap-2 px-5 py-2.5 rounded-2xl gradient-primary text-white text-sm font-bold shadow-glow">
-                <Plus className="w-4 h-4" /> Novo Produto
-              </button>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {products.map(p => <ProductCard key={p.id} product={p} onDelete={(id) => (supabase as any).from('produtos').delete().eq('id', id).then(fetchAll)} />)}
-            </div>
-          </div>
-        );
+      case 'chat': return <LiveChat initialLeads={leads} initialAgents={agents} messages={messages} />;
       case 'clients':
         return (
           <div className="space-y-5">
@@ -320,7 +245,7 @@ export default function Index() {
         active={activeTab} 
         onChange={setActiveTab} 
         alertCount={alertCount} 
-        orderCount={pendingCount} 
+        orderCount={0} 
         showAdmin={role === 'admin'} 
         onSearch={() => setSearchOpen(true)} 
         storeName={authStoreName || ''}
@@ -340,8 +265,9 @@ export default function Index() {
         className="transition-all duration-500 ease-in-out min-h-screen"
         style={{ marginLeft: sidebarCollapsed ? '68px' : '260px' }}
       >
-        <div className="max-w-6xl mx-auto px-6 py-8 pt-20 lg:pt-8">
+        <div className={activeTab === 'chat' ? "h-screen flex flex-col pt-16 lg:pt-0" : "max-w-6xl mx-auto px-6 py-8 pt-20 lg:pt-8"}>
           {/* Unified Header */}
+          {activeTab !== 'chat' && (
             <header className="mb-12 flex items-end justify-between border-b border-white/5 pb-8">
               <motion.div
                 key={activeTab}
@@ -368,9 +294,10 @@ export default function Index() {
                 </div>
               </motion.div>
             </header>
+          )}
 
           {/* Tab Content with AnimatePresence to solve "joining everything" bug */}
-          <div className="relative min-h-[60vh]">
+          <div className={`relative ${activeTab === 'chat' ? 'flex-1 h-full pb-4 pr-4' : 'min-h-[60vh]'}`}>
             <AnimatePresence initial={false}>
               <motion.div
                 key={activeTab}
@@ -378,7 +305,7 @@ export default function Index() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -15 }}
                 transition={{ duration: 0.25, ease: 'easeInOut' }}
-                className="w-full"
+                className={activeTab === 'chat' ? 'w-full h-full' : 'w-full'}
               >
                 {renderTabContent()}
               </motion.div>
@@ -387,7 +314,6 @@ export default function Index() {
         </div>
       </main>
 
-      <AddProductSheet open={showAddProduct} onClose={() => { setShowAddProduct(false); setEditingProduct(null); }} storeId={storeId} onAdded={fetchAll} initialData={editingProduct} />
       <AddLeadSheet open={showAddLead} onClose={() => setShowAddLead(false)} storeId={storeId} />
     </div>
   );

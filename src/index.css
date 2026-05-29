@@ -6,40 +6,40 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%; /* #F8FAFC */
+    --background: 0 0% 100%; /* White */
     --foreground: 222 47% 11%; /* #0F172A */
     --card: 0 0% 100%; /* #FFFFFF */
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 161 84% 39%; /* #10B981 */
+    --primary: 199 89% 48%; /* Sky Blue (sky-500) */
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%; /* #F1F5F9 (Hover Light) */
-    --secondary-foreground: 215 16% 47%; /* #64748B */
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 210 40% 96.1%;
-    --muted-foreground: 215 16% 47%; /* #64748B */
+    --muted-foreground: 215.4 16.3% 46.9%;
     --accent: 210 40% 96.1%;
-    --accent-foreground: 222 47% 11%;
+    --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 214 32% 91%; /* #E2E8F0 */
-    --input: 214 32% 91%;
-    --ring: 161 84% 39%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 199 89% 48%;
     --radius: 1rem;
     
-    --sidebar-background: 0 0% 100%; /* #FFFFFF */
-    --sidebar-foreground: 222 47% 11%; /* #0F172A */
-    --sidebar-primary: 161 84% 39%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 240 10% 3.9%;
+    --sidebar-primary: 199 89% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 210 40% 96.1%;
     --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 161 84% 39%;
+    --sidebar-border: 240 5.9% 90%;
+    --sidebar-ring: 199 89% 48%;
 
     --whatsapp-bg: 0 0% 95%; /* #F2F2F2 */
-    --whatsapp-bubble-sent: 142 70% 92%; /* #DCF8C6 */
+    --whatsapp-bubble-sent: 201 80% 92%; /* Light Ocean */
     --whatsapp-bubble-received: 0 0% 100%; /* #FFFFFF */
-    --whatsapp-mid: 161 84% 39%;
+    --whatsapp-mid: 201 100% 36%;
   }
 
   .dark {
@@ -52,7 +52,7 @@
     --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 158 64% 52%; /* #34D399 (Neon Emerald Soft) */
+    --primary: 158 64% 52%; /* #34D399 (Neon sky Soft) */
     --primary-foreground: 222 47% 5%;
 
     --secondary: 215 33% 17%; /* #1E293B (Hover Dark & Inactive Filter Bg) */
@@ -79,7 +79,7 @@
     --whatsapp-bg: 222 95% 2%;
     --badge-red: 0 84% 60%;
 
-    --header-emerald: 222 47% 4%;
+    --header-sky: 222 47% 4%;
     --header-foreground: 210 40% 98%;
 
     --shadow-card: 0 10px 25px rgba(0, 0, 0, 0.4);
@@ -123,8 +123,8 @@
 }
 
 
-/* Force contrast on text-white EXCEPT when inside primary/destructive/emerald containers or gradients */
-:root:not(.dark) .text-white:not(.force-dark, .force-dark *, .bg-primary *, .bg-destructive *, .bg-orange-500 *, .bg-emerald-500 *, .gradient-primary *, .bg-primary, .bg-destructive, .bg-orange-500, .bg-emerald-500, .gradient-primary, .shadow-glow *) {
+/* Force contrast on text-white EXCEPT when inside primary/destructive/sky containers or gradients */
+:root:not(.dark) .text-white:not(.force-dark, .force-dark *, .bg-primary *, .bg-destructive *, .bg-orange-500 *, .bg-sky-500 *, .gradient-primary *, .bg-primary, .bg-destructive, .bg-orange-500, .bg-sky-500, .gradient-primary, .shadow-glow *) {
   color: hsl(var(--foreground)) !important;
 }
 
@@ -273,7 +273,7 @@
     @apply bg-white/5 backdrop-blur-xl border border-white/10;
   }
   .glass-card-neon {
-    @apply bg-white/5 backdrop-blur-xl border border-emerald-500/20 shadow-glow;
+    @apply bg-white/5 backdrop-blur-xl border border-sky-500/20 shadow-glow;
   }
   .gradient-primary {
     background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--secondary)));

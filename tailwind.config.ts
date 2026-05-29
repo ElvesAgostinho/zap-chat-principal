@@ -50,7 +50,7 @@ export default {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
+          DEFAULT: "#0ea5e9", // Sky Blue
           foreground: "hsl(var(--primary-foreground))",
         },
         secondary: {
@@ -88,12 +88,12 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
         neon: {
-          DEFAULT: "hsl(158, 64%, 52%)",
-          glow: "rgba(52, 211, 153, 0.4)",
+          DEFAULT: "#38bdf8", // Sky Light
+          glow: "rgba(56, 189, 248, 0.4)",
         },
         electric: {
-          DEFAULT: "hsl(258, 91%, 66%)",
-          glow: "rgba(139, 92, 246, 0.4)",
+          DEFAULT: "#03045e", // Deep Ocean
+          glow: "rgba(3, 4, 94, 0.4)",
         },
       },
       borderRadius: {
@@ -130,7 +130,7 @@ export default {
         "shimmer": "shimmer 2s infinite",
       },
       boxShadow: {
-        glow: "0 0 20px rgba(52, 211, 153, 0.15)",
+        glow: "0 0 20px rgba(14, 165, 233, 0.15)", // Sky Blue glow
         "glow-purple": "0 0 20px rgba(139, 92, 246, 0.15)",
         elevated: "0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.3)",
         soft: "0 8px 30px rgba(0, 0, 0, 0.08)",

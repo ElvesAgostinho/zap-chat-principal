@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  LayoutDashboard, ShoppingBag, MessageSquare, Calendar, BarChart3,
-  Megaphone, AlertTriangle, Package, Users, Settings, Shield,
+  LayoutDashboard, MessageSquare, Users, Megaphone, Settings, Shield,
   ChevronLeft, ChevronRight, LogOut, Moon, Sun, Search,
-  Zap, Menu, X, Tag, Rocket
+  Zap, Menu, X, Tag, Rocket, Bot
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Tab } from '@/types';
@@ -47,36 +46,21 @@ const getNavGroups = (
   
   // High-tier plans: Profissional or Enterprise
   const isHighTier = ['profissional', 'enterprise'].includes(p) || showAdmin;
-  
-  // Basic entry plans: Starter or better
-  const isStarterPlus = ['starter', 'profissional', 'enterprise'].includes(p) || showAdmin;
 
   const groups: NavGroup[] = [
     {
       label: 'Principal',
       items: [
         { id: 'dashboard', icon: LayoutDashboard, label: 'Painel Hub' },
-        { id: 'orders', icon: ShoppingBag, label: 'Pedidos', badge: orderCount },
         { id: 'chat', icon: MessageSquare, label: 'Conversas', badge: chatCount },
-        { id: 'delivery', icon: Truck, label: 'Logística' },
       ],
     },
     {
       label: 'CRM & Operações',
       items: [
-        { id: 'pipeline', icon: BarChart3, label: 'Pipeline', locked: !isHighTier },
-        { id: 'clients', icon: Users, label: 'Potenciais Clientes', locked: !isHighTier },
-        { id: 'campaigns', icon: Megaphone, label: 'Campanhas', locked: !isHighTier },
-        { id: 'automation', icon: Zap, label: 'Automação', locked: !isHighTier },
-        { id: 'schedule', icon: Calendar, label: 'Agenda', locked: !isStarterPlus },
-      ],
-    },
-    {
-      label: 'Gestão',
-      items: [
-        { id: 'products', icon: Tag, label: 'Produtos' },
-        { id: 'stock', icon: Package, label: 'Estoque' },
-        { id: 'alerts', icon: AlertTriangle, label: 'Alertas', badge: alertCount },
+        { id: 'clients', icon: Users, label: 'Clientes' },
+        { id: 'campaigns', icon: Megaphone, label: 'Broadcasts' },
+        { id: 'automation', icon: Bot, label: 'Automação', locked: !isHighTier },
       ],
     },
     {
@@ -227,7 +211,7 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
         {p !== 'enterprise' && !collapsed && (
           <button
             onClick={() => setUpgradeOpen(true)}
-            className="w-full mb-2 p-3.5 rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-emerald-600 text-primary-foreground flex flex-col gap-1 hover:brightness-110 transition-all shadow-glow group border border-white/10"
+            className="w-full mb-2 p-3.5 rounded-2xl bg-gradient-to-br from-primary via-primary/90 to-sky-600 text-primary-foreground flex flex-col gap-1 hover:brightness-110 transition-all shadow-glow group border border-white/10"
           >
             <div className="flex items-center justify-between w-full">
               <span className="text-[9px] font-black uppercase tracking-widest opacity-80">Plano {plano || 'Iniciante'}</span>
@@ -245,18 +229,18 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
           {(storeProfilePic || storePhone) && (
             <div className={`flex items-center gap-3 w-full p-2 ${collapsed ? 'justify-center p-1' : 'border-b border-white/5 mb-1'}`}>
               {storeProfilePic ? (
-                <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 shadow-sm border border-emerald-500/30">
+                <div className="w-8 h-8 rounded-xl overflow-hidden flex-shrink-0 shadow-sm border border-sky-500/30">
                   <img src={storeProfilePic} alt="WhatsApp Avatar" className="w-full h-full object-cover" />
                 </div>
               ) : (
-                <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0 border border-emerald-500/20">
-                  <span className="text-emerald-500"><Zap className="w-4 h-4" /></span>
+                <div className="w-8 h-8 rounded-xl bg-sky-500/10 flex items-center justify-center flex-shrink-0 border border-sky-500/20">
+                  <span className="text-sky-500"><Zap className="w-4 h-4" /></span>
                 </div>
               )}
               {!collapsed && (
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-bold text-emerald-500 truncate flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <p className="text-[10px] font-bold text-sky-500 truncate flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-pulse" />
                     WhatsApp Ativo
                   </p>
                   <p className="text-[9px] text-muted-foreground font-mono mt-0.5 truncate">{storePhone ? `+${storePhone}` : 'Conectado'}</p>
@@ -281,7 +265,7 @@ export default function Sidebar({ active, onChange, alertCount = 0, orderCount =
             {/* User Info */}
             {!collapsed && (
               <div className="flex items-center gap-3 w-full p-2">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-emerald-600 flex items-center justify-center flex-shrink-0 shadow-sm border border-white/20">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-primary to-sky-600 flex items-center justify-center flex-shrink-0 shadow-sm border border-white/20">
                   <span className="text-primary-foreground text-[10px] font-black tracking-tighter">{initials}</span>
                 </div>
                 <div className="flex-1 min-w-0">

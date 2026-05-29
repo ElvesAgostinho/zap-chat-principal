@@ -20,7 +20,7 @@ const plans: Plan[] = [
     name: 'Starter',
     price: '25.000 Kz',
     icon: Rocket,
-    color: 'emerald',
+    color: 'sky',
     features: ['Até 200 Leads ativos', 'Vitrine Personalizada', 'Gestão de Pedidos', '2 Atendentes', 'Relatórios Básicos']
   },
   {
@@ -256,7 +256,7 @@ export default function UpgradeModal({ isOpen, onClose }: { isOpen: boolean; onC
                         whileTap={{ scale: 0.98 }}
                         onClick={handleSubmitPayment}
                         disabled={!uploadFile || isUploading || uploadComplete}
-                        className={`w-full py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-glow transition-all flex items-center justify-center gap-2 ${uploadComplete ? 'bg-emerald-500 text-white' : 'bg-primary text-white disabled:opacity-50'}`}
+                        className={`w-full py-4 rounded-2xl font-black uppercase tracking-[0.2em] text-xs shadow-glow transition-all flex items-center justify-center gap-2 ${uploadComplete ? 'bg-sky-500 text-white' : 'bg-primary text-white disabled:opacity-50'}`}
                       >
                         {isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : uploadComplete ? <Check className="w-4 h-4" /> : <Send className="w-4 h-4" />}
                         {uploadComplete ? 'ENVIADO COM SUCESSO' : 'FINALIZAR UPGRADE'}

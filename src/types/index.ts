@@ -64,6 +64,19 @@ export interface Mensagem {
   created_at: string;
 }
 
+export interface Automacao {
+  id: string;
+  loja_id: string;
+  nome: string;
+  ativo: boolean;
+  trigger_type: string;
+  trigger_keyword: string | null;
+  nodes: any;
+  edges: any;
+  criado_em: string;
+  atualizado_em: string;
+}
+
 export interface Campanha {
   id: string;
   loja_id: string;

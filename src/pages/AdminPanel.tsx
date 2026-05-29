@@ -256,9 +256,9 @@ export default function AdminPanel() {
           <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="bg-card p-4 rounded-2xl shadow-card">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {isConnected ? <Wifi className="w-4 h-4 text-emerald-500" /> : <WifiOff className="w-4 h-4 text-muted-foreground" />}
+                {isConnected ? <Wifi className="w-4 h-4 text-sky-500" /> : <WifiOff className="w-4 h-4 text-muted-foreground" />}
                 <span className="text-sm font-medium text-foreground">WhatsApp</span>
-                <span className={`text-xs font-medium ${isConnected ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+                <span className={`text-xs font-medium ${isConnected ? 'text-sky-600' : 'text-muted-foreground'}`}>
                   {isConnected ? 'Conectado' : 'Desconectado'}
                 </span>
               </div>

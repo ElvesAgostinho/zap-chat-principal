@@ -106,25 +106,25 @@ export default function ApiIntegrationPanel() {
         <motion.div 
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="bg-emerald-50 border border-emerald-200 p-5 rounded-2xl space-y-3"
+          className="bg-sky-50 border border-sky-200 p-5 rounded-2xl space-y-3"
         >
-          <div className="flex items-center gap-2 text-emerald-700">
+          <div className="flex items-center gap-2 text-sky-700">
             <CheckCircle className="w-4 h-4" />
             <span className="text-xs font-bold uppercase tracking-wider">Sua Nova Chave API</span>
           </div>
-          <p className="text-[10px] text-emerald-600">Copie agora, você não poderá vê-la novamente por segurança.</p>
-          <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-emerald-100 group">
-            <code className="text-sm font-mono text-emerald-700 break-all">{generatedKey}</code>
+          <p className="text-[10px] text-sky-600">Copie agora, você não poderá vê-la novamente por segurança.</p>
+          <div className="flex items-center justify-between bg-white p-3 rounded-xl border border-sky-100 group">
+            <code className="text-sm font-mono text-sky-700 break-all">{generatedKey}</code>
             <button 
               onClick={() => { navigator.clipboard.writeText(generatedKey); toast.success('Copiado!'); }}
-              className="p-2 hover:bg-emerald-50 rounded-lg transition-colors"
+              className="p-2 hover:bg-sky-50 rounded-lg transition-colors"
             >
-              <Copy className="w-4 h-4 text-emerald-600" />
+              <Copy className="w-4 h-4 text-sky-600" />
             </button>
           </div>
           <button 
             onClick={() => setGeneratedKey(null)}
-            className="text-[10px] font-bold text-emerald-700 underline"
+            className="text-[10px] font-bold text-sky-700 underline"
           >
             Já salvei minha chave
           </button>
@@ -158,7 +158,7 @@ export default function ApiIntegrationPanel() {
                   </div>
                   <div className="flex gap-2 mb-4">
                     <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-secondary text-muted-foreground">all scopes</span>
-                    <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-600 border border-emerald-100">Ativa</span>
+                    <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-sky-50 text-sky-600 border border-sky-100">Ativa</span>
                   </div>
                 </div>
                 <div className="pt-4 border-t border-border/40 flex items-center justify-between text-[10px] text-muted-foreground">
