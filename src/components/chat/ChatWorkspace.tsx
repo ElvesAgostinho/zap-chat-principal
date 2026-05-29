@@ -491,18 +491,18 @@ export default function ChatWorkspace({ leadId }: { leadId: string }) {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="absolute right-0 top-0 bottom-0 w-[320px] bg-slate-50 border-l border-slate-100 z-40 flex flex-col"
+            className="absolute right-0 top-0 bottom-0 w-[320px] bg-slate-50 border-l border-slate-200 z-40 flex flex-col"
           >
-            <div className="p-6 border-b border-slate-200/60 bg-white">
+            <div className="p-6 border-b border-slate-200 bg-white">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-black text-foreground uppercase tracking-wider text-xs">Perfil do Lead</h3>
-                <button onClick={() => setShowProfile(false)} className="p-2 rounded-xl bg-secondary text-muted-foreground hover:text-foreground">
+                <h3 className="font-black text-slate-800 uppercase tracking-wider text-xs">Perfil do Lead</h3>
+                <button onClick={() => setShowProfile(false)} className="p-2 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-800">
                   <ChevronLeft className="w-5 h-5" />
                 </button>
               </div>
               <div className="flex flex-col items-center">
                 <div 
-                  className="w-24 h-24 rounded-[32px] bg-secondary border-4 border-card shadow-card overflow-hidden flex items-center justify-center relative group"
+                  className="w-24 h-24 rounded-[32px] bg-slate-100 border-4 border-white shadow-sm overflow-hidden flex items-center justify-center relative group"
                   onClick={() => profileFileRef.current?.click()}
                 >
                   {uploadingProfile ? (
@@ -510,15 +510,15 @@ export default function ChatWorkspace({ leadId }: { leadId: string }) {
                   ) : leadFoto ? (
                     <img src={leadFoto} className="w-full h-full object-cover" />
                   ) : (
-                    <User className="w-10 h-10 text-muted-foreground/30" />
+                    <User className="w-10 h-10 text-slate-300" />
                   )}
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
                     <Camera className="w-6 h-6 text-primary-foreground" />
                   </div>
                 </div>
                 <input ref={profileFileRef} type="file" accept="image/*" className="hidden" onChange={handleProfileUpload} />
-                <h4 className="mt-4 font-black text-xl text-foreground text-center line-clamp-1">{leadName}</h4>
-                <p className="text-sm text-muted-foreground font-mono">{leadPhone}</p>
+                <h4 className="mt-4 font-black text-xl text-slate-900 text-center line-clamp-1">{leadName}</h4>
+                <p className="text-sm text-slate-500 font-mono">{leadPhone}</p>
                 <div className="mt-3 flex gap-2">
                    <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-black uppercase tracking-widest">{fonte || 'Origem desconhecida'}</span>
                 </div>
@@ -528,13 +528,13 @@ export default function ChatWorkspace({ leadId }: { leadId: string }) {
             <div className="flex-1 overflow-y-auto p-6 space-y-8">
               {/* Responsibility & Status */}
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-muted-foreground mb-3">
-                  <LayoutDashboard className="w-4 h-4 text-primary" />
+                <div className="flex items-center gap-2 text-slate-500 mb-3">
+                  <LayoutDashboard className="w-4 h-4 text-sky-500" />
                   <span className="text-[10px] font-black uppercase tracking-widest">Controles e Status</span>
                 </div>
-                <div className="space-y-4 bg-secondary/30 p-4 rounded-3xl border border-border/40">
+                <div className="space-y-4 bg-slate-100 p-4 rounded-3xl border border-slate-200">
                   <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-2 px-1">Status do Pipeline</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2 px-1">Status do Pipeline</label>
                     <select 
                       value={status}
                       onChange={(e) => {
@@ -545,13 +545,13 @@ export default function ChatWorkspace({ leadId }: { leadId: string }) {
                            toast.success(`Status: ${val}`);
                          });
                       }}
-                      className="w-full bg-card px-4 py-3 rounded-2xl border border-border/60 text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none"
+                      className="w-full bg-white px-4 py-3 rounded-2xl border border-slate-200 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-sky-500/20 outline-none"
                     >
                       {['Novo', 'Interessado', 'Aguardando', 'Vendido', 'Perdido'].map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground block mb-2 px-1">Atendente Responsável</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-500 block mb-2 px-1">Atendente Responsável</label>
                     <select 
                       value={atendenteId || 'none'}
                       onChange={(e) => {
@@ -562,7 +562,7 @@ export default function ChatWorkspace({ leadId }: { leadId: string }) {
                            toast.success('Atendente alterado!');
                          });
                       }}
-                      className="w-full bg-card px-4 py-3 rounded-2xl border border-border/60 text-xs font-bold focus:ring-2 focus:ring-primary/20 outline-none"
+                      className="w-full bg-white px-4 py-3 rounded-2xl border border-slate-200 text-xs font-bold text-slate-800 focus:ring-2 focus:ring-sky-500/20 outline-none"
                     >
                       <option value="none">Nenhum Atendente</option>
                       {agents.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
@@ -574,35 +574,35 @@ export default function ChatWorkspace({ leadId }: { leadId: string }) {
               {/* Timeline */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <History className="w-4 h-4 text-primary" />
+                  <div className="flex items-center gap-2 text-slate-500">
+                    <History className="w-4 h-4 text-sky-500" />
                     <span className="text-[10px] font-black uppercase tracking-widest">Linha do Tempo</span>
                   </div>
-                  <button onClick={fetchTimeline} disabled={loadingTimeline} className="p-1.5 rounded-lg hover:bg-secondary text-primary transition-colors disabled:opacity-30">
+                  <button onClick={fetchTimeline} disabled={loadingTimeline} className="p-1.5 rounded-lg hover:bg-slate-200 text-sky-500 transition-colors disabled:opacity-30">
                      <RotateCcw className={`w-3.5 h-3.5 ${loadingTimeline ? 'animate-spin' : ''}`} />
                   </button>
                 </div>
                 
-                <div className="relative space-y-6 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-[2px] before:bg-border/60">
+                <div className="relative space-y-6 before:absolute before:left-3 before:top-2 before:bottom-2 before:w-[2px] before:bg-slate-200">
                   {timeline.map((event, idx) => (
                     <div key={event.id} className="relative pl-8 animate-fade-in-up" style={{ animationDelay: `${idx * 0.1}s` }}>
-                      <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-background border-2 border-primary flex items-center justify-center z-10">
-                        {event.tipo === 'mudanca_status' ? <LayoutDashboard className="w-3 h-3 text-primary" /> : <Info className="w-3 h-3 text-primary" />}
+                      <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-white border-2 border-sky-500 flex items-center justify-center z-10">
+                        {event.tipo === 'mudanca_status' ? <LayoutDashboard className="w-3 h-3 text-sky-500" /> : <Info className="w-3 h-3 text-sky-500" />}
                       </div>
-                      <p className="text-xs font-bold text-foreground leading-tight">{event.descritivo}</p>
-                      <p className="text-[10px] text-muted-foreground mt-1 tabular-nums">{new Date(event.criado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
+                      <p className="text-xs font-bold text-slate-800 leading-tight">{event.descritivo}</p>
+                      <p className="text-[10px] text-slate-400 mt-1 tabular-nums">{new Date(event.criado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
                   ))}
                   
                   {timeline.length === 0 && !loadingTimeline && (
-                    <div className="text-center py-10 opacity-30 italic text-[11px] text-muted-foreground">Sem histórico registrado.</div>
+                    <div className="text-center py-10 opacity-30 italic text-[11px] text-slate-500">Sem histórico registrado.</div>
                   )}
                 </div>
               </div>
             </div>
 
-            <div className="p-6 border-t border-border bg-card">
-              <button disabled className="w-full py-4 rounded-2xl bg-secondary text-muted-foreground font-black text-[10px] uppercase tracking-widest opacity-50 cursor-not-allowed">
+            <div className="p-6 border-t border-slate-200 bg-slate-50">
+              <button disabled className="w-full py-4 rounded-2xl bg-slate-200 text-slate-500 font-black text-[10px] uppercase tracking-widest opacity-50 cursor-not-allowed">
                 Exportar Histórico PDF
               </button>
             </div>
