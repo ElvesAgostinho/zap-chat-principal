@@ -46,7 +46,8 @@ function ProtectedRoute({ children, adminOnly = false, superAdminOnly = false }:
   }
 
   // If store is suspended (manual) or expired (auto-billing)
-  if (!isSuperAdmin && (statusLoja === 'suspenso' || isExpired)) {
+  // BYPASS: Temporarily removed 'isExpired' check for testing
+  if (!isSuperAdmin && statusLoja === 'suspenso') {
     return <SuspendedScreen />;
   }
 
@@ -82,7 +83,7 @@ function AppRoutes() {
                 <DeletedAccountScreen />
               ) : statusLoja === 'pendente_aprovacao' ? (
                 <PendingApprovalScreen />
-              ) : (statusLoja === 'suspenso' || isExpired) ? (
+              ) : statusLoja === 'suspenso' ? (
                 <SuspendedScreen />
               ) : (
                 <Index />

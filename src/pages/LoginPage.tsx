@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
-import { Loader2, LogIn, Mail, Zap, Eye, EyeOff } from 'lucide-react';
+import { Loader2, LogIn, Mail, Zap, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface LoginLocationState {
@@ -84,6 +84,10 @@ export default function LoginPage() {
         <div className="absolute -bottom-40 -left-40 w-[500px] h-[500px] rounded-full bg-primary/5 blur-[100px]" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full bg-primary/[0.02] blur-[80px]" />
       </div>
+
+      <Link to="/" className="absolute top-6 left-6 z-50 flex items-center gap-2 px-4 py-2 bg-white/50 backdrop-blur-md border border-slate-200 rounded-xl text-slate-600 font-semibold hover:bg-white transition-all shadow-sm">
+        <ArrowLeft className="w-4 h-4" /> Voltar
+      </Link>
 
       <motion.div
         initial={{ opacity: 0, y: 24 }}

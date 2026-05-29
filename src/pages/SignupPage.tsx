@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
-import { Loader2, UserPlus, Store, Users, ChevronRight, ChevronLeft, MessageSquare, Building2, Phone, MapPin, User, KeyRound } from 'lucide-react';
+import { Loader2, UserPlus, Store, Users, ChevronRight, ChevronLeft, MessageSquare, Building2, Phone, MapPin, User, KeyRound, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 type AccountType = null | 'admin' | 'employee';
@@ -103,6 +103,10 @@ export default function SignupPage() {
         <div className="absolute bottom-[10%] -left-[10%] w-[500px] h-[500px] rounded-full bg-primary/5 blur-[120px] animate-pulse" style={{ animationDelay: '2s' }} />
         <div className="absolute inset-0 bg-noise opacity-[0.03] mix-blend-overlay" />
       </div>
+
+      <Link to="/" className="absolute top-6 left-6 z-50 flex items-center gap-2 px-4 py-2 bg-white/50 backdrop-blur-md border border-slate-200 rounded-xl text-slate-600 font-semibold hover:bg-white transition-all shadow-sm">
+        <ArrowLeft className="w-4 h-4" /> Voltar
+      </Link>
 
       <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: "easeOut" }} className="w-full max-w-sm relative z-10">
         <div className="text-center mb-8">
