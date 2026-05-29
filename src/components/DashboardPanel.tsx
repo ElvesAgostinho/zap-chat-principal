@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
-import { Users, Zap, MessageSquare, Target, Clock, ArrowUpRight, TrendingUp } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
+import { Users, Zap, MessageSquare, Target, ArrowUpRight, TrendingUp, TrendingDown, CheckCircle2, Clock, Star } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell, FunnelChart, Funnel, LabelList } from 'recharts';
 import { Lead } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,8 +15,15 @@ export default function DashboardPanel({ leads, alertCount }: DashboardPanelProp
   const { storeName, storeId } = useAuth();
   const [activeAutomations, setActiveAutomations] = useState(0);
   const [totalMessages, setTotalMessages] = useState(0);
+  const [prevWeekLeads, setPrevWeekLeads] = useState(0);
   
   const clientCount = leads.filter(l => l.status === 'cliente' || l.status === 'comprado' || l.status === 'vendido').length;
+  const interestCount = leads.filter(l => l.status === 'interessado').length;
+  const waitingCount = leads.filter(l => l.status === 'aguardando').length;
+  const newCount = leads.filter(l => !l.status || l.status === 'novo').length;
+  
+  // Conversion rate: clients / total leads (if > 0)
+  const conversionRate = leads.length > 0 ? ((clientCount / leads.length) * 100).toFixed(1) : '0.0';
   
   useEffect(() => {
     const fetchStats = async () => {
@@ -36,16 +43,73 @@ export default function DashboardPanel({ leads, alertCount }: DashboardPanelProp
         .eq('loja_id', storeId);
         
       if (msgCount !== null) setTotalMessages(msgCount);
+
+      // Fetch leads from 2 weeks ago to compare
+      const twoWeeksAgo = new Date();
+      twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+      const { count: prevCount } = await supabase
+        .from('leads')
+        .select('*', { count: 'exact', head: true })
+        .eq('loja_id', storeId)
+        .gte('criado_em', twoWeeksAgo.toISOString())
+        .lt('criado_em', oneWeekAgo.toISOString());
+
+      if (prevCount !== null) setPrevWeekLeads(prevCount);
     };
 
     fetchStats();
   }, [storeId]);
 
+  // Leads from the current week
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const currentWeekLeads = leads.filter(l => l.criado_em && new Date(l.criado_em) >= oneWeekAgo).length;
+  
+  // Week-over-week trend
+  const leadTrend = prevWeekLeads > 0 
+    ? Math.round(((currentWeekLeads - prevWeekLeads) / prevWeekLeads) * 100)
+    : currentWeekLeads > 0 ? 100 : 0;
+
   const stats = [
-    { icon: Users, label: 'Contactos Totais', value: leads.length, color: 'text-primary', bg: 'bg-primary/10', trend: 0 },
-    { icon: Target, label: 'Clientes Convertidos', value: clientCount, color: 'text-blue-500', bg: 'bg-blue-500/10', trend: 0 },
-    { icon: Zap, label: 'Automações Activas', value: activeAutomations, color: 'text-amber-500', bg: 'bg-amber-500/10', trend: 0 },
-    { icon: MessageSquare, label: 'Mensagens Trocadas', value: totalMessages, color: 'text-indigo-500', bg: 'bg-indigo-500/10', trend: 0 },
+    { 
+      icon: Users, 
+      label: 'Contactos Totais', 
+      value: leads.length, 
+      color: 'text-sky-500', 
+      bg: 'bg-sky-500/10',
+      trend: leadTrend,
+      sub: `${currentWeekLeads} esta semana`
+    },
+    { 
+      icon: CheckCircle2, 
+      label: 'Clientes Convertidos', 
+      value: clientCount, 
+      color: 'text-emerald-500', 
+      bg: 'bg-emerald-500/10',
+      trend: 0,
+      sub: `${conversionRate}% de conversão`
+    },
+    { 
+      icon: Zap, 
+      label: 'Automações Activas', 
+      value: activeAutomations, 
+      color: 'text-amber-500', 
+      bg: 'bg-amber-500/10',
+      trend: 0,
+      sub: 'a trabalhar para ti'
+    },
+    { 
+      icon: MessageSquare, 
+      label: 'Mensagens Trocadas', 
+      value: totalMessages, 
+      color: 'text-indigo-500', 
+      bg: 'bg-indigo-500/10',
+      trend: 0,
+      sub: 'total acumulado'
+    },
   ];
 
   // Calculate real growth data for the last 7 days
@@ -57,26 +121,30 @@ export default function DashboardPanel({ leads, alertCount }: DashboardPanelProp
   });
 
   const growthData = last7Days.map(date => {
-    const dateStr = date.toISOString().split('T')[0]; // "YYYY-MM-DD"
+    const dateStr = date.toISOString().split('T')[0];
     const count = leads.filter(l => {
       if (!l.criado_em) return false;
       return l.criado_em.split('T')[0] === dateStr;
     }).length;
     
     return {
-      name: date.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', ''),
+      name: date.toLocaleDateString('pt-PT', { weekday: 'short' }).replace('.', ''),
       leads: count
     };
   });
 
-  const funnelData = [
-    { name: 'Novos', value: leads.filter(l => !l.status || l.status === 'novo').length },
-    { name: 'Interessados', value: leads.filter(l => l.status === 'interessado').length },
-    { name: 'Em Negociação', value: leads.filter(l => l.status === 'aguardando').length },
-    { name: 'Fechados', value: clientCount },
+  // Funnel data with percentages
+  const funnelStages = [
+    { name: 'Novos', value: newCount, color: '#3b82f6', pct: leads.length > 0 ? Math.round((newCount / leads.length) * 100) : 0 },
+    { name: 'Interessados', value: interestCount, color: '#f59e0b', pct: leads.length > 0 ? Math.round((interestCount / leads.length) * 100) : 0 },
+    { name: 'Em Negociação', value: waitingCount, color: '#a855f7', pct: leads.length > 0 ? Math.round((waitingCount / leads.length) * 100) : 0 },
+    { name: 'Clientes', value: clientCount, color: '#10b981', pct: leads.length > 0 ? Math.round((clientCount / leads.length) * 100) : 0 },
   ];
 
-  const COLORS = ['#3b82f6', '#f59e0b', '#a855f7', '#10b981'];
+  // Top pipeline items
+  const hotLeads = leads
+    .filter(l => l.status === 'interessado' || l.status === 'aguardando')
+    .slice(0, 5);
 
   return (
     <div className="space-y-6 pb-20 p-4 md:p-8 max-w-7xl mx-auto">
@@ -99,14 +167,23 @@ export default function DashboardPanel({ leads, alertCount }: DashboardPanelProp
               <div className={`w-11 h-11 rounded-2xl ${stat.bg} flex items-center justify-center border border-white/5 shadow-sm`}>
                 <stat.icon className={`w-5 h-5 ${stat.color}`} />
               </div>
-              {stat.trend > 0 && (
-                <span className="flex items-center gap-0.5 text-[10px] font-black px-2.5 py-1 rounded-full bg-primary/10 text-primary border border-primary/20">
-                  <ArrowUpRight className="w-3 h-3" />{stat.trend}%
+              {stat.trend !== 0 && (
+                <span className={`flex items-center gap-0.5 text-[10px] font-black px-2.5 py-1 rounded-full ${
+                  stat.trend > 0 
+                    ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' 
+                    : 'bg-rose-500/10 text-rose-500 border border-rose-500/20'
+                }`}>
+                  {stat.trend > 0 
+                    ? <ArrowUpRight className="w-3 h-3" /> 
+                    : <TrendingDown className="w-3 h-3" />
+                  }
+                  {Math.abs(stat.trend)}%
                 </span>
               )}
             </div>
             <p className="text-3xl font-bold text-foreground tracking-tight tabular-nums font-display">{stat.value}</p>
             <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.15em] mt-2 opacity-60">{stat.label}</p>
+            <p className="text-[11px] text-muted-foreground mt-1 opacity-80">{stat.sub}</p>
           </motion.div>
         ))}
       </div>
@@ -126,6 +203,7 @@ export default function DashboardPanel({ leads, alertCount }: DashboardPanelProp
                 <Tooltip 
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
                   itemStyle={{ color: '#0ea5e9', fontWeight: 'bold' }}
+                  formatter={(v: any) => [`${v} lead${v !== 1 ? 's' : ''}`, '']}
                 />
                 <Line type="monotone" dataKey="leads" stroke="#0ea5e9" strokeWidth={4} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6, strokeWidth: 0 }} />
               </LineChart>
@@ -133,31 +211,87 @@ export default function DashboardPanel({ leads, alertCount }: DashboardPanelProp
           </div>
         </div>
 
-        {/* Funnel Chart */}
+        {/* Conversion Funnel */}
         <div className="bg-card rounded-3xl p-6 border border-border/50 shadow-card">
-          <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-            <Target className="w-5 h-5 text-indigo-500" /> Taxa de Conversão
-          </h3>
-          <div className="h-[250px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={funnelData} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                <XAxis type="number" hide />
-                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#334155', fontWeight: 600 }} width={100} />
-                <Tooltip 
-                  cursor={{ fill: 'rgba(0,0,0,0.02)' }}
-                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
-                />
-                <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={24}>
-                  {funnelData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-bold text-lg flex items-center gap-2">
+              <Target className="w-5 h-5 text-indigo-500" /> Taxa de Conversão
+            </h3>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-full">
+              <Star className="w-3.5 h-3.5 text-emerald-500" />
+              <span className="text-sm font-black text-emerald-600">{conversionRate}%</span>
+            </div>
           </div>
+
+          <div className="space-y-3">
+            {funnelStages.map((stage, i) => (
+              <div key={stage.name} className="flex items-center gap-3">
+                <div className="w-24 text-xs font-bold text-slate-600 text-right shrink-0">{stage.name}</div>
+                <div className="flex-1 bg-slate-100 rounded-full h-6 relative overflow-hidden">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.max(stage.pct, stage.value > 0 ? 4 : 0)}%` }}
+                    transition={{ delay: 0.2 + i * 0.1, duration: 0.6, ease: 'easeOut' }}
+                    className="h-full rounded-full flex items-center justify-end pr-2"
+                    style={{ backgroundColor: stage.color }}
+                  >
+                    {stage.value > 0 && (
+                      <span className="text-[10px] font-black text-white">{stage.value}</span>
+                    )}
+                  </motion.div>
+                </div>
+                <div className="w-10 text-xs font-bold text-slate-500 shrink-0">{stage.pct}%</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Conversion Insight */}
+          {leads.length > 0 && (
+            <div className="mt-5 p-3 bg-indigo-50 rounded-xl border border-indigo-100">
+              <p className="text-xs text-indigo-700">
+                {clientCount === 0 
+                  ? '🚀 Começa a fechar os teus primeiros negócios!'
+                  : clientCount < 3 
+                  ? `🎯 ${interestCount + waitingCount} leads em pipeline. Foca-te em converter!`
+                  : `✅ ${clientCount} clientes convertidos de ${leads.length} contactos (${conversionRate}%)`
+                }
+              </p>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Hot Leads Pipeline */}
+      {hotLeads.length > 0 && (
+        <div className="bg-card rounded-3xl p-6 border border-border/50 shadow-card">
+          <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-amber-500" /> Pipeline Activo — Leads Quentes
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {hotLeads.map((lead, i) => (
+              <motion.div
+                key={lead.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 hover:border-amber-300 transition-colors"
+              >
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-black shrink-0 ${
+                  lead.status === 'aguardando' ? 'bg-purple-500' : 'bg-amber-500'
+                }`}>
+                  {(lead.nome || lead.telefone || '?').charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-800 truncate">{lead.nome || lead.telefone}</p>
+                  <p className="text-[10px] text-slate-500 capitalize">
+                    {lead.status === 'aguardando' ? '🔥 Em Negociação' : '⭐ Interessado'}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
