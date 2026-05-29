@@ -1,9 +1,33 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Automacao } from '@/types';
-import { Bot, Plus, ArrowLeft, Play, Square, Trash2, Edit2 } from 'lucide-react';
+import { Bot, Plus, ArrowLeft, Play, Square, Trash2, Edit2, AlertTriangle } from 'lucide-react';
 import WorkflowBuilder from './automation/WorkflowBuilder';
+
+// Error Boundary Component
+class AutomationErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean, error: any}> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 text-center bg-red-50 text-red-600 rounded-xl m-4 border border-red-200">
+          <AlertTriangle className="mx-auto w-12 h-12 mb-4 text-red-500" />
+          <h2 className="text-lg font-bold mb-2">Erro no Construtor de Fluxos</h2>
+          <p className="text-sm opacity-80 mb-4">{this.state.error?.message}</p>
+          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-red-600 text-white rounded-lg">Recarregar Página</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function AutomationPanel() {
   const { storeId } = useAuth();
@@ -75,7 +99,9 @@ export default function AutomationPanel() {
           </div>
         </div>
         <div className="flex-1 w-full h-full relative">
-          <WorkflowBuilder automationId={selectedFlow.id} initialNodes={selectedFlow.nodes} initialEdges={selectedFlow.edges} />
+          <AutomationErrorBoundary>
+            <WorkflowBuilder automationId={selectedFlow.id} initialNodes={selectedFlow.nodes} initialEdges={selectedFlow.edges} />
+          </AutomationErrorBoundary>
         </div>
       </div>
     );

@@ -1,5 +1,5 @@
 import { Handle, Position, useReactFlow } from '@xyflow/react';
-import { Zap, X } from 'lucide-react';
+import { MessageCircle, X } from 'lucide-react';
 
 export default function TriggerNode({ id, data }: { id: string, data: any }) {
   const { setNodes, setEdges } = useReactFlow();
@@ -21,7 +21,7 @@ export default function TriggerNode({ id, data }: { id: string, data: any }) {
       </button>
       <div className="bg-sky-50 px-4 py-2 flex items-center gap-2 border-b border-sky-100">
         <div className="p-1.5 bg-sky-500 rounded-md text-white">
-          <Zap size={14} />
+          <MessageCircle size={14} />
         </div>
         <span className="text-xs font-bold text-sky-800 uppercase tracking-wider">Gatilho Inicial</span>
       </div>

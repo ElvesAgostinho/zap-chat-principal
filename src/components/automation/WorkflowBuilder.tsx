@@ -15,7 +15,7 @@ import {
   Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { MessageSquare, Zap, GitBranch, Clock, Image as ImageIcon, CheckCircle, Save, Loader2, Trash2 } from 'lucide-react';
+import { MessageSquare, Zap, GitBranch, Clock, Image as ImageIcon, CheckCircle, Save, Loader2, Trash2, MessageCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -56,7 +56,7 @@ function DnDPanel() {
   };
 
   const menuItems = [
-    { type: 'triggerNode', label: 'Gatilho', icon: Zap, color: 'text-sky-500', bg: 'bg-sky-50' },
+    { type: 'triggerNode', label: 'Gatilho', icon: MessageCircle, color: 'text-sky-500', bg: 'bg-sky-50' },
     { type: 'messageNode', label: 'Mensagem', icon: MessageSquare, color: 'text-blue-500', bg: 'bg-blue-50' },
     { type: 'mediaNode', label: 'Media', icon: ImageIcon, color: 'text-pink-500', bg: 'bg-pink-50' },
     { type: 'conditionNode', label: 'Condição', icon: GitBranch, color: 'text-amber-500', bg: 'bg-amber-50' },
