@@ -233,8 +233,9 @@ export default function SuperAdminPanel() {
         rightContent={
           <div className="flex items-center gap-2">
             <SuperAdminNotifications onNavigate={(tab) => setActiveTab(tab)} />
-            <motion.button whileTap={{ scale: 0.95 }} onClick={signOut} className="p-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors" title="Sair">
-              <LogOut className="w-5 h-5" />
+            <motion.button whileTap={{ scale: 0.95 }} onClick={signOut} className="px-3 py-2 rounded-xl bg-secondary text-foreground hover:bg-secondary/80 transition-colors flex items-center gap-2" title="Sair">
+              <LogOut className="w-4 h-4" />
+              <span className="text-sm font-medium">Sair</span>
             </motion.button>
           </div>
         }

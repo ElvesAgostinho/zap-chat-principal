@@ -39,7 +39,7 @@ export default function SuperAdminNotifications({ onNavigate }: { onNavigate: (t
       <motion.button 
         whileTap={{ scale: 0.95 }}
         onClick={() => { setIsOpen(!isOpen); if (!isOpen) fetchPendingCounts(); }}
-        className="relative p-2 rounded-lg bg-white/10 text-white hover:bg-white/20 transition-colors"
+        className="relative p-2 rounded-xl bg-secondary text-foreground hover:bg-secondary/80 transition-colors"
         title="Notificações"
       >
         <Bell className="w-5 h-5" />
