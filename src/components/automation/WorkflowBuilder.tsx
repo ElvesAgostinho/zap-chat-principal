@@ -26,6 +26,162 @@ const WhatsAppIcon = ({ size = 14, className = "" }) => (
 );
 import { toast } from 'sonner';
 
+const FlowExample = ({ children }: { children: React.ReactNode }) => (
+  <div className="bg-slate-100/50 p-4 rounded-xl flex items-center gap-2 overflow-x-auto mt-3 border border-slate-200">
+    {children}
+  </div>
+);
+
+const NodeMock = ({ icon: Icon, title, colorClass, bgClass }: { icon: any, title: string, colorClass: string, bgClass: string }) => (
+  <div className="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 shadow-sm min-w-[120px] shrink-0">
+    <div className={`p-1.5 rounded-md ${bgClass} ${colorClass}`}>
+      <Icon size={14} />
+    </div>
+    <span className="text-[11px] font-bold text-slate-700">{title}</span>
+  </div>
+);
+
+const ArrowMock = ({ label }: { label?: string }) => (
+  <div className="flex flex-col items-center shrink-0 px-2">
+    {label && <span className="text-[9px] font-bold text-slate-400 mb-0.5 uppercase bg-white px-1 rounded-full border border-slate-200">{label}</span>}
+    <div className="w-6 h-0.5 bg-slate-300 relative">
+      <div className="absolute -right-1 top-1/2 -translate-y-1/2 w-0 h-0 border-t-[3px] border-b-[3px] border-l-[4px] border-t-transparent border-b-transparent border-l-slate-400"></div>
+    </div>
+  </div>
+);
+
+const HelpModalContent = () => (
+  <div className="overflow-y-auto p-6 space-y-8 text-slate-600 text-sm">
+    <div className="space-y-2">
+      <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><Zap className="text-amber-500 w-4 h-4" /> 1. Gatilho (O Início)</h3>
+      <p>Todas as automações começam com um Gatilho. Aqui defines qual é a <strong>palavra-chave</strong> que inicia o fluxo.</p>
+      <p className="text-slate-500 italic text-[13px]"><strong>Quando usar:</strong> É obrigatório ser o primeiro nó de qualquer fluxo.</p>
+      <FlowExample>
+        <NodeMock icon={WhatsAppIcon} title="Gatilho: 'oi'" colorClass="text-[#25D366]" bgClass="bg-[#25D366]/10" />
+        <ArrowMock />
+        <NodeMock icon={MessageSquare} title="Olá! Como ajudo?" colorClass="text-blue-500" bgClass="bg-blue-50" />
+      </FlowExample>
+    </div>
+
+    <div className="space-y-2">
+      <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><MessageSquare className="text-sky-500 w-4 h-4" /> 2. Nova Mensagem</h3>
+      <p>Envia um texto simples ao cliente. Podes encadear várias mensagens seguidas.</p>
+      <FlowExample>
+        <NodeMock icon={WhatsAppIcon} title="Gatilho: 'menu'" colorClass="text-[#25D366]" bgClass="bg-[#25D366]/10" />
+        <ArrowMock />
+        <NodeMock icon={MessageSquare} title="Menu Principal" colorClass="text-blue-500" bgClass="bg-blue-50" />
+        <ArrowMock />
+        <NodeMock icon={MessageSquare} title="1. Produtos..." colorClass="text-blue-500" bgClass="bg-blue-50" />
+      </FlowExample>
+    </div>
+
+    <div className="space-y-2">
+      <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><ImageIcon className="text-pink-500 w-4 h-4" /> 3. Mídia (Imagens / Áudio)</h3>
+      <p>Envia imagens, PDFs ou vídeos. Áudios <code>.ogg</code> ou <code>.mp3</code> são enviados como "gravados na hora".</p>
+      <FlowExample>
+        <NodeMock icon={MessageSquare} title="Aqui está o menu:" colorClass="text-blue-500" bgClass="bg-blue-50" />
+        <ArrowMock />
+        <NodeMock icon={ImageIcon} title="catalogo.pdf" colorClass="text-pink-500" bgClass="bg-pink-50" />
+      </FlowExample>
+    </div>
+
+    <div className="space-y-2">
+      <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><HelpCircle className="text-indigo-500 w-4 h-4" /> 4. Pedir Input</h3>
+      <p>Faz uma pergunta e guarda a próxima resposta do cliente numa variável (ex: email, nome).</p>
+      <FlowExample>
+        <NodeMock icon={HelpCircle} title="Qual o teu nome?" colorClass="text-indigo-500" bgClass="bg-indigo-50" />
+        <ArrowMock label="guarda" />
+        <NodeMock icon={MessageSquare} title="Prazer, {{nome}}" colorClass="text-blue-500" bgClass="bg-blue-50" />
+      </FlowExample>
+    </div>
+
+    <div className="space-y-2">
+      <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><GitBranch className="text-amber-500 w-4 h-4" /> 5. Condição (Bifurcações)</h3>
+      <p>Divide o caminho. Exemplo: Se a resposta for 1, vai para o SIM. Se não, vai para o NÃO.</p>
+      <FlowExample>
+        <NodeMock icon={MessageSquare} title="Cor?" colorClass="text-blue-500" bgClass="bg-blue-50" />
+        <ArrowMock />
+        <NodeMock icon={GitBranch} title="Se: 'Azul'" colorClass="text-amber-500" bgClass="bg-amber-50" />
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center"><ArrowMock label="Sim" /><NodeMock icon={MessageSquare} title="Boa escolha!" colorClass="text-blue-500" bgClass="bg-blue-50" /></div>
+          <div className="flex items-center"><ArrowMock label="Não" /><NodeMock icon={MessageSquare} title="Temos outras..." colorClass="text-blue-500" bgClass="bg-blue-50" /></div>
+        </div>
+      </FlowExample>
+    </div>
+
+    <div className="space-y-2">
+      <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><Shuffle className="text-fuchsia-500 w-4 h-4" /> 6. Teste A/B</h3>
+      <p>Divide os clientes aleatoriamente (50% / 50%) para testares qual das mensagens converte melhor.</p>
+      <FlowExample>
+        <NodeMock icon={WhatsAppIcon} title="Gatilho: 'promo'" colorClass="text-[#25D366]" bgClass="bg-[#25D366]/10" />
+        <ArrowMock />
+        <NodeMock icon={Shuffle} title="A/B (50/50)" colorClass="text-fuchsia-500" bgClass="bg-fuchsia-50" />
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center"><ArrowMock label="A" /><NodeMock icon={MessageSquare} title="Mensagem Curta" colorClass="text-blue-500" bgClass="bg-blue-50" /></div>
+          <div className="flex items-center"><ArrowMock label="B" /><NodeMock icon={MessageSquare} title="Mensagem Longa" colorClass="text-blue-500" bgClass="bg-blue-50" /></div>
+        </div>
+      </FlowExample>
+    </div>
+
+    <div className="space-y-2">
+      <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><Clock className="text-slate-500 w-4 h-4" /> 7. Atraso (Follow-up Mágico)</h3>
+      <p>Pausa o fluxo por X minutos ou dias. Excelente para recuperar clientes que pararam de responder (follow-up).</p>
+      <FlowExample>
+        <NodeMock icon={MessageSquare} title="Link de pagto." colorClass="text-blue-500" bgClass="bg-blue-50" />
+        <ArrowMock />
+        <NodeMock icon={Clock} title="Aguardar 2h" colorClass="text-slate-500" bgClass="bg-slate-50" />
+        <ArrowMock />
+        <NodeMock icon={MessageSquare} title="Conseguiu pagar?" colorClass="text-blue-500" bgClass="bg-blue-50" />
+      </FlowExample>
+    </div>
+
+    <div className="space-y-2">
+      <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><Tag className="text-amber-500 w-4 h-4" /> 8. Acção CRM (Etiquetas)</h3>
+      <p>Nó invisível para o cliente. Marca o lead com uma etiqueta (ex: VIP) ou move-o no Kanban.</p>
+      <FlowExample>
+        <NodeMock icon={WhatsAppIcon} title="Gatilho: 'preço'" colorClass="text-[#25D366]" bgClass="bg-[#25D366]/10" />
+        <ArrowMock />
+        <NodeMock icon={Tag} title="Etiqueta: Quente" colorClass="text-amber-500" bgClass="bg-amber-50" />
+        <ArrowMock />
+        <NodeMock icon={MessageSquare} title="Custa 50€." colorClass="text-blue-500" bgClass="bg-blue-50" />
+      </FlowExample>
+    </div>
+
+    <div className="space-y-2">
+      <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><BellRing className="text-rose-500 w-4 h-4" /> 9. Notificar Equipa</h3>
+      <p>Cria um alerta sonoro e visual para os teus atendentes no painel de CRM.</p>
+      <FlowExample>
+        <NodeMock icon={GitBranch} title="Se: 'Comprar'" colorClass="text-amber-500" bgClass="bg-amber-50" />
+        <ArrowMock label="Sim" />
+        <NodeMock icon={BellRing} title="Alerta: Lead!" colorClass="text-rose-500" bgClass="bg-rose-50" />
+      </FlowExample>
+    </div>
+
+    <div className="space-y-2">
+      <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><Webhook className="text-purple-500 w-4 h-4" /> 10. Webhook</h3>
+      <p>Envia dados do cliente em tempo real para automações externas (ex: n8n, Make, Zapier).</p>
+      <FlowExample>
+        <NodeMock icon={HelpCircle} title="Email?" colorClass="text-indigo-500" bgClass="bg-indigo-50" />
+        <ArrowMock />
+        <NodeMock icon={Webhook} title="Enviar p/ Make" colorClass="text-purple-500" bgClass="bg-purple-50" />
+        <ArrowMock />
+        <NodeMock icon={MessageSquare} title="Registo feito!" colorClass="text-blue-500" bgClass="bg-blue-50" />
+      </FlowExample>
+    </div>
+
+    <div className="space-y-2">
+      <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><ArrowRightCircle className="text-teal-500 w-4 h-4" /> 11. Saltar Fluxo</h3>
+      <p>Em vez de criares um fluxo gigante, liga este fluxo a outra automação que já existe.</p>
+      <FlowExample>
+        <NodeMock icon={MessageSquare} title="Falar c/ humano?" colorClass="text-blue-500" bgClass="bg-blue-50" />
+        <ArrowMock />
+        <NodeMock icon={ArrowRightCircle} title="Ir: Suporte" colorClass="text-teal-500" bgClass="bg-teal-50" />
+      </FlowExample>
+    </div>
+  </div>
+);
+
+
 // Custom nodes
 import TriggerNode from './nodes/TriggerNode';
 import MessageNode from './nodes/MessageNode';
@@ -609,49 +765,7 @@ export default function WorkflowBuilder({ automationId, initialNodes, initialEdg
                 <X size={20} />
               </button>
             </div>
-            
-            <div className="overflow-y-auto p-6 space-y-6 text-slate-600 text-sm">
-              <div className="space-y-2">
-                <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><Zap className="text-amber-500 w-4 h-4" /> 1. Gatilho (O Início)</h3>
-                <p>Todas as automações começam com um Gatilho. Aqui defines qual é a <strong>palavra-chave</strong> que o cliente tem de escrever no WhatsApp para que este fluxo comece (ex: "oi", "preço").</p>
-                <p className="text-slate-500 italic text-[13px]"><strong>Quando usar:</strong> É obrigatório ser o primeiro nó de qualquer fluxo. Usa para captar a primeira mensagem do cliente ou para criar atalhos (ex: cliente digita "suporte" para abrir um fluxo de ajuda).</p>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><MessageSquare className="text-sky-500 w-4 h-4" /> 2. Nova Mensagem</h3>
-                <p>Envia um texto simples ao cliente. Podes usar a variável <code>{'{'}{'{'}nome{'}'}{'}'}</code> para chamar o cliente pelo nome. Podes encadear várias mensagens de seguida.</p>
-                <p className="text-slate-500 italic text-[13px]"><strong>Quando usar:</strong> Para dar as boas-vindas, enviar menus de opções ("Digita 1 para X, 2 para Y"), responder a perguntas frequentes ou confirmar recebimentos.</p>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><ImageIcon className="text-indigo-500 w-4 h-4" /> 3. Mídia (Imagens / Áudio)</h3>
-                <p>Faz o upload de uma imagem, PDF ou vídeo. Se carregares um áudio <code>.ogg</code>, ele será enviado como "Áudio Gravado na Hora" no WhatsApp do cliente.</p>
-                <p className="text-slate-500 italic text-[13px]"><strong>Quando usar:</strong> Para enviar o catálogo em PDF, fotos de produtos, comprovativos, ou um áudio natural (como se fosses tu a gravar na hora) para criar proximidade.</p>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><Tag className="text-amber-500 w-4 h-4" /> 4. Acção CRM (Etiquetas e Etapas)</h3>
-                <p>Nó invisível para o cliente, mas essencial para a tua organização. Usa-o para:</p>
-                <ul className="list-disc pl-5 space-y-1">
-                  <li><strong>Adicionar Etiqueta:</strong> Marca o cliente com uma palavra (ex: VIP, Interessado).</li>
-                  <li><strong>Remover Etiqueta:</strong> Tira uma etiqueta antiga.</li>
-                  <li><strong>Mudar Etapa do Cliente:</strong> Move o contacto automaticamente no teu quadro Kanban (Pipeline).</li>
-                </ul>
-                <p className="text-slate-500 italic text-[13px] mt-1"><strong>Quando usar:</strong> Sempre que quiseres qualificar um cliente automaticamente sem tocar no rato. Ex: Se ele pedir preço, move-o para a etapa "Negociação" e dá a etiqueta "Quente".</p>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><GitBranch className="text-amber-500 w-4 h-4" /> 5. Condição (Bifurcações)</h3>
-                <p>Manda a conversa para caminhos diferentes! Exemplo: "Se a mensagem do cliente for igual a 1, vai para o caminho SIM (cima). Se não for, vai para o caminho NÃO (baixo)".</p>
-                <p className="text-slate-500 italic text-[13px]"><strong>Quando usar:</strong> Quando das opções ao cliente (Ex: "1 - Comprar", "2 - Ajuda"). Colocas uma condição "Se a mensagem for igual a 1" e crias caminhos separados para cada resposta.</p>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><Clock className="text-slate-500 w-4 h-4" /> 6. Atraso (Follow-up Mágico)</h3>
-                <p>Coloca o fluxo em pausa. Podes definir para esperar 2 horas, e de seguida ligas a uma mensagem do tipo: <em>"Ainda tens interesse?"</em>. Excelente para recuperar clientes que pararam de responder.</p>
-                <p className="text-slate-500 italic text-[13px]"><strong>Quando usar:</strong> Para lembrar o cliente que abandonou a conversa ou para simular que foste "verificar o stock" e voltaste passado 2 minutos com a resposta, parecendo mais humano.</p>
-              </div>
-            </div>
+            <HelpModalContent />
             
             <div className="bg-slate-50 p-4 border-t border-slate-100 flex justify-end">
               <button onClick={() => setShowHelpModal(false)} className="px-6 py-2.5 bg-slate-800 text-white rounded-xl font-bold text-sm hover:bg-slate-700 transition-colors">
