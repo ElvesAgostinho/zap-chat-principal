@@ -15,6 +15,7 @@ import LiveChat from '@/components/chat/LiveChat';
 import AutomationPanel from '@/components/AutomationPanel';
 import NotificationsCenter from '@/components/NotificationsCenter';
 import AdminPanel from '@/pages/AdminPanel';
+import PipelinePanel from '@/components/PipelinePanel';
 import { formatCurrency } from '@/data/mock';
 import { Produto, Lead, Venda, Tab } from '@/types';
 
@@ -26,6 +27,7 @@ const TAB_TITLES: Record<Tab, string> = {
   settings: 'Configurações',
   admin: 'Administração',
   automation: 'Automação Zap',
+  pipeline: 'Funil de Vendas'
 } as Record<Tab, string>;
 
 export default function Index() {
@@ -88,7 +90,6 @@ export default function Index() {
     
     let filteredMsgs = data || [];
     if (role !== 'admin' && user?.id) {
-      // Funcionário só vê mensagens dos leads que são dele
       const { data: myLeads } = await (supabase as any).from('leads').select('id').eq('loja_id', storeId).eq('atendente_id', user.id);
       const myLeadIds = new Set((myLeads || []).map((l: any) => l.id));
       filteredMsgs = filteredMsgs.filter((m: any) => myLeadIds.has(m.lead_id));
@@ -113,7 +114,7 @@ export default function Index() {
       const newMsg = payload.new;
       if (newMsg && newMsg.loja_id === storeId) {
         if (role !== 'admin') {
-          fetchMessages(); // Force auth check
+          fetchMessages();
         } else {
           setMessages(prev => [newMsg, ...prev]);
         }
@@ -142,11 +143,9 @@ export default function Index() {
   useEffect(() => {
     const onStorage = () => setSidebarCollapsed(localStorage.getItem('sidebar_collapsed') === 'true');
     window.addEventListener('storage', onStorage);
-    // Remove setInterval as it's too aggressive and causes "heavy" UI
     return () => { window.removeEventListener('storage', onStorage); };
   }, []);
 
-  // Cmd+K shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -217,6 +216,7 @@ export default function Index() {
           />
         );
       case 'chat': return <LiveChat initialLeads={leads} initialAgents={agents} messages={messages} />;
+      case 'pipeline': return <PipelinePanel leads={leads} />;
       case 'clients':
         return (
           <div className="space-y-5">

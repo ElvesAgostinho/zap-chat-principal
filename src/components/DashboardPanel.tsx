@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion';
-import { Users, Zap, MessageSquare, Target, Clock, ArrowUpRight } from 'lucide-react';
+import { Users, Zap, MessageSquare, Target, Clock, ArrowUpRight, TrendingUp } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
 import { Lead } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -20,6 +21,26 @@ export default function DashboardPanel({ leads, alertCount }: DashboardPanelProp
     { icon: Zap, label: 'Automações Activas', value: activeAutomations, color: 'text-amber-500', bg: 'bg-amber-500/10', trend: 0 },
     { icon: MessageSquare, label: 'Mensagens Trocadas', value: '1.2k', color: 'text-indigo-500', bg: 'bg-indigo-500/10', trend: 20 },
   ];
+
+  // Mock data for charts - in real app, derive from leads/sales over time
+  const growthData = [
+    { name: 'Seg', leads: 4 },
+    { name: 'Ter', leads: 7 },
+    { name: 'Qua', leads: 5 },
+    { name: 'Qui', leads: 12 },
+    { name: 'Sex', leads: 18 },
+    { name: 'Sáb', leads: 25 },
+    { name: 'Dom', leads: Math.max(10, leads.length) },
+  ];
+
+  const funnelData = [
+    { name: 'Novos', value: leads.filter(l => !l.status || l.status === 'novo').length || 10 },
+    { name: 'Interessados', value: leads.filter(l => l.status === 'interessado').length || 7 },
+    { name: 'Em Negociação', value: leads.filter(l => l.status === 'aguardando').length || 5 },
+    { name: 'Fechados', value: clientCount || 3 },
+  ];
+
+  const COLORS = ['#3b82f6', '#f59e0b', '#a855f7', '#10b981'];
 
   return (
     <div className="space-y-6 pb-20 p-4 md:p-8 max-w-7xl mx-auto">
@@ -55,28 +76,50 @@ export default function DashboardPanel({ leads, alertCount }: DashboardPanelProp
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
-        {/* Atividade Recente Placeholder */}
+        {/* Growth Chart */}
         <div className="bg-card rounded-3xl p-6 border border-border/50 shadow-card">
-          <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><Clock className="w-5 h-5 text-primary" />Actividade Recente</h3>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4 text-sm">
-              <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-muted-foreground flex-1">Novo lead entrou pelo Gatilho "Comprar"</span>
-              <span className="text-xs font-mono text-slate-400">Agora</span>
-            </div>
-            <div className="flex items-center gap-4 text-sm">
-              <div className="w-2 h-2 rounded-full bg-primary" />
-              <span className="text-muted-foreground flex-1">Campanha de Boas Vindas concluída para João</span>
-              <span className="text-xs font-mono text-slate-400">Há 5m</span>
-            </div>
+          <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-sky-500" /> Crescimento de Leads (7 dias)
+          </h3>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={growthData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} dy={10} />
+                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b' }} />
+                <Tooltip 
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
+                  itemStyle={{ color: '#0ea5e9', fontWeight: 'bold' }}
+                />
+                <Line type="monotone" dataKey="leads" stroke="#0ea5e9" strokeWidth={4} dot={{ r: 4, strokeWidth: 2 }} activeDot={{ r: 6, strokeWidth: 0 }} />
+              </LineChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Status */}
-        <div className="bg-gradient-to-br from-primary/5 to-transparent p-8 rounded-3xl border border-primary/10 flex flex-col items-center justify-center text-center">
-          <Zap className="w-12 h-12 text-primary mx-auto mb-4" />
-          <h4 className="font-black text-xl mb-2">Sistema a funcionar em pleno! 🚀</h4>
-          <p className="text-sm text-muted-foreground max-w-sm mx-auto">As automações estão activas e prontas a interagir com os seus leads.</p>
+        {/* Funnel Chart */}
+        <div className="bg-card rounded-3xl p-6 border border-border/50 shadow-card">
+          <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+            <Target className="w-5 h-5 text-indigo-500" /> Taxa de Conversão
+          </h3>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={funnelData} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                <XAxis type="number" hide />
+                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#334155', fontWeight: 600 }} width={100} />
+                <Tooltip 
+                  cursor={{ fill: 'rgba(0,0,0,0.02)' }}
+                  contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
+                />
+                <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={24}>
+                  {funnelData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
     </div>

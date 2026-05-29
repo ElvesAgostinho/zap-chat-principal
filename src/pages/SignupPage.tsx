@@ -86,7 +86,7 @@ export default function SignupPage() {
           ? 'A sua conta foi criada. Aguarde a aprovação do Super Admin.'
           : 'A sua conta foi criada. Aguarde a validação do administrador da loja.',
       });
-      navigate('/login', { state: { email: email.trim().toLowerCase(), confirmationPending: false } });
+      navigate('/app');
     } catch (err: unknown) {
       toast({ title: 'Erro ao criar conta', description: err instanceof Error ? err.message : 'Erro inesperado', variant: 'destructive' });
     } finally {
