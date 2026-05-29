@@ -613,16 +613,19 @@ export default function WorkflowBuilder({ automationId, initialNodes, initialEdg
               <div className="space-y-2">
                 <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><Zap className="text-amber-500 w-4 h-4" /> 1. Gatilho (O Início)</h3>
                 <p>Todas as automações começam com um Gatilho. Aqui defines qual é a <strong>palavra-chave</strong> que o cliente tem de escrever no WhatsApp para que este fluxo comece (ex: "oi", "preço").</p>
+                <p className="text-slate-500 italic text-[13px]"><strong>Quando usar:</strong> É obrigatório ser o primeiro nó de qualquer fluxo. Usa para captar a primeira mensagem do cliente ou para criar atalhos (ex: cliente digita "suporte" para abrir um fluxo de ajuda).</p>
               </div>
 
               <div className="space-y-2">
                 <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><MessageSquare className="text-sky-500 w-4 h-4" /> 2. Nova Mensagem</h3>
                 <p>Envia um texto simples ao cliente. Podes usar a variável <code>{'{'}{'{'}nome{'}'}{'}'}</code> para chamar o cliente pelo nome. Podes encadear várias mensagens de seguida.</p>
+                <p className="text-slate-500 italic text-[13px]"><strong>Quando usar:</strong> Para dar as boas-vindas, enviar menus de opções ("Digita 1 para X, 2 para Y"), responder a perguntas frequentes ou confirmar recebimentos.</p>
               </div>
 
               <div className="space-y-2">
                 <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><ImageIcon className="text-indigo-500 w-4 h-4" /> 3. Mídia (Imagens / Áudio)</h3>
                 <p>Faz o upload de uma imagem, PDF ou vídeo. Se carregares um áudio <code>.ogg</code>, ele será enviado como "Áudio Gravado na Hora" no WhatsApp do cliente.</p>
+                <p className="text-slate-500 italic text-[13px]"><strong>Quando usar:</strong> Para enviar o catálogo em PDF, fotos de produtos, comprovativos, ou um áudio natural (como se fosses tu a gravar na hora) para criar proximidade.</p>
               </div>
 
               <div className="space-y-2">
@@ -631,18 +634,21 @@ export default function WorkflowBuilder({ automationId, initialNodes, initialEdg
                 <ul className="list-disc pl-5 space-y-1">
                   <li><strong>Adicionar Etiqueta:</strong> Marca o cliente com uma palavra (ex: VIP, Interessado).</li>
                   <li><strong>Remover Etiqueta:</strong> Tira uma etiqueta antiga.</li>
-                  <li><strong>Mudar Etapa do Cliente:</strong> Move o contacto automaticamente no teu quadro Kanban (Pipeline) sem tu mexeres um dedo!</li>
+                  <li><strong>Mudar Etapa do Cliente:</strong> Move o contacto automaticamente no teu quadro Kanban (Pipeline).</li>
                 </ul>
+                <p className="text-slate-500 italic text-[13px] mt-1"><strong>Quando usar:</strong> Sempre que quiseres qualificar um cliente automaticamente sem tocar no rato. Ex: Se ele pedir preço, move-o para a etapa "Negociação" e dá a etiqueta "Quente".</p>
               </div>
 
               <div className="space-y-2">
                 <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><GitBranch className="text-amber-500 w-4 h-4" /> 5. Condição (Bifurcações)</h3>
                 <p>Manda a conversa para caminhos diferentes! Exemplo: "Se a mensagem do cliente for igual a 1, vai para o caminho SIM (cima). Se não for, vai para o caminho NÃO (baixo)".</p>
+                <p className="text-slate-500 italic text-[13px]"><strong>Quando usar:</strong> Quando das opções ao cliente (Ex: "1 - Comprar", "2 - Ajuda"). Colocas uma condição "Se a mensagem for igual a 1" e crias caminhos separados para cada resposta.</p>
               </div>
 
               <div className="space-y-2">
                 <h3 className="font-bold text-slate-800 text-base flex items-center gap-2"><Clock className="text-slate-500 w-4 h-4" /> 6. Atraso (Follow-up Mágico)</h3>
                 <p>Coloca o fluxo em pausa. Podes definir para esperar 2 horas, e de seguida ligas a uma mensagem do tipo: <em>"Ainda tens interesse?"</em>. Excelente para recuperar clientes que pararam de responder.</p>
+                <p className="text-slate-500 italic text-[13px]"><strong>Quando usar:</strong> Para lembrar o cliente que abandonou a conversa ou para simular que foste "verificar o stock" e voltaste passado 2 minutos com a resposta, parecendo mais humano.</p>
               </div>
             </div>
             
