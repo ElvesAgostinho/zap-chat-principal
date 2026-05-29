@@ -120,7 +120,6 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
   const { screenToFlowPosition } = useReactFlow();
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [uploadingMedia, setUploadingMedia] = useState(false);
-  const [showHelpModal, setShowHelpModal] = useState(false);
 
   const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -533,6 +532,7 @@ export default function WorkflowBuilder({ automationId, initialNodes, initialEdg
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes && initialNodes.length > 0 ? initialNodes : defaultNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges && initialEdges.length > 0 ? initialEdges : []);
   const [isSaving, setIsSaving] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   const saveFlow = async () => {
     setIsSaving(true);
