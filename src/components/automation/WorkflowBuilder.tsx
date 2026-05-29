@@ -285,6 +285,7 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
                 <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
                   {selectedNode.type === 'messageNode' ? 'Mensagem' : 
                    selectedNode.type === 'inputNode' ? 'Pergunta a fazer' : 
+                   selectedNode.type === 'actionNode' ? 'Etiqueta da Ação' :
                    selectedNode.type === 'notifyNode' ? 'Mensagem de Alerta' : 'Conteúdo Principal'}
                 </label>
                 {selectedNode.type === 'messageNode' || selectedNode.type === 'notifyNode' || selectedNode.type === 'inputNode' ? (
@@ -413,6 +414,39 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
               </div>
             )}
 
+            {/* ACTION SPECIFIC */}
+            {selectedNode.type === 'actionNode' && (
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Tipo de Ação</label>
+                <select
+                  className="w-full border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 mb-3"
+                  value={(selectedNode.data.actionType as string) || 'add_tag'}
+                  onChange={(e) => {
+                    updateNodeData('actionType', e.target.value);
+                    const typeLabel = e.target.value === 'add_tag' ? 'Adicionar Tag' : e.target.value === 'remove_tag' ? 'Remover Tag' : 'Mudar Status';
+                    updateNodeLabel(`${typeLabel}: ${(selectedNode.data.actionValue as string) || ''}`);
+                  }}
+                >
+                  <option value="add_tag">Adicionar Tag</option>
+                  <option value="remove_tag">Remover Tag</option>
+                  <option value="change_status">Mudar Status (Etapa)</option>
+                </select>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Valor</label>
+                <input 
+                  type="text"
+                  className="w-full border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  value={(selectedNode.data.actionValue as string) || ''}
+                  onChange={(e) => {
+                    updateNodeData('actionValue', e.target.value);
+                    const typeValue = (selectedNode.data.actionType as string) || 'add_tag';
+                    const typeLabel = typeValue === 'add_tag' ? 'Adicionar Tag' : typeValue === 'remove_tag' ? 'Remover Tag' : 'Mudar Status';
+                    updateNodeLabel(`${typeLabel}: ${e.target.value}`);
+                  }}
+                  placeholder="Ex: interessado, negociacao, etc"
+                />
+              </div>
+            )}
+
             {/* CONDITION SPECIFIC */}
             {selectedNode.type === 'conditionNode' && (
               <div>
@@ -425,13 +459,15 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
                   <option value="has_tag">Tem a Tag</option>
                   <option value="no_tag">Não tem a Tag</option>
                   <option value="phone_exists">Telefone Existe</option>
+                  <option value="match_exact">Resposta é exata a</option>
+                  <option value="match_contains">Resposta contém</option>
                 </select>
                 <input 
                   type="text"
                   className="w-full border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                   value={(selectedNode.data.conditionValue as string) || ''}
                   onChange={(e) => updateNodeData('conditionValue', e.target.value)}
-                  placeholder="Ex: VIP"
+                  placeholder="Ex: VIP ou '1'"
                 />
               </div>
             )}

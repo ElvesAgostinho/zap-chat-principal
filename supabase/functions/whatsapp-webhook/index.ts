@@ -414,7 +414,7 @@ Deno.serve(async (req: any) => {
                     if (msgText) {
                       await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
                         method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
-                        body: JSON.stringify({ number: phone, text: msgText }),
+                        body: JSON.stringify({ number: phone, text: msgText, options: { delay: 1500, presence: 'composing' } }),
                       });
                       await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: msgText, tipo: 'enviada', is_bot: true, loja_id: storeId });
                     }
@@ -425,20 +425,28 @@ Deno.serve(async (req: any) => {
                       const isImage = mediaUrl.match(/\\.(jpeg|jpg|gif|png)$/i);
                       await fetch(`${baseUrl}/message/sendMedia/${instanceName}`, {
                         method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
-                        body: JSON.stringify({ number: phone, mediatype: isImage ? 'image' : 'document', media: mediaUrl }),
+                        body: JSON.stringify({ number: phone, mediatype: isImage ? 'image' : 'document', media: mediaUrl, options: { delay: 1500 } }),
                       });
                       await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: '[Mídia da Automação]', media_url: mediaUrl, media_type: isImage ? 'image' : 'document', tipo: 'enviada', is_bot: true, loja_id: storeId });
                     }
                   }
                   else if (nextNode.type === 'actionNode') {
-                    const actionLabel = String(nextNode.data?.label || '');
-                    if (actionLabel.toLowerCase().includes('tag')) {
-                      const newTag = actionLabel.replace(/adicionar\\s*tag:?/i, '').trim() || 'automacao';
+                    const actionType = nextNode.data?.actionType || 'add_tag';
+                    const actionValue = String(nextNode.data?.actionValue || '').trim();
+                    
+                    if (actionType === 'add_tag' && actionValue) {
                       const { data: leadData } = await supabase.from('leads').select('tags').eq('id', leadId).single();
                       const existingTags = leadData?.tags || [];
-                      if (!existingTags.includes(newTag)) {
-                        await supabase.from('leads').update({ tags: [...existingTags, newTag] }).eq('id', leadId);
+                      if (!existingTags.includes(actionValue)) {
+                        await supabase.from('leads').update({ tags: [...existingTags, actionValue] }).eq('id', leadId);
                       }
+                    } else if (actionType === 'remove_tag' && actionValue) {
+                      const { data: leadData } = await supabase.from('leads').select('tags').eq('id', leadId).single();
+                      const existingTags = leadData?.tags || [];
+                      const newTags = existingTags.filter((t: string) => t !== actionValue);
+                      await supabase.from('leads').update({ tags: newTags }).eq('id', leadId);
+                    } else if (actionType === 'change_status' && actionValue) {
+                      await supabase.from('leads').update({ status: actionValue }).eq('id', leadId);
                     }
                   }
                   else if (nextNode.type === 'conditionNode') {
@@ -453,6 +461,10 @@ Deno.serve(async (req: any) => {
                       conditionMet = !(leadData?.tags || []).includes(conditionValue);
                     } else if (conditionType === 'phone_exists') {
                       conditionMet = !!leadData?.telefone;
+                    } else if (conditionType === 'match_exact') {
+                      conditionMet = messageText.trim().toLowerCase() === conditionValue.trim().toLowerCase();
+                    } else if (conditionType === 'match_contains') {
+                      conditionMet = messageText.trim().toLowerCase().includes(conditionValue.trim().toLowerCase());
                     }
                     
                     const trueEdge = edges.find((e: any) => e.source === nextNode.id && String(e.sourceHandle).includes('true'));
@@ -470,7 +482,27 @@ Deno.serve(async (req: any) => {
                     }
                   }
                   else if (nextNode.type === 'delayNode') {
-                    console.warn(`[webhook] Delay Node encontrado. Execução interrompida no Delay (requer cron job na v2).`);
+                    const amount = parseInt(nextNode.data?.amount || '1', 10);
+                    const unit = nextNode.data?.unit || 'minutos';
+                    
+                    let delayMs = amount * 60 * 1000;
+                    if (unit === 'segundos') delayMs = amount * 1000;
+                    else if (unit === 'horas') delayMs = amount * 60 * 60 * 1000;
+                    else if (unit === 'dias') delayMs = amount * 24 * 60 * 60 * 1000;
+
+                    const executeAt = new Date(Date.now() + delayMs).toISOString();
+                    const edgeAfterDelay = edges.find((e: any) => e.source === nextNode.id);
+                    if (edgeAfterDelay) {
+                      const targetNodeId = edgeAfterDelay.target;
+                      await supabase.from('automacoes_pendentes').insert({
+                        lead_id: leadId,
+                        loja_id: storeId,
+                        automacao_id: matchedAuto.id,
+                        node_id: targetNodeId,
+                        execute_at: executeAt
+                      });
+                      console.log(`[webhook] Delay de ${amount} ${unit}. Fluxo guardado na DB para continuar no nó ${targetNodeId}.`);
+                    }
                     break;
                   }
                   
@@ -723,9 +755,10 @@ Deno.serve(async (req: any) => {
               }
             } catch (botErr) { console.error('[webhook] Global Bot system error:', botErr); }
           }
-        }
-      }
-    }
+          } // Fecho do if (!automationExecuted)
+        } // Fecho do if (hasContent)
+      } // Fecho principal do for-loop
+    } // Fecho principal do !fromMe
 
     if (eventNormalized === 'connection.update') {
       const state = body.data?.state || body.state;
