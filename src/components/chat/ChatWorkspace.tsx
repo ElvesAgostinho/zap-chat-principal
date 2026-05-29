@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { createPortal } from 'react-dom';
 
 interface MsgRow { id: string; lead_id: string | null; lead_nome: string | null; conteudo: string; tipo: string; is_bot: boolean; created_at: string; loja_id: string; respondido_por: string | null; respondido_por_nome: string | null; media_url?: string | null; media_type?: string | null; }
 
@@ -14,10 +15,11 @@ function MessageMedia({ url, type }: { url: string; type: string }) {
     return (
       <>
         <img src={url} alt="Mídia" className="max-w-full rounded-lg cursor-pointer max-h-60 object-cover" loading="lazy" onClick={() => setFullscreen(true)} />
-        {fullscreen && (
-          <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setFullscreen(false)}>
-            <img src={url} alt="Mídia" className="max-w-full max-h-full rounded-xl" />
-          </div>
+        {fullscreen && createPortal(
+          <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4" onClick={() => setFullscreen(false)}>
+            <img src={url} alt="Mídia" className="max-w-full max-h-full rounded-xl shadow-2xl" />
+          </div>,
+          document.body
         )}
       </>
     );
