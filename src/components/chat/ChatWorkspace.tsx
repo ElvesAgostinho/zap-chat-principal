@@ -11,12 +11,35 @@ interface MsgRow { id: string; lead_id: string | null; lead_nome: string | null;
 
 function MessageMedia({ url, type }: { url: string; type: string }) {
   const [fullscreen, setFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (fullscreen) {
+      window.history.pushState({ imageModal: true }, '');
+      
+      const handlePopState = (e: PopStateEvent) => {
+        setFullscreen(false);
+      };
+      
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
+    }
+  }, [fullscreen]);
+
+  const handleClose = () => {
+    setFullscreen(false);
+    if (window.history.state?.imageModal) {
+      window.history.back();
+    }
+  };
+
   if (type === 'image') {
     return (
       <>
         <img src={url} alt="Mídia" className="max-w-full rounded-lg cursor-pointer max-h-60 object-cover" loading="lazy" onClick={() => setFullscreen(true)} />
         {fullscreen && createPortal(
-          <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4" onClick={() => setFullscreen(false)}>
+          <div className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4" onClick={handleClose}>
             <img src={url} alt="Mídia" className="max-w-full max-h-full rounded-xl shadow-2xl" />
           </div>,
           document.body

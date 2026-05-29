@@ -42,7 +42,7 @@ export default function LoginPage() {
       const normalizedEmail = email.trim().toLowerCase();
       const { error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
       if (error) throw error;
-      navigate('/app');
+      navigate('/app', { replace: true });
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Erro inesperado ao entrar';
 
