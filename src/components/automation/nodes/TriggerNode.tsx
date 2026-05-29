@@ -10,7 +10,8 @@ export default function TriggerNode({ id, data }: { id: string, data: any }) {
     setEdges((eds) => eds.filter((edge) => edge.source !== id && edge.target !== id));
   };
   return (
-    <div className="w-64 shadow-elevated rounded-xl bg-white border-2 border-sky-500 overflow-hidden group hover:border-sky-400 transition-colors relative">
+    <>
+      <div className="w-64 shadow-elevated rounded-xl bg-white border-2 border-sky-500 overflow-hidden group hover:border-sky-400 transition-colors relative">
       
       <button 
         onClick={onDelete}
@@ -29,11 +30,12 @@ export default function TriggerNode({ id, data }: { id: string, data: any }) {
         <p className="text-sm font-medium text-slate-700">{data.label}</p>
         <p className="text-xs text-slate-500 mt-1">Quando um cliente enviar esta mensagem, o fluxo começa.</p>
       </div>
+      </div>
       <Handle 
         type="source" 
         position={Position.Right} 
         className="w-3 h-3 bg-sky-500 border-2 border-white rounded-full right-[-7px]"
       />
-    </div>
+    </>
   );
 }
