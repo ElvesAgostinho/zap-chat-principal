@@ -107,6 +107,50 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Pricing Section */}
+      <section className="py-24 bg-slate-50 px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Plano Único e Transparente</h2>
+            <p className="text-slate-500">Tudo o que o teu negócio precisa por um valor acessível, sem surpresas.</p>
+          </div>
+
+          <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden max-w-lg mx-auto transform hover:-translate-y-1 transition-transform duration-300">
+            <div className="p-8 text-center bg-gradient-to-br from-blue-600 to-sky-500 relative overflow-hidden">
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
+              <h3 className="text-2xl font-bold text-white mb-2 relative z-10">Acesso Completo</h3>
+              <div className="text-white/80 text-sm font-bold uppercase tracking-wider mb-4 relative z-10">Plano Mensal</div>
+              <div className="flex items-center justify-center gap-1 relative z-10">
+                <span className="text-5xl font-extrabold text-white">25.000</span>
+                <span className="text-xl text-white/80 font-medium mt-2">Kz/mês</span>
+              </div>
+            </div>
+            <div className="p-8">
+              <ul className="space-y-4 mb-8">
+                {[
+                  '1 número WhatsApp',
+                  'Automações',
+                  'Chatbot',
+                  'Etiquetas',
+                  'Atendimento',
+                  'Funil visual',
+                  'Respostas rápidas',
+                  'Suporte básico'
+                ].map((item, i) => (
+                  <li key={i} className="flex items-center gap-3 text-slate-700 font-medium">
+                    <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <Link to="/signup" className="w-full py-4 bg-blue-600 text-white rounded-xl text-lg font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-700 transition-all flex items-center justify-center">
+                Começar Agora
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-slate-900 text-slate-400 py-12 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between">
