@@ -122,8 +122,8 @@ const App = () => {
           <ScrollToTop />
           <AuthProvider>
             <AppRoutes />
+            <WhatsAppSupport />
           </AuthProvider>
-          <WhatsAppSupport />
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
