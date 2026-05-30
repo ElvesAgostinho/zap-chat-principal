@@ -168,18 +168,33 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="bg-slate-900 text-slate-400 py-12 px-6">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between">
-          <div className="flex items-center gap-3 mb-4 md:mb-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center">
-              <Zap className="w-4 h-4 text-white fill-white" />
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex flex-col items-center md:items-start gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center">
+                <Zap className="w-4 h-4 text-white fill-white" />
+              </div>
+              <span className="font-extrabold text-[18px] text-white">
+                Zap<span className="text-sky-400">CRM</span>
+              </span>
             </div>
-            <span className="font-extrabold text-[18px] text-white">
-              Zap<span className="text-sky-400">CRM</span>
-            </span>
+            <p className="text-sm">
+              © {new Date().getFullYear()} ZapCRM. Todos os direitos reservados.
+            </p>
           </div>
-          <p className="text-sm">
-            © {new Date().getFullYear()} ZapCRM. Todos os direitos reservados.
-          </p>
+
+          <div className="flex flex-col items-center md:items-end gap-2 text-sm">
+            <h4 className="text-slate-300 font-bold mb-1">Contactos e Suporte</h4>
+            <a href="mailto:geral@topconsultores.pt" className="hover:text-white transition-colors flex items-center gap-2">
+              <span className="w-4 h-4 flex items-center justify-center bg-slate-800 rounded">📧</span> geral@topconsultores.pt
+            </a>
+            <a href="https://wa.me/351936179188" target="_blank" rel="noreferrer" className="hover:text-emerald-400 transition-colors flex items-center gap-2">
+              <span className="w-4 h-4 flex items-center justify-center bg-slate-800 rounded">📱</span> +351 936179188
+            </a>
+            <a href="https://www.topia.solutions" target="_blank" rel="noreferrer" className="hover:text-sky-400 transition-colors flex items-center gap-2">
+              <span className="w-4 h-4 flex items-center justify-center bg-slate-800 rounded">🌐</span> www.topia.solutions
+            </a>
+          </div>
         </div>
       </footer>
     </div>
