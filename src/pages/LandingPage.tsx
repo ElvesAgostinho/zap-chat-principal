@@ -34,9 +34,6 @@ export default function LandingPage() {
       {/* Hero Section */}
       <main className="pt-32 pb-20 px-6">
         <div className="max-w-7xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-sky-100 text-sky-700 text-xs font-bold uppercase tracking-wider mb-8">
-            <Zap className="w-4 h-4" /> Feito por Angolanos, para o mercado Angolano 🇦🇴
-          </div>
           <h1 className="text-5xl md:text-7xl font-extrabold text-slate-900 tracking-tight leading-tight mb-6">
             Automatiza o teu WhatsApp.<br className="hidden md:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-blue-600">
