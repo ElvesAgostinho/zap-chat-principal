@@ -14,6 +14,7 @@ import {
   useReactFlow,
   Node,
   Panel,
+  getOutgoers,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { MessageSquare, Zap, GitBranch, Clock, Image as ImageIcon, CheckCircle, Save, Loader2, Trash2, MessageCircle, Tag, HelpCircle, Webhook, Shuffle, ArrowRightCircle, BellRing, X } from 'lucide-react';
@@ -309,6 +310,28 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
     [setEdges]
   );
 
+  const isValidConnection = useCallback(
+    (connection: Connection | Edge) => {
+      const target = nodes.find((node: Node) => node.id === connection.target);
+      if (!target) return true;
+
+      const hasCycle = (node: Node, visited = new Set()) => {
+        if (visited.has(node.id)) return false;
+        visited.add(node.id);
+
+        for (const outgoer of getOutgoers(node, nodes, edges)) {
+          if (outgoer.id === connection.source) return true;
+          if (hasCycle(outgoer, visited)) return true;
+        }
+        return false;
+      };
+
+      if (target.id === connection.source) return false;
+      return !hasCycle(target);
+    },
+    [nodes, edges]
+  );
+
   const onDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
@@ -395,6 +418,7 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          isValidConnection={isValidConnection}
           onDrop={onDrop}
           onDragOver={onDragOver}
           onNodeClick={onNodeClick}

@@ -53,7 +53,17 @@ Deno.serve(async (req) => {
       let nextNode = nodes.find((n: any) => n.id === startNodeId);
 
       // Loop de execução copiado do webhook
+      let visitedNodes = new Set();
+      let executionSteps = 0;
+
       while (nextNode) {
+        if (visitedNodes.has(nextNode.id) || executionSteps > 50) {
+          console.log(`[worker] Loop detetado ou limite excedido (nó ${nextNode.id}). Interrompendo.`);
+          break;
+        }
+        visitedNodes.add(nextNode.id);
+        executionSteps++;
+
         if (nextNode.type === 'messageNode' || nextNode.type === 'notifyNode' || nextNode.type === 'inputNode') {
           let msgText = nextNode.data?.label || '';
           msgText = msgText.replace(/\\{\\{nome\\}\\}/g, lead.nome || 'Cliente');

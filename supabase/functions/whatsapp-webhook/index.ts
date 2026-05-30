@@ -407,8 +407,17 @@ Deno.serve(async (req: any) => {
                 };
 
                 let nextNode = getNextNode(currentNodeId);
+                let visitedNodes = new Set();
+                let executionSteps = 0;
                 
                 while (nextNode) {
+                  if (visitedNodes.has(nextNode.id) || executionSteps > 50) {
+                    console.log(`[webhook] Loop detetado ou limite excedido (nó ${nextNode.id}). Interrompendo automação para evitar falha.`);
+                    break;
+                  }
+                  visitedNodes.add(nextNode.id);
+                  executionSteps++;
+
                   if (nextNode.type === 'messageNode') {
                     const msgText = nextNode.data?.label || '';
                     if (msgText) {
