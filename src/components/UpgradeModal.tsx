@@ -17,27 +17,11 @@ interface Plan {
 const plans: Plan[] = [
   {
     id: 'starter',
-    name: 'Starter',
+    name: 'Acesso Completo',
     price: '25.000 Kz',
     icon: Rocket,
     color: 'sky',
-    features: ['Até 200 Leads ativos', 'Vitrine Personalizada', 'Gestão de Pedidos', '2 Atendentes', 'Relatórios Básicos']
-  },
-  {
-    id: 'profissional',
-    name: 'Profissional',
-    price: '50.000 Kz',
-    icon: Zap,
-    color: 'primary',
-    features: ['Leads Ilimitados', 'BI & Relatórios de Lucro', 'Exportação de Dados', 'Até 5 Atendentes', 'Automações de Pós-Venda']
-  },
-  {
-    id: 'enterprise',
-    name: 'Enterprise',
-    price: '100.000 Kz',
-    icon: Diamond,
-    color: 'violet',
-    features: ['Tudo do Profissional', 'Atendentes Ilimitados', 'Domínio Customizado', 'API de Integração', 'Gerente Dedicado']
+    features: ['Leads Ilimitados', 'Automações Avançadas', 'Múltiplos Atendentes', 'API & Integrações', 'Relatórios Detalhados']
   }
 ];
 

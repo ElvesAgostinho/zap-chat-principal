@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Bot, MessageSquare, Zap, BarChart3, Users, ArrowRight, CheckCircle2 } from 'lucide-react';
 import MockupDashboard from '../components/landing/MockupDashboard';
-import MockupFlowBuilder from '../components/landing/MockupFlowBuilder';
+import MockupAutomationBlocks from '../components/landing/MockupAutomationBlocks';
 
 export default function LandingPage() {
   return (
@@ -34,6 +34,11 @@ export default function LandingPage() {
       {/* Hero Section */}
       <main className="pt-32 pb-20 px-6">
         <div className="max-w-7xl mx-auto text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 border border-blue-100 text-blue-700 font-bold text-sm mb-6 shadow-sm">
+            <span>🇦🇴</span>
+            <span>100% focado no mercado Angolano</span>
+          </div>
+          
           <h1 className="text-5xl md:text-7xl font-extrabold text-slate-900 tracking-tight leading-tight mb-6">
             Automatiza o teu WhatsApp.<br className="hidden md:block" />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-sky-500 to-blue-600">
@@ -41,7 +46,7 @@ export default function LandingPage() {
             </span>
           </h1>
           <p className="text-lg md:text-xl text-slate-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-            O CRM 100% focado na realidade de Angola. Cria chatbots em minutos, gere os teus leads e aumenta a tua faturação automaticamente.
+            O CRM feito de angolanos para angolanos. Cria chatbots em minutos, gere os teus leads e aumenta a tua faturação automaticamente.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link to="/signup" className="w-full sm:w-auto px-8 py-4 bg-blue-600 text-white rounded-2xl text-lg font-bold shadow-xl shadow-blue-500/20 hover:bg-blue-700 hover:shadow-2xl hover:shadow-blue-500/30 transition-all flex items-center justify-center gap-2 group">
@@ -65,12 +70,12 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Automação Visual Intuitiva</h2>
-            <p className="text-slate-500">Constrói fluxos de atendimento completos sem escrever uma única linha de código.</p>
+            <p className="text-slate-500">Constrói fluxos de atendimento completos e visualiza o seu desempenho.</p>
           </div>
           <div className="relative max-w-5xl mx-auto">
             <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-white to-transparent z-20 pointer-events-none"></div>
             <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-white to-transparent z-20 pointer-events-none"></div>
-            <MockupFlowBuilder />
+            <MockupAutomationBlocks />
           </div>
         </div>
       </section>

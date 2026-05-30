@@ -27,7 +27,7 @@ interface AuthState {
   loading: boolean;
   membershipState: MembershipState;
   isSuperAdmin: boolean;
-  plano: 'starter' | 'profissional' | 'enterprise' | null;
+  plano: string | null;
   statusLoja: 'pendente_aprovacao' | 'ativo' | 'suspenso' | 'cancelado' | 'eliminado' | null;
   storeProfilePic: string | null;
   storePhone: string | null;
@@ -91,7 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [membershipState, setMembershipState] = useState<MembershipState>('loading');
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [plano, setPlano] = useState<'starter' | 'profissional' | 'enterprise' | null>(null);
+  const [plano, setPlano] = useState<string | null>(null);
   const [statusLoja, setStatusLoja] = useState<'pendente_aprovacao' | 'ativo' | 'suspenso' | 'cancelado' | 'eliminado' | null>(null);
   const [storeProfilePic, setStoreProfilePic] = useState<string | null>(null);
   const [storePhone, setStorePhone] = useState<string | null>(null);
@@ -197,7 +197,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setStoreCode(null);
           setStoreName(null);
           setMembershipState('super_admin');
-          setPlano('enterprise'); // Super admin has max access
+          setPlano('ilimitado'); // Super admin has max access
           setStatusLoja('ativo');
           setIsExpired(false);
           setLoading(false);
@@ -226,7 +226,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .maybeSingle();
             
           if (storeData) {
-            setPlano(isSuper ? 'enterprise' : storeData.plano);
+            setPlano(isSuper ? 'ilimitado' : storeData.plano);
             setStatusLoja(isSuper ? 'ativo' : storeData.status_aprovacao);
             setStoreName(storeData.nome);
             setStoreSlug(storeData.slug || slugify(storeData.nome));

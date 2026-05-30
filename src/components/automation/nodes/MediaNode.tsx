@@ -1,5 +1,5 @@
 import { Handle, Position, useReactFlow } from '@xyflow/react';
-import { Image as ImageIcon, X } from 'lucide-react';
+import { Image as ImageIcon, X, Video, Mic, FileText } from 'lucide-react';
 
 export default function MediaNode({ id, data }: { id: string, data: any }) {
   const { setNodes, setEdges } = useReactFlow();
@@ -27,8 +27,23 @@ export default function MediaNode({ id, data }: { id: string, data: any }) {
       </div>
       
       <div className="p-4 bg-white">
-        {data.mediaUrl && data.mediaUrl.match(/\\.(jpeg|jpg|gif|png)$/i) ? (
+        {data.mediaUrl && data.mediaUrl.match(/\.(jpeg|jpg|gif|png)(\?.*)?$/i) ? (
           <img src={data.mediaUrl} alt="Media" className="w-full h-24 object-cover rounded-lg mb-2 border border-slate-200" />
+        ) : data.mediaUrl && data.mediaUrl.match(/\.(mp4|mov|avi|mkv)(\?.*)?$/i) ? (
+          <div className="flex items-center gap-2 p-2 bg-pink-50 rounded border border-pink-100 mb-2">
+            <Video className="w-4 h-4 text-pink-500" />
+            <span className="text-[10px] text-pink-700 truncate font-medium">Vídeo Anexado</span>
+          </div>
+        ) : data.mediaUrl && data.mediaUrl.match(/\.(ogg|mp3|wav|m4a|aac)(\?.*)?$/i) ? (
+          <div className="flex items-center gap-2 p-2 bg-pink-50 rounded border border-pink-100 mb-2">
+            <Mic className="w-4 h-4 text-pink-500" />
+            <span className="text-[10px] text-pink-700 truncate font-medium">Áudio Anexado</span>
+          </div>
+        ) : data.mediaUrl ? (
+          <div className="flex items-center gap-2 p-2 bg-pink-50 rounded border border-pink-100 mb-2">
+            <FileText className="w-4 h-4 text-pink-500" />
+            <span className="text-[10px] text-pink-700 truncate font-medium">Documento Anexado</span>
+          </div>
         ) : (
           <div className="w-full h-24 bg-slate-100 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center mb-2">
             <ImageIcon className="w-8 h-8 text-slate-400" />

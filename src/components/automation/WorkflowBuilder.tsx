@@ -665,8 +665,8 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
                   className="w-full py-6 border-2 border-dashed border-slate-200 rounded-xl text-slate-400 hover:border-sky-500 hover:text-sky-500 transition-colors flex flex-col items-center justify-center gap-2"
                 >
                   {uploadingMedia ? <Loader2 className="w-6 h-6 animate-spin" /> : <ImageIcon className="w-6 h-6" />}
-                  <span className="text-xs font-semibold">
-                    {uploadingMedia ? 'A carregar...' : 'Carregar Imagem / PDF'}
+                  <span className="text-xs font-semibold text-center px-4">
+                    {uploadingMedia ? 'A carregar...' : 'Carregar Imagem, Vídeo, Áudio ou PDF'}
                   </span>
                 </button>
                 {selectedNode.data.mediaUrl && (
