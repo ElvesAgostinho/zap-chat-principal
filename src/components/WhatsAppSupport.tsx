@@ -1,9 +1,14 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Mail, Globe, Phone } from 'lucide-react';
+import { MessageCircle, X, Mail, Globe } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function WhatsAppSupport() {
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useAuth();
+
+  // Se o utilizador estiver logado, não mostramos o widget flutuante
+  if (user) return null;
 
   const whatsappNumber = "351936179188";
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=Olá,%20preciso%20de%20ajuda%20com%20o%20CRM.`;
