@@ -83,6 +83,15 @@ export default function AutomationPanel() {
 
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  const renameAutomation = async (id: string, newName: string) => {
+    if (!newName.trim()) return;
+    await supabase.from('automacoes').update({ nome: newName }).eq('id', id);
+    setAutomations(prev => prev.map(a => a.id === id ? { ...a, nome: newName } : a));
+    if (selectedFlow?.id === id) {
+      setSelectedFlow({ ...selectedFlow, nome: newName });
+    }
+  };
+
   if (selectedFlow) {
     return (
       <div className={
@@ -99,9 +108,16 @@ export default function AutomationPanel() {
               <ArrowLeft className="w-4 h-4" /> Voltar
             </button>
             <div className="h-8 w-px bg-slate-300"></div>
-            <div>
-              <h2 className="font-bold text-slate-800">{selectedFlow.nome}</h2>
-              <p className="text-[10px] text-slate-500 uppercase tracking-widest">
+            <div key={selectedFlow.id} className="flex flex-col">
+              <input
+                type="text"
+                defaultValue={selectedFlow.nome}
+                onBlur={(e) => renameAutomation(selectedFlow.id, e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
+                className="font-bold text-slate-800 bg-transparent border-b-2 border-transparent hover:border-slate-300 focus:border-sky-500 focus:outline-none px-1 -ml-1 transition-colors w-64"
+                title="Clique para editar o nome"
+              />
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest px-1 -ml-1">
                 {selectedFlow.ativo ? '🟢 Activo' : '⚪ Inactivo'}
               </p>
             </div>
