@@ -8,7 +8,7 @@ const getPlanDisplayName = (p: string | null) => {
   const plan = (p || '').toLowerCase();
   if (plan === 'enterprise') return 'Enterprise';
   if (plan === 'profissional') return 'Profissional';
-  return 'Starter'; // Fallback for 'iniciante' or empty
+  return 'Acesso Completo'; // Fallback for 'starter' or empty
 };
 
 const getDaysLeft = (date: string | null) => {
@@ -351,9 +351,7 @@ export default function SuperAdminPanel() {
                       onChange={(e) => setSelectedPlans(prev => ({ ...prev, [l.id]: e.target.value }))}
                       className="w-full px-4 py-3 text-sm rounded-2xl border border-border bg-background font-bold focus:ring-2 focus:ring-primary/20 outline-none h-12"
                     >
-                      <option value="starter">Starter — 25.000 Kz</option>
-                      <option value="profissional">Profissional — 50.000 Kz</option>
-                      <option value="enterprise">Enterprise — 100.000 Kz</option>
+                      <option value="starter">Acesso Completo — 25.000 Kz</option>
                     </select>
                   </div>
 
@@ -520,9 +518,7 @@ export default function SuperAdminPanel() {
                       onChange={(e) => setSelectedPlans(prev => ({ ...prev, [loja.id]: e.target.value }))}
                       className="flex-1 px-3 py-2 text-xs rounded-xl border border-border bg-background text-foreground focus:ring-2 focus:ring-primary/20 outline-none h-11 font-bold"
                     >
-                      <option value="starter">Starter — 25.000 Kz</option>
-                      <option value="profissional">Profissional — 50.000 Kz</option>
-                      <option value="enterprise">Enterprise — 100.000 Kz</option>
+                      <option value="starter">Acesso Completo — 25.000 Kz</option>
                     </select>
                     <motion.button
                       whileTap={{ scale: 0.95 }}

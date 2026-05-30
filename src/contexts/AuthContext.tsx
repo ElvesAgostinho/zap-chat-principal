@@ -226,8 +226,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .maybeSingle();
             
           if (storeData) {
-            setPlano(storeData.plano);
-            setStatusLoja(storeData.status_aprovacao);
+            setPlano(isSuper ? 'enterprise' : storeData.plano);
+            setStatusLoja(isSuper ? 'ativo' : storeData.status_aprovacao);
             setStoreName(storeData.nome);
             setStoreSlug(storeData.slug || slugify(storeData.nome));
             setStoreCode(storeData.codigo_unico);
@@ -235,37 +235,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setStoreProfilePic(storeData.profile_picture_url || null);
             setStorePhone(storeData.phone || null);
 
-            // Fetch active subscription for expiration date
-            const { data: sub } = await supabase
-              .from('assinaturas')
-              .select('data_fim')
-              .eq('loja_id', sId)
-              .eq('status', 'ativo')
-              .maybeSingle();
-            
-            if (sub && sub.data_fim) {
-              setDataFim(sub.data_fim);
-              const expDate = new Date(sub.data_fim);
-              setIsExpired(expDate < new Date());
-            } else {
+            if (isSuper) {
+              setDataFim('2099-12-31T23:59:59.000Z');
               setIsExpired(false);
+            } else {
+              // Fetch active subscription for expiration date
+              const { data: sub } = await supabase
+                .from('assinaturas')
+                .select('data_fim')
+                .eq('loja_id', sId)
+                .eq('status', 'ativo')
+                .maybeSingle();
+              
+              if (sub && sub.data_fim) {
+                setDataFim(sub.data_fim);
+                const expDate = new Date(sub.data_fim);
+                setIsExpired(expDate < new Date());
+              } else {
+                setIsExpired(false);
+              }
             }
           }
         }
         
         setMembershipState('linked');
       } else if (membership.status === 'pendente') {
-        setStoreId(null);
-        setStoreSlug(null);
-        setStoreCode(null);
-        setStoreName(null);
-        setMembershipState('pending');
+        if (isSuper) {
+          // Bypass pending status for super admins
+          setMembershipState('linked');
+          setStoreId(membership.loja_id ?? null);
+          setPlano('enterprise');
+          setStatusLoja('ativo');
+          setDataFim('2099-12-31T23:59:59.000Z');
+          setIsExpired(false);
+        } else {
+          setStoreId(null);
+          setStoreSlug(null);
+          setStoreCode(null);
+          setStoreName(null);
+          setMembershipState('pending');
+        }
       } else if (membership.status === 'rejeitado') {
-        setStoreId(null);
-        setStoreSlug(null);
-        setStoreCode(null);
-        setStoreName(null);
-        setMembershipState('rejected');
+        if (isSuper) {
+           // Bypass rejected status for super admins
+           setMembershipState('linked');
+           setStoreId(membership.loja_id ?? null);
+           setPlano('enterprise');
+           setStatusLoja('ativo');
+           setDataFim('2099-12-31T23:59:59.000Z');
+           setIsExpired(false);
+        } else {
+          setStoreId(null);
+          setStoreSlug(null);
+          setStoreCode(null);
+          setStoreName(null);
+          setMembershipState('rejected');
+        }
       } else {
         setStoreId(null);
         setStoreSlug(null);
