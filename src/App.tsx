@@ -57,7 +57,7 @@ function ProtectedRoute({ children, adminOnly = false, superAdminOnly = false }:
 }
 
 function AppRoutes() {
-  const { user, role, loading, isSuperAdmin, statusLoja, isExpired } = useAuth();
+  const { user, role, loading, isSuperAdmin, statusLoja, isExpired, storeId } = useAuth();
 
   if (loading) {
     return (
