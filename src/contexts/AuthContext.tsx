@@ -330,9 +330,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted || event === 'INITIAL_SESSION') return;
-      // Don't force loading state on standard token refresh events
-      const isSignOut = event === 'SIGNED_OUT';
-      scheduleResolve(nextSession, isSignOut);
+      // Force loading state when signing in or signing out
+      const needsLoading = event === 'SIGNED_IN' || event === 'SIGNED_OUT';
+      scheduleResolve(nextSession, needsLoading);
     });
 
     // BUG-02 + BUG-06 fix: Listen for real-time changes on the user's membership row.
