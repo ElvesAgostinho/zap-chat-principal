@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Bot, MessageSquare, Zap, BarChart3, Users, ArrowRight, CheckCircle2 } from 'lucide-react';
+import MockupDashboard from '../components/landing/MockupDashboard';
+import MockupFlowBuilder from '../components/landing/MockupFlowBuilder';
 
 export default function LandingPage() {
   return (
@@ -54,19 +56,30 @@ export default function LandingPage() {
             </Link>
           </div>
           
-          <div className="mt-20 relative max-w-5xl mx-auto">
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-50 via-transparent to-transparent z-10 h-full w-full pointer-events-none"></div>
-            <img 
-              src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=2070" 
-              alt="Dashboard Preview" 
-              className="rounded-3xl shadow-2xl border border-slate-200/50 object-cover"
-            />
+          <div className="mt-20 relative max-w-5xl mx-auto text-left">
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-50 via-transparent to-transparent z-20 h-full w-full pointer-events-none"></div>
+            <MockupDashboard />
           </div>
         </div>
       </main>
 
+      {/* Flow Builder Mockup Section */}
+      <section className="py-24 bg-white border-t border-slate-100 px-6 overflow-hidden">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Automação Visual Intuitiva</h2>
+            <p className="text-slate-500">Constrói fluxos de atendimento completos sem escrever uma única linha de código.</p>
+          </div>
+          <div className="relative max-w-5xl mx-auto">
+            <div className="absolute inset-y-0 left-0 w-20 bg-gradient-to-r from-white to-transparent z-20 pointer-events-none"></div>
+            <div className="absolute inset-y-0 right-0 w-20 bg-gradient-to-l from-white to-transparent z-20 pointer-events-none"></div>
+            <MockupFlowBuilder />
+          </div>
+        </div>
+      </section>
+
       {/* Features Section */}
-      <section className="py-24 bg-white border-t border-slate-100 px-6">
+      <section className="py-24 bg-slate-50 border-t border-slate-100 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-4">Tudo o que precisas para crescer</h2>
