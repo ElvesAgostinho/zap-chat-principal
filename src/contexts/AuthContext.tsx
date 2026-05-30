@@ -330,8 +330,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted || event === 'INITIAL_SESSION') return;
-      // Force loading state when signing in or signing out
-      const needsLoading = event === 'SIGNED_IN' || event === 'SIGNED_OUT';
+      
+      // Force loading state ONLY when explicitly signing out.
+      // This prevents the app from unmounting and flashing a spinner when the tab regains focus
+      // and Supabase fires a SIGNED_IN or TOKEN_REFRESHED event to validate the session.
+      const needsLoading = event === 'SIGNED_OUT';
+      
       scheduleResolve(nextSession, needsLoading);
     });
 
