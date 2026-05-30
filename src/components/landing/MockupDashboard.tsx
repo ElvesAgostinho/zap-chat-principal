@@ -47,8 +47,8 @@ export default function MockupDashboard() {
               <ComposedChart data={data} margin={{ top: 10, right: 0, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1f2937" vertical={false} />
                 <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#9ca3af', fontSize: 10, fontWeight: 'bold' }} dy={10} />
-                <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fill: '#0ea5e9', fontSize: 10, fontWeight: 'bold' }} tickFormatter={(val) => \`\${val / 1000}K\`} />
-                <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fill: '#f472b6', fontSize: 10, fontWeight: 'bold' }} tickFormatter={(val) => \`\${val}%\`} />
+                <YAxis yAxisId="left" axisLine={false} tickLine={false} tick={{ fill: '#0ea5e9', fontSize: 10, fontWeight: 'bold' }} tickFormatter={(val) => `${val / 1000}K`} />
+                <YAxis yAxisId="right" orientation="right" axisLine={false} tickLine={false} tick={{ fill: '#f472b6', fontSize: 10, fontWeight: 'bold' }} tickFormatter={(val) => `${val}%`} />
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#ffffff', borderRadius: '8px', border: 'none', color: '#000', fontWeight: 'bold', padding: '12px' }}
                   itemStyle={{ fontWeight: 'bold' }}
