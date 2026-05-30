@@ -77,13 +77,13 @@ function AppRoutes() {
         element={
           user ? (
             <ProtectedRoute>
-              {isSuperAdmin ? (
+              {isSuperAdmin && !storeId ? (
                 <SuperAdminPanel />
-              ) : statusLoja === 'eliminado' ? (
+              ) : statusLoja === 'eliminado' && !isSuperAdmin ? (
                 <DeletedAccountScreen />
-              ) : statusLoja === 'pendente_aprovacao' ? (
+              ) : statusLoja === 'pendente_aprovacao' && !isSuperAdmin ? (
                 <PendingApprovalScreen />
-              ) : statusLoja === 'suspenso' ? (
+              ) : statusLoja === 'suspenso' && !isSuperAdmin ? (
                 <SuspendedScreen />
               ) : (
                 <Index />

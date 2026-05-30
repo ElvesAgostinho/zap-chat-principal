@@ -126,7 +126,7 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="p-8">
-              <ul className="space-y-4 mb-8">
+              <ul className="grid grid-cols-2 gap-x-4 gap-y-3 mb-8 text-left">
                 {[
                   '1 número WhatsApp',
                   'Automações',
@@ -137,8 +137,8 @@ export default function LandingPage() {
                   'Respostas rápidas',
                   'Suporte básico'
                 ].map((item, i) => (
-                  <li key={i} className="flex items-center gap-3 text-slate-700 font-medium">
-                    <CheckCircle2 className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                  <li key={i} className="flex items-center gap-2 text-slate-700 font-medium text-[13px] md:text-sm">
+                    <CheckCircle2 className="w-4 h-4 text-blue-500 flex-shrink-0" />
                     {item}
                   </li>
                 ))}

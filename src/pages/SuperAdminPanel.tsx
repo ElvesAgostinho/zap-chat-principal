@@ -65,8 +65,7 @@ interface Stats {
 }
 
 export default function SuperAdminPanel() {
-  const { signOut } = useAuth();
-  const { user } = useAuth();
+  const { signOut, user, storeId } = useAuth();
   const [lojas, setLojas] = useState<LojaInfo[]>([]);
   const [assinaturas, setAssinaturas] = useState<Assinatura[]>([]);
   const [allAdmins, setAllAdmins] = useState<UsuarioLoja[]>([]);
@@ -233,6 +232,12 @@ export default function SuperAdminPanel() {
         rightContent={
           <div className="flex items-center gap-2">
             <SuperAdminNotifications onNavigate={(tab) => setActiveTab(tab)} />
+            {user && storeId && (
+               <motion.button whileTap={{ scale: 0.95 }} onClick={() => window.location.href = '/app'} className="px-3 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary/20 transition-colors flex items-center gap-2" title="Aceder à Minha Loja">
+                 <Store className="w-4 h-4" />
+                 <span className="text-sm font-bold hidden sm:inline">Minha Loja</span>
+               </motion.button>
+            )}
             <motion.button whileTap={{ scale: 0.95 }} onClick={signOut} className="px-3 py-2 rounded-xl bg-secondary text-foreground hover:bg-secondary/80 transition-colors flex items-center gap-2" title="Sair">
               <LogOut className="w-4 h-4" />
               <span className="text-sm font-medium">Sair</span>

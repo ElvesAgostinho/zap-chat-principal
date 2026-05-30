@@ -177,21 +177,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const superAdmin = await checkSuperAdmin(nextSession.user.id);
       if (versionRef.current !== version) return;
 
+      let isSuper = false;
       if (superAdmin) {
         setIsSuperAdmin(true);
-        setRole('super_admin');
-        setStatus('aprovado');
-        setUserName(nextSession.user.user_metadata?.full_name || 'Super Admin');
-        setStoreId(null);
-        setStoreSlug(null);
-        setStoreCode(null);
-        setStoreName(null);
-        setMembershipState('super_admin');
-        setPlano('enterprise'); // Super admin has max access
-        setStatusLoja('ativo');
-        setIsExpired(false);
-        setLoading(false);
-        return;
+        isSuper = true;
       }
 
       // Normal membership flow
@@ -199,9 +188,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (versionRef.current !== version) return;
 
       if (!membership) {
-        clearMembership();
-        setMembershipState('unlinked');
-        return;
+        if (isSuper) {
+          setRole('super_admin');
+          setStatus('aprovado');
+          setUserName(nextSession.user.user_metadata?.full_name || 'Super Admin');
+          setStoreId(null);
+          setStoreSlug(null);
+          setStoreCode(null);
+          setStoreName(null);
+          setMembershipState('super_admin');
+          setPlano('enterprise'); // Super admin has max access
+          setStatusLoja('ativo');
+          setIsExpired(false);
+          setLoading(false);
+          return;
+        } else {
+          clearMembership();
+          setMembershipState('unlinked');
+          return;
+        }
       }
 
       setRole(membership.role ?? null);

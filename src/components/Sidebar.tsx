@@ -35,7 +35,8 @@ interface NavItem {
 const getNavGroups = (
   chatCount: number, 
   showAdmin: boolean,
-  plano: string | null
+  plano: string | null,
+  isSuperAdmin: boolean = false
 ): NavGroup[] => {
   const p = plano?.toLowerCase() || '';
   const isHighTier = ['profissional', 'enterprise'].includes(p) || showAdmin;
@@ -61,24 +62,29 @@ const getNavGroups = (
       items: [
         { id: 'settings', icon: Settings, label: 'Configurações' },
         ...(showAdmin ? [{ id: 'admin' as Tab, icon: Shield, label: 'Admin', locked: false }] : []),
+        ...(isSuperAdmin ? [{ id: 'super_admin' as any, icon: Shield, label: 'Super Admin', locked: false }] : []),
       ],
     },
   ];
 };
 
 export default function Sidebar({ active, onChange, chatCount = 0, showAdmin = false }: SidebarProps) {
-  const { signOut, userName, plano, storeProfilePic, role } = useAuth();
+  const { signOut, userName, plano, storeProfilePic, role, isSuperAdmin } = useAuth();
   
   const [isHovered, setIsHovered] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
 
-  const navGroups = getNavGroups(chatCount, showAdmin, plano);
+  const navGroups = getNavGroups(chatCount, showAdmin, plano, isSuperAdmin);
   const isExpanded = isHovered || mobileOpen;
 
   const handleTabChange = (item: NavItem) => {
     if (item.locked) {
       setUpgradeOpen(true);
+      return;
+    }
+    if (item.id === ('super_admin' as any)) {
+      window.location.href = '/super-admin';
       return;
     }
     onChange(item.id);
