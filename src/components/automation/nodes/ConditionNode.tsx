@@ -35,7 +35,7 @@ export default function ConditionNode({ id, data }: { id: string, data: any }) {
       <Handle 
         type="target" 
         position={Position.Left} 
-        className="w-3 h-3 bg-slate-200 border-2 border-white rounded-full left-[-7px]"
+        className="w-4 h-4 bg-slate-200 border-2 border-white rounded-full left-[-8px]"
       />
       
       {/* Outputs: Yes and No */}
@@ -43,17 +43,17 @@ export default function ConditionNode({ id, data }: { id: string, data: any }) {
         type="source" 
         position={Position.Right} 
         id="true"
-        className="w-3 h-3 bg-sky-500 border-2 border-white rounded-full right-[-7px] top-[30%]"
+        className="w-4 h-4 bg-sky-500 border-2 border-white rounded-full right-[-8px] top-[30%]"
       />
-      <div className="absolute right-[-20px] top-[26%] text-[10px] font-bold text-sky-600">Sim</div>
+      <div className="absolute right-[-28px] top-[26%] text-[10px] font-bold text-sky-600 pointer-events-none select-none">Sim</div>
       
       <Handle 
         type="source" 
         position={Position.Right} 
         id="false"
-        className="w-3 h-3 bg-red-500 border-2 border-white rounded-full right-[-7px] top-[70%]"
+        className="w-4 h-4 bg-red-500 border-2 border-white rounded-full right-[-8px] top-[70%]"
       />
-      <div className="absolute right-[-20px] top-[66%] text-[10px] font-bold text-red-600">Não</div>
+      <div className="absolute right-[-28px] top-[66%] text-[10px] font-bold text-red-600 pointer-events-none select-none">Não</div>
     </>
   );
 }
