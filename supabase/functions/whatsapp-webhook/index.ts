@@ -341,6 +341,7 @@ Deno.serve(async (req: any) => {
       let leadId: string | null = null;
       let leadName = pushName || phone;
       let leadControle: string = 'bot';
+      let leadBotEnabled: boolean = true;
 
       if (!fromMe) {
         const { data: existingLead } = await supabase.from('leads').select('id, nome, controle_conversa, bot_enabled').eq('telefone', phone).eq('loja_id', storeId).maybeSingle();
@@ -348,6 +349,7 @@ Deno.serve(async (req: any) => {
           leadId = existingLead.id;
           leadName = existingLead.nome || pushName || phone;
           leadControle = existingLead.controle_conversa || 'bot';
+          if (existingLead.bot_enabled === false) leadBotEnabled = false;
           await supabase.from('leads').update({ followup_count: 0, ultimo_followup: null }).eq('id', leadId);
         } else {
           const { data: newLead } = await supabase.from('leads').insert({ nome: pushName || phone, telefone: phone, fonte: 'whatsapp', loja_id: storeId, interesse: messageText || 'Primeiro contacto', status: 'novo', bot_enabled: true, controle_conversa: 'bot', precisa_humano: false, tags: ['novo'] }).select('id').single();
@@ -365,7 +367,7 @@ Deno.serve(async (req: any) => {
       const hasContent = messageText || media;
       if (!fromMe && hasContent && leadId && storeId && EVOLUTION_API_KEY && EVOLUTION_API_URL) {
         const { data: storeData } = await supabase.from('lojas').select('bot_ativo').eq('id', storeId).maybeSingle();
-        if (storeData?.bot_ativo !== false && leadControle !== 'humano') {
+        if (storeData?.bot_ativo !== false && leadControle !== 'humano' && leadBotEnabled !== false) {
           const textForEscalation = messageText || '';
           const escalation = detectEscalation(textForEscalation);
 
@@ -381,12 +383,25 @@ Deno.serve(async (req: any) => {
             .eq('ativo', true);
             
           if (activeAutomations && activeAutomations.length > 0) {
-            const matchedAuto = activeAutomations.find((a: any) => {
-              if (!a.trigger_keyword) return false;
+            let matchedAuto = null;
+            const msgLower = textForEscalation.toLowerCase();
+
+            // 1. Procurar correspondências exatas/específicas primeiro
+            matchedAuto = activeAutomations.find((a: any) => {
+              if (!a.trigger_keyword || a.trigger_keyword.trim() === '') return false;
               const kws = a.trigger_keyword.split(',').map((k: string) => k.trim().toLowerCase());
-              const msgLower = textForEscalation.toLowerCase();
+              if (kws.includes('*')) return false; // Ignorar wildcard nesta fase
               return kws.some((kw: string) => msgLower.includes(kw));
             });
+
+            // 2. Se nenhuma específica for encontrada, procurar automações 'catch-all' (sem palavra-chave ou com '*')
+            if (!matchedAuto) {
+              matchedAuto = activeAutomations.find((a: any) => {
+                if (!a.trigger_keyword || a.trigger_keyword.trim() === '') return true; // Aceita se não tiver palavra-chave
+                const kws = a.trigger_keyword.split(',').map((k: string) => k.trim().toLowerCase());
+                return kws.includes('*');
+              });
+            }
 
             if (matchedAuto) {
               automationExecuted = true;
@@ -553,234 +568,6 @@ Deno.serve(async (req: any) => {
             });
             await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: transitionMsg, tipo: 'enviada', is_bot: true, loja_id: storeId });
             await notifyAdminEscalation(supabase, baseUrl, instanceName, EVOLUTION_API_KEY, storeId, leadName, textForEscalation, escalation.reason);
-          } else {
-            try {
-              const botBody: any = { lead_id: leadId, store_id: storeId, message_text: messageText || `[O cliente enviou ${mediaLabel || 'uma mídia'}]` };
-              if (persistedMediaUrl && persistedMediaType === 'image') botBody.image_url = persistedMediaUrl;
-
-              const botResponse = await fetch(`${supabaseUrl}/functions/v1/ai-sales-bot`, {
-                method: 'POST', headers: { 'Authorization': `Bearer ${supabaseKey}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify(botBody),
-              });
-
-              if (botResponse.ok) {
-                const botData = await botResponse.json();
-                if (botData.success && botData.reply) {
-                  const sendResponse = await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
-                    body: JSON.stringify({ number: phone, text: botData.reply }),
-                  });
-
-                  if (sendResponse.ok) {
-                    await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: botData.reply, tipo: 'enviada', is_bot: true, loja_id: storeId });
-                    
-                    const productsToSend = (botData.products_to_send || []).slice(0, 3);
-                    for (const prod of productsToSend) {
-                      if (prod.imagem) {
-                        try {
-                          let imageUrl = prod.imagem;
-                          if (imageUrl.startsWith('data:')) {
-                            const base64Match = imageUrl.match(/^data:image\/(\w+);base64,(.+)$/);
-                            if (base64Match) {
-                              const ext = base64Match[1] === 'jpeg' ? 'jpg' : base64Match[1];
-                              const binaryData = Uint8Array.from(atob(base64Match[2]), c => c.charCodeAt(0));
-                              const fileName = `${storeId}/${Date.now()}-${prod.nome.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30)}.${ext}`;
-                              const { error: uploadErr } = await supabase.storage.from('product-images').upload(fileName, binaryData, { contentType: `image/${base64Match[1]}`, upsert: true });
-                              if (!uploadErr) {
-                                const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(fileName);
-                                if (urlData?.publicUrl) {
-                                  imageUrl = urlData.publicUrl;
-                                  await supabase.from('produtos').update({ imagem: imageUrl }).eq('loja_id', storeId).eq('nome', prod.nome);
-                                }
-                              }
-                            }
-                          }
-                          const caption = `${prod.nome} - ${prod.preco ? Number(prod.preco).toLocaleString('pt-AO') + ' Kz' : 'Preço sob consulta'}`;
-                          await fetch(`${baseUrl}/message/sendMedia/${instanceName}`, {
-                            method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
-                            body: JSON.stringify({ number: phone, mediatype: 'image', media: imageUrl, caption }),
-                          });
-                          await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: caption, tipo: 'enviada', is_bot: true, loja_id: storeId, media_url: imageUrl, media_type: 'image' });
-                        } catch (imgErr) { console.error(`[webhook] Failed to send product image ${prod.nome}:`, imgErr); }
-                      }
-                    }
-
-                    // 1. Pedidos / Vendas
-                    if (botData.order_data) {
-                      const od = botData.order_data;
-                      try {
-                        const { data: prodRow } = await supabase.from('produtos').select('imagem, estoque').eq('loja_id', storeId).ilike('nome', `%${od.produto}%`).maybeSingle();
-                        if (prodRow && (prodRow.estoque || 0) <= 0) {
-                          const osMsg = 'Desculpe, esse produto está esgotado no momento 😔';
-                          await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: osMsg }) });
-                        } else {
-                          const { error: vendaError } = await supabase.from('vendas').insert({ lead_id: leadId, loja_id: storeId, produto: od.produto, produto_imagem: prodRow?.imagem, valor: od.valor, quantidade: 1, status: 'pendente', pagamento_status: 'pendente', status_entrega: 'pendente', cliente_nome: od.nome_cliente, cliente_telefone: phone, cliente_endereco: od.endereco, observacoes: `Pagamento: ${od.pagamento} | Pedido automático pelo bot` });
-                          if (!vendaError) {
-                            const { data: loja } = await supabase.from('lojas').select('telefone').eq('id', storeId).maybeSingle();
-                            if (loja?.telefone) {
-                              const notifText = `🛍️ *Novo pedido!*\n\nProduto: ${od.produto}\nCliente: ${od.nome_cliente}\nValor: ${od.valor} Kz\nEndereço: ${od.endereco}\nPagamento: ${od.pagamento}`;
-                              await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: loja.telefone, text: notifText }) });
-                            }
-                          }
-                        }
-                      } catch (orderErr) { console.error('[webhook] Order creation error:', orderErr); }
-                    }
-
-                    // 2. Agendamentos (CRITICAL: Processar ANTES do reply para ser "instantâneo" no CRM)
-                    if (botData.schedule_data) {
-                      const sd = botData.schedule_data;
-                      try {
-                        if (sd.action === 'create' || sd.action === 'reschedule') {
-                          const dateToParse = sd.data_hora || new Date().toISOString();
-                          const normalizedDate = dateToParse.includes(' ') && !dateToParse.includes('T') ? dateToParse.replace(' ', 'T') : dateToParse;
-                          let dateObj = new Date(normalizedDate);
-                          if (isNaN(dateObj.getTime())) { dateObj = new Date(); dateObj.setHours(dateObj.getHours() + 1); dateObj.setMinutes(0, 0, 0); }
-                          const isoDate = dateObj.toISOString();
-                          const targetDate = new Date(isoDate);
-
-                          if (targetDate < new Date()) {
-                            const pastMsg = `Lamento, mas não consigo fazer marcações para o passado. Escolha outro horário? 🕒`;
-                            await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: pastMsg }) });
-                          } else if (sd.action === 'create') {
-                            const { error: sErr } = await supabase.from('agendamentos').insert({ 
-                              lead_id: leadId, 
-                              loja_id: storeId, 
-                              data_hora: isoDate, 
-                              status: 'pendente', 
-                              cliente_nome: leadName, 
-                              cliente_telefone: phone, 
-                              servico: sd.servico || 'Agendamento' 
-                            });
-                            
-                            if (sErr) {
-                              console.error('[webhook] Erro ao criar agendamento:', sErr);
-                            } else {
-                              await supabase.from('notificacoes').insert({ loja_id: storeId, lead_id: leadId, tipo: 'agendamento', titulo: '📅 Novo Agendamento', mensagem: `${leadName} agendou para ${targetDate.toLocaleString('pt-PT')}.`, link: '/schedule' });
-                              const confMsg = `📅 *Agendamento Registado!*\n\nServiço: ${sd.servico || 'Atendimento'}\nData: ${targetDate.toLocaleDateString('pt-PT')}\nHora: ${targetDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}\n\nObrigado! A nossa equipa entrará em contacto se for necessário algum ajuste. 😊`;
-                              await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: confMsg }) });
-                            }
-                          } else if (sd.action === 'reschedule') {
-                            // Prioritize closest upcoming appointment
-                            const { data: ext } = await supabase.from('agendamentos')
-                              .select('id, notas')
-                              .eq('lead_id', leadId)
-                              .eq('loja_id', storeId)
-                              .gte('data_hora', new Date().toISOString())
-                              .in('status', ['pendente', 'confirmado'])
-                              .order('data_hora', { ascending: true })
-                              .limit(1)
-                              .maybeSingle();
-
-                            const targetId = ext?.id || await supabase.from('agendamentos')
-                              .select('id')
-                              .eq('lead_id', leadId)
-                              .eq('loja_id', storeId)
-                              .order('data_hora', { ascending: false })
-                              .limit(1)
-                              .maybeSingle().then(r => r.data?.id);
-
-                            if (targetId) {
-                              const { error: uErr } = await supabase.from('agendamentos').update({ 
-                                data_hora: isoDate, 
-                                status: 'pendente',
-                                notas: ((ext?.notas || '') + '\n🔄 Reagendado via Bot').trim()
-                              }).eq('id', targetId);
-                              
-                              if (!uErr) {
-                                const upMsg = `🔄 *Agendamento Atualizado!*\n\nO seu horário foi alterado para:\n📅 ${targetDate.toLocaleDateString('pt-PT')} às ${targetDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}\n\nObrigado pela preferência! 👋`;
-                                await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: upMsg }) });
-                              }
-                            } else {
-                              // Fallback: Create new if none found
-                              await supabase.from('agendamentos').insert({ lead_id: leadId, loja_id: storeId, data_hora: isoDate, status: 'pendente', cliente_nome: leadName, cliente_whatsapp: phone, servico: sd.servico || 'Atendimento' });
-                              const fallbackMsg = `✅ *Novo Agendamento Confirmado!*\n\nComo não encontrei a sua marcação anterior, criei uma nova para:\n📅 ${targetDate.toLocaleDateString('pt-PT')} às ${targetDate.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}\n\nAté breve! 🚀`;
-                              await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: fallbackMsg }) });
-                            }
-                          }
-                        } else if (sd.action === 'cancel') {
-                          const { error: cErr } = await supabase.from('agendamentos').update({ status: 'cancelado' }).eq('lead_id', leadId).eq('loja_id', storeId).neq('status', 'concluido');
-                          if (!cErr) {
-                            const cancelMsg = `🚫 *Agendamento Cancelado*\n\nConforme o seu pedido, o seu agendamento foi cancelado com sucesso. 👋`;
-                            await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: cancelMsg }) });
-                            await supabase.from('notificacoes').insert({ loja_id: storeId, lead_id: leadId, tipo: 'agendamento', titulo: '🚫 Agendamento Cancelado', mensagem: `${leadName} cancelou o agendamento via bot.`, link: '/schedule' });
-                          }
-                        }
-                      } catch (schErr) { console.error('[webhook] Schedule action error:', schErr); }
-                    }
-
-                    // 3. Formas de Pagamento
-                    if (botData.send_payment) {
-                      try {
-                        const { data: payments } = await supabase.from('formas_pagamento').select('tipo, detalhes').eq('loja_id', storeId).eq('is_active', true);
-                        if (payments && payments.length > 0) {
-                          const payMsg = `Aqui tens as nossas formas de pagamento:\n\n` + 
-                            payments.map((p: any) => `🔹 *${p.tipo}*: ${p.detalhes}`).join('\n') + 
-                            `\n\nPor favor, envia o comprovativo após a operação! 🙏`;
-                          await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: payMsg }) });
-                          await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: payMsg, tipo: 'enviada', is_bot: true, loja_id: storeId });
-                        }
-                      } catch (pErr) { console.error('[webhook] Payment info error:', pErr); }
-                    }
-
-                    // 4. Localização
-                    if (botData.send_location) {
-                      try {
-                        const { data: store } = await supabase.from('lojas').select('endereco').eq('id', storeId).maybeSingle();
-                        if (store?.endereco) {
-                          const locMsg = `📍 *Morada:*\n${store.endereco}\n\nPodes usar esta morada para chegar até nós! 🚗`;
-                          await fetch(`${baseUrl}/message/sendText/${instanceName}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, body: JSON.stringify({ number: phone, text: locMsg }) });
-                          await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: locMsg, tipo: 'enviada', is_bot: true, loja_id: storeId });
-                        }
-                      } catch (lErr) { console.error('[webhook] Location info error:', lErr); }
-                    }
-
-                    // 4.5 Enviar Fotos de Produtos Solicitados
-                    if (botData.requested_products && botData.requested_products.length > 0) {
-                      for (const productName of botData.requested_products) {
-                        try {
-                          const { data: product } = await supabase
-                            .from('produtos')
-                            .select('nome, imagem, preco')
-                            .eq('loja_id', storeId)
-                            .ilike('nome', `%${productName}%`)
-                            .maybeSingle();
-
-                          if (product && product.imagem) {
-                            const mediaData = {
-                              number: phone,
-                              media: product.imagem,
-                              mediatype: 'image',
-                              caption: `📸 *${product.nome}*\n💰 Preço: Kz ${product.preco}\n\nDesejas agendar uma visita para ver este modelo? 😊`
-                            };
-                            await fetch(`${baseUrl}/message/sendMedia/${instanceName}`, { 
-                              method: 'POST', 
-                              headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, 
-                              body: JSON.stringify(mediaData) 
-                            });
-                          }
-                        } catch (pErr) { console.error('[webhook] Product media error:', pErr); }
-                      }
-                    }
-
-                    // 5. Enviar Resposta Principal do Bot (Última Etapa)
-                    if (botData.reply) {
-                      await fetch(`${baseUrl}/message/sendText/${instanceName}`, { 
-                        method: 'POST', 
-                        headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY }, 
-                        body: JSON.stringify({ number: phone, text: botData.reply }) 
-                      });
-                      await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: botData.reply, tipo: 'enviada', is_bot: true, loja_id: storeId });
-                    }
-
-                    // 6. Escalamento
-                    if (botData.escalate_to_human) {
-                      await supabase.from('leads').update({ controle_conversa: 'humano', precisa_humano: true, bot_enabled: false }).eq('id', leadId);
-                      await notifyAdminEscalation(supabase, baseUrl, instanceName, EVOLUTION_API_KEY, storeId, leadName, textForEscalation, botData.escalate_to_human);
-                    }
-                  }
-                }
-              }
-            } catch (botErr) { console.error('[webhook] Global Bot system error:', botErr); }
           }
           } // Fecho do if (!automationExecuted)
         } // Fecho do if (hasContent)
