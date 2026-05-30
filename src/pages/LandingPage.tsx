@@ -23,7 +23,7 @@ export default function LandingPage() {
               Entrar
             </Link>
             <Link to="/signup" className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all hover:-translate-y-0.5">
-              Começar Grátis
+              Começar Agora
             </Link>
           </div>
         </div>
@@ -33,7 +33,7 @@ export default function LandingPage() {
       <main className="pt-32 pb-20 px-6">
         <div className="max-w-7xl mx-auto text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-sky-100 text-sky-700 text-xs font-bold uppercase tracking-wider mb-8">
-            <Zap className="w-4 h-4" /> A revolução do atendimento
+            <Zap className="w-4 h-4" /> Feito por Angolanos, para o mercado Angolano 🇦🇴
           </div>
           <h1 className="text-5xl md:text-7xl font-extrabold text-slate-900 tracking-tight leading-tight mb-6">
             Automatiza o teu WhatsApp.<br className="hidden md:block" />
@@ -42,11 +42,11 @@ export default function LandingPage() {
             </span>
           </h1>
           <p className="text-lg md:text-xl text-slate-500 max-w-2xl mx-auto mb-10 leading-relaxed">
-            A plataforma completa de CRM e Automação para o teu negócio. Cria chatbots em minutos, gere leads e aumenta a tua faturação automaticamente.
+            O CRM 100% focado na realidade de Angola. Cria chatbots em minutos, gere os teus leads e aumenta a tua faturação automaticamente.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link to="/signup" className="w-full sm:w-auto px-8 py-4 bg-blue-600 text-white rounded-2xl text-lg font-bold shadow-xl shadow-blue-500/20 hover:bg-blue-700 hover:shadow-2xl hover:shadow-blue-500/30 transition-all flex items-center justify-center gap-2 group">
-              Criar Conta Grátis
+              Começar Agora
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
             <Link to="/login" className="w-full sm:w-auto px-8 py-4 bg-white text-slate-700 border border-slate-200 rounded-2xl text-lg font-bold hover:bg-slate-50 transition-colors flex items-center justify-center gap-2">
