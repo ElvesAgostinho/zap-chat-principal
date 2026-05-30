@@ -98,6 +98,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [dataFim, setDataFim] = useState<string | null>(null);
   const [isExpired, setIsExpired] = useState(false);
   const versionRef = useRef(0);
+  const sessionRef = useRef<Session | null>(null);
+
+  useEffect(() => {
+    sessionRef.current = session;
+  }, [session]);
 
   const clearMembership = () => {
     setRole(null);
@@ -331,10 +336,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted || event === 'INITIAL_SESSION') return;
       
-      // Force loading state ONLY when explicitly signing out.
-      // This prevents the app from unmounting and flashing a spinner when the tab regains focus
-      // and Supabase fires a SIGNED_IN or TOKEN_REFRESHED event to validate the session.
-      const needsLoading = event === 'SIGNED_OUT';
+      // Force loading state ONLY when explicitly signing out, or if this is the first SIGNED_IN event (actual login).
+      // If we already have a sessionRef.current, it means this is just a background token refresh/validation
+      // and we shouldn't flash the loading screen.
+      const isLoggingOut = event === 'SIGNED_OUT';
+      const isFirstSignIn = event === 'SIGNED_IN' && !sessionRef.current;
+      
+      const needsLoading = isLoggingOut || isFirstSignIn;
       
       scheduleResolve(nextSession, needsLoading);
     });
