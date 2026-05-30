@@ -5,10 +5,11 @@ import { useAuth } from '@/contexts/AuthContext';
 
 export default function WhatsAppSupport() {
   const [isOpen, setIsOpen] = useState(false);
+  const [isDismissed, setIsDismissed] = useState(false);
   const { user } = useAuth();
 
-  // Se o utilizador estiver logado, não mostramos o widget flutuante
-  if (user) return null;
+  // Se o utilizador estiver logado ou tiver fechado o widget, não mostramos
+  if (user || isDismissed) return null;
 
   const whatsappNumber = "351936179188";
   const whatsappUrl = `https://wa.me/${whatsappNumber}?text=Olá,%20preciso%20de%20ajuda%20com%20o%20CRM.`;
@@ -24,7 +25,7 @@ export default function WhatsAppSupport() {
             transition={{ duration: 0.2 }}
             className="mb-4 bg-white rounded-2xl shadow-elevated border border-slate-200 overflow-hidden w-72"
           >
-            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-4 text-white">
+            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-4 text-white relative">
               <h3 className="font-bold text-lg">Suporte Topia</h3>
               <p className="text-emerald-50 text-xs mt-1">Como podemos ajudar-te hoje?</p>
             </div>
@@ -77,14 +78,25 @@ export default function WhatsAppSupport() {
         )}
       </AnimatePresence>
 
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all"
-      >
-        {isOpen ? <X className="w-6 h-6" /> : <MessageCircle className="w-7 h-7" />}
-      </motion.button>
+      <div className="relative">
+        {!isOpen && (
+          <button 
+            onClick={() => setIsDismissed(true)}
+            className="absolute -top-2 -right-2 bg-slate-800 text-white w-5 h-5 rounded-full flex items-center justify-center shadow-md hover:bg-slate-700 z-10 transition-colors"
+            title="Fechar widget"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        )}
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={() => setIsOpen(!isOpen)}
+          className="w-14 h-14 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-lg hover:shadow-xl transition-all"
+        >
+          {isOpen ? <X className="w-6 h-6" /> : <MessageCircle className="w-7 h-7" />}
+        </motion.button>
+      </div>
     </div>
   );
 }

@@ -344,30 +344,6 @@ export default function ChatWorkspace({ leadId }: { leadId: string }) {
             >
               <Info className="w-5 h-5" />
             </button>
-            <div className={`hidden lg:flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold shadow-sm 
-              ${!storeBotActive ? 'filter-inactive' : 
-                isHumanMode ? 'bg-orange-500 text-white shadow-glow' : 
-                'filter-active'}`}>
-              {!storeBotActive ? (
-                <><X className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none text-[8px]">BOT OFF</span></>
-              ) : isHumanMode ? (
-                <><User className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none text-[8px]">HUMANO</span></>
-              ) : (
-                <><Bot className="w-[11px] h-[11px] mb-[1px]" /> <span className="leading-none text-[8px]">BOT</span></>
-              )}
-            </div>
-            <button onClick={scheduleFollowup} className="p-2 rounded-xl text-foreground hover:bg-secondary transition-colors" title="Agendar Follow-up" >
-              <CalendarClock className="w-5 h-5" />
-            </button>
-            {isHumanMode ? (
-              <button onClick={returnToBot} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-sky-100 text-sky-700 text-xs font-bold hover:bg-sky-200 transition-all shadow-sm border border-sky-200">
-                <RotateCcw className="w-4 h-4" /> <span>Reactivar Automação</span>
-              </button>
-            ) : (
-              <button onClick={assumeConversation} className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 text-white text-xs font-bold hover:bg-amber-600 transition-all shadow-md">
-                <UserCheck className="w-4 h-4" /> <span>Pausar Automação</span>
-              </button>
-            )}
           </div>
         </div>
 
