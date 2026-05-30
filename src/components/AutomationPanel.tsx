@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Automacao } from '@/types';
-import { Bot, Plus, ArrowLeft, Play, Square, Trash2, Edit2, AlertTriangle } from 'lucide-react';
+import { Bot, Plus, ArrowLeft, Play, Square, Trash2, Edit2, AlertTriangle, Maximize2, Minimize2 } from 'lucide-react';
 import WorkflowBuilder from './automation/WorkflowBuilder';
 
 // Error Boundary Component
@@ -81,23 +81,39 @@ export default function AutomationPanel() {
     setAutomations(prev => prev.filter(a => a.id !== id));
   };
 
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
   if (selectedFlow) {
     return (
-      <div className="w-full h-[calc(100vh-220px)] min-h-[600px] rounded-2xl overflow-hidden border border-slate-200 shadow-sm animate-fade-in flex flex-col bg-white">
-        <div className="h-16 border-b border-slate-200 flex items-center px-4 shrink-0 bg-slate-50 gap-4">
-          <button 
-            onClick={() => { setSelectedFlow(null); fetchAutomations(); }}
-            className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200 rounded-lg transition-colors border border-transparent hover:border-slate-300"
-          >
-            <ArrowLeft className="w-4 h-4" /> Voltar
-          </button>
-          <div className="h-8 w-px bg-slate-300"></div>
-          <div>
-            <h2 className="font-bold text-slate-800">{selectedFlow.nome}</h2>
-            <p className="text-[10px] text-slate-500 uppercase tracking-widest">
-              {selectedFlow.ativo ? '🟢 Activo' : '⚪ Inactivo'}
-            </p>
+      <div className={
+        isFullscreen 
+          ? "fixed inset-0 z-[100] bg-slate-50 flex flex-col animate-in fade-in zoom-in-95 duration-200" 
+          : "w-full h-[calc(100vh-220px)] min-h-[600px] rounded-2xl overflow-hidden border border-slate-200 shadow-sm animate-fade-in flex flex-col bg-white"
+      }>
+        <div className="h-16 border-b border-slate-200 flex items-center justify-between px-4 shrink-0 bg-slate-50">
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => { setSelectedFlow(null); fetchAutomations(); }}
+              className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200 rounded-lg transition-colors border border-transparent hover:border-slate-300"
+            >
+              <ArrowLeft className="w-4 h-4" /> Voltar
+            </button>
+            <div className="h-8 w-px bg-slate-300"></div>
+            <div>
+              <h2 className="font-bold text-slate-800">{selectedFlow.nome}</h2>
+              <p className="text-[10px] text-slate-500 uppercase tracking-widest">
+                {selectedFlow.ativo ? '🟢 Activo' : '⚪ Inactivo'}
+              </p>
+            </div>
           </div>
+          <button
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-600 hover:text-sky-600 hover:bg-sky-50 rounded-lg transition-colors border border-transparent hover:border-sky-200"
+            title={isFullscreen ? "Sair do Modo Tela Cheia" : "Modo Tela Cheia"}
+          >
+            {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+            <span className="hidden sm:inline">{isFullscreen ? "Minimizar" : "Tela Cheia"}</span>
+          </button>
         </div>
         <div className="flex-1 w-full h-full relative">
           <AutomationErrorBoundary>
