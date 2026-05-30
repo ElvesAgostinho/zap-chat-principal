@@ -104,6 +104,8 @@ function AppRoutes() {
 
 
 
+import WhatsAppSupport from "./components/WhatsAppSupport";
+
 const App = () => {
   // Enforce Light Theme universally (Manychat Clone)
   if (typeof document !== 'undefined') {
@@ -121,6 +123,7 @@ const App = () => {
           <AuthProvider>
             <AppRoutes />
           </AuthProvider>
+          <WhatsAppSupport />
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
