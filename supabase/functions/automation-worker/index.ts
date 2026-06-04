@@ -255,7 +255,7 @@ Deno.serve(async (req) => {
         else if (nextNode.type === 'notifyNode') {
           const alertMsg = nextNode.data?.label || 'Lead precisa de atenção!';
           await supabase.from('leads').update({ precisa_humano: true }).eq('id', lead.id);
-          await supabase.from('mensagens').insert({ lead_id: lead.id, lead_nome: lead.nome, conteudo: `[SISTEMA] 🔔 ${alertMsg}`, tipo: 'enviada', is_bot: true, loja_id: store.id });
+          await supabase.from('mensagens').insert({ lead_id: lead.id, lead_nome: lead.nome, conteudo: `[SISTEMA] [ALERTA] ${alertMsg}`, tipo: 'enviada', is_bot: true, loja_id: store.id });
         }
         
         // Go to next node

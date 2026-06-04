@@ -83,14 +83,14 @@ async function notifyAdminEscalation(
 
 function extractMedia(message: any): { label: string; type: string; mediaObj: any } | null {
   if (!message) return null;
-  if (message.imageMessage) return { label: '📷 Imagem', type: 'image', mediaObj: message.imageMessage };
-  if (message.videoMessage) return { label: '📹 Vídeo', type: 'video', mediaObj: message.videoMessage };
-  if (message.audioMessage) return { label: '🎵 Áudio', type: 'audio', mediaObj: message.audioMessage };
-  if (message.pttMessage) return { label: '🎵 Áudio', type: 'audio', mediaObj: message.pttMessage };
-  if (message.documentMessage) return { label: '📄 Documento', type: 'document', mediaObj: message.documentMessage };
-  if (message.stickerMessage) return { label: '🏷️ Sticker', type: 'image', mediaObj: message.stickerMessage };
-  if (message.contactMessage || message.contactsArrayMessage) return { label: '👤 Contacto', type: 'document', mediaObj: null };
-  if (message.locationMessage || message.liveLocationMessage) return { label: '📍 Localização', type: 'document', mediaObj: null };
+  if (message.imageMessage) return { label: '[FOTO] Imagem', type: 'image', mediaObj: message.imageMessage };
+  if (message.videoMessage) return { label: '[VIDEO] Vídeo', type: 'video', mediaObj: message.videoMessage };
+  if (message.audioMessage) return { label: '[AUDIO] Áudio', type: 'audio', mediaObj: message.audioMessage };
+  if (message.pttMessage) return { label: '[AUDIO] Áudio', type: 'audio', mediaObj: message.pttMessage };
+  if (message.documentMessage) return { label: '[DOC] Documento', type: 'document', mediaObj: message.documentMessage };
+  if (message.stickerMessage) return { label: '[STICKER] Sticker', type: 'image', mediaObj: message.stickerMessage };
+  if (message.contactMessage || message.contactsArrayMessage) return { label: '[CONTATO] Contacto', type: 'document', mediaObj: null };
+  if (message.locationMessage || message.liveLocationMessage) return { label: '[LOCAL] Localização', type: 'document', mediaObj: null };
   return null;
 }
 
@@ -354,7 +354,7 @@ Deno.serve(async (req: any) => {
         } else {
           isFirstMessage = true;
           const { data: newLead } = await supabase.from('leads').insert({ nome: pushName || phone, telefone: phone, fonte: 'whatsapp', loja_id: storeId, interesse: messageText || 'Primeiro contacto', status: 'novo', bot_enabled: true, controle_conversa: 'bot', precisa_humano: false, tags: ['novo'] }).select('id').single();
-          if (newLead) { leadId = newLead.id; leadControle = 'bot'; fetchProfileInfo(supabase, baseUrl, instanceName, EVOLUTION_API_KEY, phone, newLead.id, storeId); }
+          if (newLead) { leadId = newLead.id; leadControle = 'bot'; fetchProfileInfo(supabase, baseUrl, instanceName, EVOLUTION_API_KEY as string, phone, newLead.id, storeId); }
         }
       } else {
         const { data: existingLead } = await supabase.from('leads').select('id, nome').eq('telefone', phone).eq('loja_id', storeId).maybeSingle();
@@ -477,6 +477,11 @@ Deno.serve(async (req: any) => {
             let nextNode = nodes.find((n: any) => n.id === startingNodeId);
             let visitedNodes = new Set();
             let executionSteps = 0;
+            const getNextNode = (currentId: string) => {
+              const edgeOut = edges.find((e: any) => e.source === currentId);
+              if (edgeOut) return nodes.find((n: any) => n.id === edgeOut.target);
+              return null;
+            };
             
             while (nextNode) {
               if (visitedNodes.has(nextNode.id) || executionSteps > 50) {
@@ -633,7 +638,7 @@ Deno.serve(async (req: any) => {
                     // Notificar equipa — cria alerta no painel
                     const alertMsg = nextNode.data?.label || 'Lead precisa de atenção!';
                     await supabase.from('leads').update({ precisa_humano: true }).eq('id', leadId);
-                    await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: `[SISTEMA] 🔔 ${alertMsg}`, tipo: 'enviada', is_bot: true, loja_id: storeId });
+                    await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: `[SISTEMA] [ALERTA] ${alertMsg}`, tipo: 'enviada', is_bot: true, loja_id: storeId });
                     console.log(`[webhook] notifyNode: Alerta criado para lead ${leadId}`);
                   }
                   else if (nextNode.type === 'inputNode') {
@@ -772,8 +777,6 @@ Deno.serve(async (req: any) => {
                   await new Promise(r => setTimeout(r, 600)); // Sleep para não dar spam na API
                 }
               }
-            }
-          }
           // --------------------------------------------------------------------------------
 
           // Só executa escalation se nenhuma automação foi executada
@@ -783,7 +786,7 @@ Deno.serve(async (req: any) => {
             }
             if (escalation.shouldEscalate && escalation.reason) {
               await supabase.from('leads').update({ controle_conversa: 'humano', precisa_humano: true, bot_enabled: false }).eq('id', leadId);
-              const transitionMsg = ESCALATION_MESSAGES[escalation.reason] || 'Vou transferir para um atendente 😊';
+              const transitionMsg = ESCALATION_MESSAGES[escalation.reason] || 'Vou transferir para um atendente :-)';
               await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
                 body: JSON.stringify({ number: phone, text: transitionMsg }),
