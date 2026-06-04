@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
           const falseEdge = edges.find((e: any) => e.source === nextNode.id && String(e.sourceHandle).includes('false'));
           
           let targetEdge = conditionMet ? trueEdge : falseEdge;
-          if (!targetEdge) targetEdge = edges.find((e: any) => e.source === nextNode.id);
+          // Removed fallback to prevent executing true path when condition is false
           
           if (targetEdge) {
             nextNode = nodes.find((n: any) => n.id === targetEdge.target);
