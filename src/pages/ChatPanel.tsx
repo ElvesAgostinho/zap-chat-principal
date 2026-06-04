@@ -228,6 +228,10 @@ export default function ChatPanel() {
     setInput('');
     setSending(true);
 
+    if (controleConversa !== 'humano') {
+      assumeConversation();
+    }
+
     try {
       let mediaUrl: string | null = null;
       let mediaType: string | null = null;
