@@ -223,8 +223,7 @@ const defaultNodes = [
   }
 ];
 
-let id = 0;
-const getId = () => `dndnode_${id++}`;
+const getId = () => `node_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
 
 function DnDPanel() {
   const onDragStart = (event: DragEvent<HTMLDivElement>, nodeType: string, label: string) => {
