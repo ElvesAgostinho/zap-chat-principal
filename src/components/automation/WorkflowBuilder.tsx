@@ -183,7 +183,6 @@ const HelpModalContent = () => (
 );
 
 
-// Custom nodes
 import TriggerNode from './nodes/TriggerNode';
 import MessageNode from './nodes/MessageNode';
 import ActionNode from './nodes/ActionNode';
@@ -195,6 +194,9 @@ import WebhookNode from './nodes/WebhookNode';
 import RandomizerNode from './nodes/RandomizerNode';
 import JumpNode from './nodes/JumpNode';
 import NotifyNode from './nodes/NotifyNode';
+import StopNode from './nodes/StopNode';
+import TimerNode from './nodes/TimerNode';
+import { StopCircle, AlarmClock } from 'lucide-react';
 
 const nodeTypes: NodeTypes = {
   triggerNode: TriggerNode,
@@ -208,6 +210,8 @@ const nodeTypes: NodeTypes = {
   randomizerNode: RandomizerNode,
   jumpNode: JumpNode,
   notifyNode: NotifyNode,
+  stopNode: StopNode,
+  timerNode: TimerNode,
 };
 
 const defaultNodes = [
@@ -241,6 +245,8 @@ function DnDPanel() {
     { type: 'notifyNode', label: 'Notificar', icon: BellRing, color: 'text-rose-500', bg: 'bg-rose-50', desc: 'Alerta a tua equipa no painel' },
     { type: 'webhookNode', label: 'Webhook', icon: Webhook, color: 'text-purple-500', bg: 'bg-purple-50', desc: 'Envia dados para APIs externas ou Make' },
     { type: 'jumpNode', label: 'Ir para Fluxo', icon: ArrowRightCircle, color: 'text-teal-500', bg: 'bg-teal-50', desc: 'Ligar a outra automação' },
+    { type: 'timerNode', label: 'Agendar', icon: AlarmClock, color: 'text-orange-500', bg: 'bg-orange-50', desc: 'Agenda execução para hora fixa' },
+    { type: 'stopNode', label: 'Parar Fluxo', icon: StopCircle, color: 'text-red-500', bg: 'bg-red-50', desc: 'Termina automação imediatamente' },
   ];
 
   return (
@@ -362,6 +368,8 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
       if (type === 'webhookNode') label = 'Webhook Request';
       if (type === 'randomizerNode') label = 'A/B Test';
       if (type === 'jumpNode') label = 'Saltar Fluxo';
+      if (type === 'stopNode') label = 'Parar Automação';
+      if (type === 'timerNode') label = 'Agendar para as 09:00';
 
       const newNode = {
         id: getId(),
@@ -462,7 +470,7 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
           <div className="space-y-4">
             
             {/* COMMON LABEL */}
-            {!['delayNode', 'randomizerNode', 'webhookNode', 'jumpNode'].includes(selectedNode.type) && (
+            {!['delayNode', 'randomizerNode', 'webhookNode', 'jumpNode', 'stopNode', 'timerNode', 'triggerNode'].includes(selectedNode.type) && (
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
                   {selectedNode.type === 'messageNode' ? 'Mensagem' : 
@@ -643,14 +651,78 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
                   <option value="phone_exists">Já guardámos o Telefone</option>
                   <option value="match_exact">A mensagem do cliente for igual a</option>
                   <option value="match_contains">A mensagem do cliente tiver a palavra</option>
+                  <option value="has_status">Status do Lead for igual a</option>
+                  <option value="not_status">Status do Lead for diferente de</option>
+                  <option value="hour_between">Hora do dia estiver entre</option>
+                  <option value="day_of_week">Dia da semana for (1-7)</option>
+                  <option value="var_equals">Variável guardada for igual a</option>
                 </select>
                 <input 
                   type="text"
                   className="w-full border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
                   value={(selectedNode.data.conditionValue as string) || ''}
-                  onChange={(e) => updateNodeData('conditionValue', e.target.value)}
-                  placeholder="Ex: VIP, ou '1', ou 'preço'"
+                  onChange={(e) => {
+                    updateNodeData('conditionValue', e.target.value);
+                    const t = (selectedNode.data.conditionType as string) || 'has_tag';
+                    if (t === 'hour_between') updateNodeLabel(`Hora entre: ${e.target.value}`);
+                    else if (t === 'day_of_week') updateNodeLabel(`Dia for: ${e.target.value}`);
+                    else if (t === 'var_equals') updateNodeLabel(`Variável = ${e.target.value}`);
+                    else if (t === 'match_exact') updateNodeLabel(`Msg exata: ${e.target.value}`);
+                    else updateNodeLabel(`Condição: ${e.target.value}`);
+                  }}
+                  placeholder="Ex: VIP, ou '09:00-18:00', ou '1-5'"
                 />
+              </div>
+            )}
+
+            {/* TRIGGER SPECIFIC */}
+            {selectedNode.type === 'triggerNode' && (
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Tipo de Gatilho</label>
+                <select
+                  className="w-full border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 mb-3"
+                  value={(selectedNode.data.triggerType as string) || 'keyword'}
+                  onChange={(e) => updateNodeData('triggerType', e.target.value)}
+                >
+                  <option value="keyword">Palavra-chave Exata/Parcial</option>
+                  <option value="any_message">Qualquer mensagem (Catch-all)</option>
+                  <option value="first_message">Primeira mensagem (Novo lead)</option>
+                  <option value="tag_added">Quando Etiqueta for adicionada</option>
+                </select>
+                
+                {(!selectedNode.data.triggerType || selectedNode.data.triggerType === 'keyword' || selectedNode.data.triggerType === 'tag_added') && (
+                  <>
+                    <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">
+                      {(selectedNode.data.triggerType === 'tag_added') ? 'Nome da Etiqueta' : 'Palavras-chave (separadas por vírgula)'}
+                    </label>
+                    <input 
+                      type="text"
+                      className="w-full border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      value={selectedNode.data.label as string}
+                      onChange={(e) => updateNodeLabel(e.target.value)}
+                      placeholder={selectedNode.data.triggerType === 'tag_added' ? "Ex: comprou" : "Ex: preco, comprar, ajuda"}
+                    />
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* TIMER SPECIFIC */}
+            {selectedNode.type === 'timerNode' && (
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Hora Agendada</label>
+                <input 
+                  type="time"
+                  className="w-full border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 font-mono"
+                  value={(selectedNode.data.time as string) || '09:00'}
+                  onChange={(e) => {
+                    updateNodeData('time', e.target.value);
+                    updateNodeLabel(`Agendar para as ${e.target.value}`);
+                  }}
+                />
+                <p className="text-[10px] text-slate-500 mt-2">
+                  O fluxo vai pausar e retomar exatamente a esta hora.
+                </p>
               </div>
             )}
 

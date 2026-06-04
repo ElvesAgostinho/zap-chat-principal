@@ -64,10 +64,23 @@ Deno.serve(async (req) => {
         visitedNodes.add(nextNode.id);
         executionSteps++;
 
-        if (nextNode.type === 'messageNode' || nextNode.type === 'notifyNode' || nextNode.type === 'inputNode') {
-          let msgText = nextNode.data?.label || '';
-          msgText = msgText.replace(/\\{\\{nome\\}\\}/g, lead.nome || 'Cliente');
-          if (msgText) {
+        // Replaces text with variables
+        const parseVariables = async (text: string, lId: string) => {
+          if (!text || !text.includes('{{')) return text;
+          const { data: ld } = await supabase.from('leads').select('nome, variaveis').eq('id', lId).single();
+          let result = text.replace(/{{nome}}/g, ld?.nome || '');
+          if (ld?.variaveis) {
+            for (const [key, value] of Object.entries(ld.variaveis)) {
+              result = result.replace(new RegExp(`{{${key}}}`, 'g'), String(value));
+            }
+          }
+          return result;
+        };
+
+        if (nextNode.type === 'messageNode') {
+          let msgTextRaw = nextNode.data?.label || '';
+          if (msgTextRaw) {
+            const msgText = await parseVariables(msgTextRaw, lead.id);
             await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
               method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
               body: JSON.stringify({ number: phone, text: msgText, options: { delay: 1500, presence: 'composing' } }),
@@ -128,15 +141,38 @@ Deno.serve(async (req) => {
           const conditionValue = nextNode.data?.conditionValue;
           let conditionMet = false;
           
-          const { data: leadData } = await supabase.from('leads').select('tags, telefone').eq('id', lead.id).single();
+          const { data: leadData } = await supabase.from('leads').select('tags, telefone, status, variaveis').eq('id', lead.id).single();
           if (conditionType === 'has_tag') {
             conditionMet = (leadData?.tags || []).includes(conditionValue);
           } else if (conditionType === 'no_tag') {
             conditionMet = !(leadData?.tags || []).includes(conditionValue);
           } else if (conditionType === 'phone_exists') {
             conditionMet = !!leadData?.telefone;
+          } else if (conditionType === 'has_status') {
+            conditionMet = (leadData?.status || '').toLowerCase() === conditionValue.trim().toLowerCase();
+          } else if (conditionType === 'not_status') {
+            conditionMet = (leadData?.status || '').toLowerCase() !== conditionValue.trim().toLowerCase();
+          } else if (conditionType === 'hour_between') {
+            const [start, end] = conditionValue.split('-');
+            if (start && end) {
+              const currentHour = new Date().getHours() + (new Date().getMinutes() / 60);
+              const [sH, sM] = start.split(':').map(Number);
+              const [eH, eM] = end.split(':').map(Number);
+              const sT = sH + (sM || 0)/60;
+              const eT = eH + (eM || 0)/60;
+              conditionMet = (currentHour >= sT && currentHour <= eT);
+            }
+          } else if (conditionType === 'day_of_week') {
+            const day = new Date().getDay();
+            const cDay = Number(conditionValue);
+            conditionMet = (day === cDay);
+          } else if (conditionType === 'var_equals') {
+            const [vName, vVal] = conditionValue.split('=');
+            if (vName && vVal && leadData?.variaveis) {
+              conditionMet = String(leadData.variaveis[vName.trim()]).toLowerCase() === vVal.trim().toLowerCase();
+            }
           }
-          // match_exact/match_contains cannot be evaluated on a delayed node since we don't have a message text!
+          // match_exact/match_contains always false in worker since there's no incoming message text.
           
           const trueEdge = edges.find((e: any) => e.source === nextNode.id && String(e.sourceHandle).includes('true'));
           const falseEdge = edges.find((e: any) => e.source === nextNode.id && String(e.sourceHandle).includes('false'));
@@ -174,6 +210,52 @@ Deno.serve(async (req) => {
             });
           }
           break; // Stop and wait for the NEXT worker
+        }
+        else if (nextNode.type === 'inputNode') {
+          const questionRaw = nextNode.data?.label || '';
+          if (questionRaw) {
+            const question = await parseVariables(questionRaw, lead.id);
+            await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
+              body: JSON.stringify({ number: phone, text: question, options: { delay: 1500, presence: 'composing' } }),
+            });
+            await supabase.from('mensagens').insert({ lead_id: lead.id, lead_nome: lead.nome, conteudo: question, tipo: 'enviada', is_bot: true, loja_id: store.id });
+            try {
+              await supabase.from('automacoes_pendentes').insert({
+                lead_id: lead.id, loja_id: store.id, automacao_id: auto.id,
+                node_id: nextNode.id, status: 'waiting_input', execute_at: new Date('2099-12-31').toISOString()
+              });
+            } catch (e) {
+              console.warn('[worker] Erro inputNode:', e);
+            }
+          }
+          break; // Stop and wait for user reply
+        }
+        else if (nextNode.type === 'stopNode') {
+          await supabase.from('leads').update({ controle_conversa: 'humano' }).eq('id', lead.id);
+          break;
+        }
+        else if (nextNode.type === 'timerNode') {
+          const timeStr = nextNode.data?.time || '09:00';
+          const [tH, tM] = timeStr.split(':').map(Number);
+          let targetDate = new Date();
+          targetDate.setHours(tH, tM, 0, 0);
+          if (targetDate <= new Date()) {
+            targetDate.setDate(targetDate.getDate() + 1); // Amanhã
+          }
+          const edgeAfterDelay = edges.find((e: any) => e.source === nextNode.id);
+          if (edgeAfterDelay) {
+            await supabase.from('automacoes_pendentes').insert({
+              lead_id: lead.id, loja_id: store.id, automacao_id: auto.id,
+              node_id: edgeAfterDelay.target, execute_at: targetDate.toISOString()
+            });
+          }
+          break;
+        }
+        else if (nextNode.type === 'notifyNode') {
+          const alertMsg = nextNode.data?.label || 'Lead precisa de atenção!';
+          await supabase.from('leads').update({ precisa_humano: true }).eq('id', lead.id);
+          await supabase.from('mensagens').insert({ lead_id: lead.id, lead_nome: lead.nome, conteudo: `[SISTEMA] 🔔 ${alertMsg}`, tipo: 'enviada', is_bot: true, loja_id: store.id });
         }
         
         // Go to next node

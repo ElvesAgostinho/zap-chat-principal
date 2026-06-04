@@ -333,15 +333,15 @@ Deno.serve(async (req: any) => {
       let persistedMediaType: string | null = media?.type || null;
       const rawUrlString = EVOLUTION_API_URL ? EVOLUTION_API_URL.replace(/\/+$/, '') : '';
       const baseUrl = rawUrlString.startsWith('http') ? rawUrlString : `https://${rawUrlString}`;
-
       if (media && media.mediaObj && EVOLUTION_API_KEY && EVOLUTION_API_URL && messageId) {
         persistedMediaUrl = await persistMedia(supabase, baseUrl, instanceName, EVOLUTION_API_KEY, messageId, media.type, storeId, media.mediaObj);
       }
 
-      let leadId: string | null = null;
+      let leadId = null;
       let leadName = pushName || phone;
-      let leadControle: string = 'bot';
-      let leadBotEnabled: boolean = true;
+      let leadControle = 'bot';
+      let leadBotEnabled = true;
+      let isFirstMessage = false;
 
       if (!fromMe) {
         const { data: existingLead } = await supabase.from('leads').select('id, nome, controle_conversa, bot_enabled').eq('telefone', phone).eq('loja_id', storeId).maybeSingle();
@@ -352,6 +352,7 @@ Deno.serve(async (req: any) => {
           if (existingLead.bot_enabled === false) leadBotEnabled = false;
           await supabase.from('leads').update({ followup_count: 0, ultimo_followup: null }).eq('id', leadId);
         } else {
+          isFirstMessage = true;
           const { data: newLead } = await supabase.from('leads').insert({ nome: pushName || phone, telefone: phone, fonte: 'whatsapp', loja_id: storeId, interesse: messageText || 'Primeiro contacto', status: 'novo', bot_enabled: true, controle_conversa: 'bot', precisa_humano: false, tags: ['novo'] }).select('id').single();
           if (newLead) { leadId = newLead.id; leadControle = 'bot'; fetchProfileInfo(supabase, baseUrl, instanceName, EVOLUTION_API_KEY, phone, newLead.id, storeId); }
         }
@@ -375,67 +376,120 @@ Deno.serve(async (req: any) => {
           // AUTOMATION ENGINE (ZAP CHAT FLOWS)
           // --------------------------------------------------------------------------------
           let automationExecuted = false;
+          let matchedAuto = null;
+          let startingNodeId = null;
           
-          const { data: activeAutomations } = await supabase
-            .from('automacoes')
-            .select('*')
-            .eq('loja_id', storeId)
-            .eq('ativo', true);
-            
-          if (activeAutomations && activeAutomations.length > 0) {
-            let matchedAuto = null;
-            const msgLower = textForEscalation.toLowerCase();
-
-            // 1. Procurar correspondências exatas/específicas primeiro
-            matchedAuto = activeAutomations.find((a: any) => {
-              if (!a.trigger_keyword || a.trigger_keyword.trim() === '') return false;
-              const kws = a.trigger_keyword.split(',').map((k: string) => k.trim().toLowerCase());
-              if (kws.includes('*')) return false; // Ignorar wildcard nesta fase
-              return kws.some((kw: string) => msgLower.includes(kw));
-            });
-
-            // 2. Se nenhuma específica for encontrada, procurar automações 'catch-all' (sem palavra-chave ou com '*')
-            if (!matchedAuto) {
-              matchedAuto = activeAutomations.find((a: any) => {
-                if (!a.trigger_keyword || a.trigger_keyword.trim() === '') return true; // Aceita se não tiver palavra-chave
-                const kws = a.trigger_keyword.split(',').map((k: string) => k.trim().toLowerCase());
-                return kws.includes('*');
-              });
-            }
-
-            if (matchedAuto) {
+          // 0. Check if lead is waiting for input
+          const { data: waitingInput } = await supabase.from('automacoes_pendentes').select('*').eq('lead_id', leadId).eq('loja_id', storeId).eq('status', 'waiting_input').maybeSingle();
+          
+          if (waitingInput) {
+            // Retrieve automation and node
+            const { data: resumeAuto } = await supabase.from('automacoes').select('*').eq('id', waitingInput.automacao_id).single();
+            if (resumeAuto) {
+              matchedAuto = resumeAuto;
               automationExecuted = true;
-              console.log(`[webhook] Executando Automação: ${matchedAuto.nome}`);
+              console.log(`[webhook] Retomando Automação ${matchedAuto.nome} do nó ${waitingInput.node_id}`);
               
+              // Find the inputNode to get variable name
               const nodes = matchedAuto.nodes || [];
+              const inputNode = nodes.find((n: any) => n.id === waitingInput.node_id);
+              if (inputNode) {
+                const varName = inputNode.data?.variable || 'resposta';
+                // Save answer to variaveis
+                const { data: leadData } = await supabase.from('leads').select('variaveis').eq('id', leadId).single();
+                const vars = leadData?.variaveis || {};
+                vars[varName] = messageText;
+                await supabase.from('leads').update({ variaveis: vars }).eq('id', leadId);
+              }
+              
+              // Clear pending task
+              await supabase.from('automacoes_pendentes').delete().eq('id', waitingInput.id);
+              
+              // Start from the edge OUT of the inputNode
               const edges = matchedAuto.edges || [];
+              const edgeOut = edges.find((e: any) => e.source === waitingInput.node_id);
+              if (edgeOut) {
+                startingNodeId = edgeOut.target;
+              } else {
+                matchedAuto = null; // Nowhere to go
+              }
+            } else {
+              await supabase.from('automacoes_pendentes').delete().eq('id', waitingInput.id);
+            }
+          }
+          
+          if (!matchedAuto) {
+            const { data: activeAutomations } = await supabase
+              .from('automacoes')
+              .select('*')
+              .eq('loja_id', storeId)
+              .eq('ativo', true);
               
-              const triggerNode = nodes.find((n: any) => n.type === 'triggerNode');
-              
-              if (triggerNode) {
-                let currentNodeId = triggerNode.id;
-                
-                const getNextNode = (sourceId: string) => {
-                  const edge = edges.find((e: any) => e.source === sourceId);
-                  if (edge) return nodes.find((n: any) => n.id === edge.target);
-                  return null;
-                };
+            if (activeAutomations && activeAutomations.length > 0) {
+              const msgLower = textForEscalation.toLowerCase();
 
-                let nextNode = getNextNode(currentNodeId);
-                let visitedNodes = new Set();
-                let executionSteps = 0;
+              matchedAuto = activeAutomations.find((a: any) => {
+                const triggerNode = (a.nodes || []).find((n: any) => n.type === 'triggerNode');
+                if (!triggerNode) return false;
                 
-                while (nextNode) {
-                  if (visitedNodes.has(nextNode.id) || executionSteps > 50) {
-                    console.log(`[webhook] Loop detetado ou limite excedido (nó ${nextNode.id}). Interrompendo automação para evitar falha.`);
+                const tType = triggerNode.data?.triggerType || 'keyword';
+                
+                if (tType === 'first_message') return isFirstMessage;
+                if (tType === 'any_message') return true;
+                if (tType === 'tag_added') return false; // Handled elsewhere
+                
+                // keyword logic
+                const keywordLabel = triggerNode.data?.label || a.trigger_keyword;
+                if (!keywordLabel || keywordLabel.trim() === '') return false;
+                const kws = keywordLabel.split(',').map((k: string) => k.trim().toLowerCase());
+                if (kws.includes('*')) return true;
+                return kws.some((kw: string) => msgLower.includes(kw));
+              });
+              
+              if (matchedAuto) {
+                const triggerNode = matchedAuto.nodes.find((n: any) => n.type === 'triggerNode');
+                const edgeOut = matchedAuto.edges.find((e: any) => e.source === triggerNode?.id);
+                if (edgeOut) startingNodeId = edgeOut.target;
+              }
+            }
+          }
+
+          if (matchedAuto && startingNodeId) {
+            automationExecuted = true;
+            console.log(`[webhook] Executando Automação: ${matchedAuto.nome}`);
+            
+            const nodes = matchedAuto.nodes || [];
+            const edges = matchedAuto.edges || [];
+            
+            // Replaces text with variables
+            const parseVariables = async (text: string, lId: string) => {
+              if (!text || !text.includes('{{')) return text;
+              const { data: ld } = await supabase.from('leads').select('nome, variaveis').eq('id', lId).single();
+              let result = text.replace(/{{nome}}/g, ld?.nome || '');
+              if (ld?.variaveis) {
+                for (const [key, value] of Object.entries(ld.variaveis)) {
+                  result = result.replace(new RegExp(`{{${key}}}`, 'g'), String(value));
+                }
+              }
+              return result;
+            };
+
+            let nextNode = nodes.find((n: any) => n.id === startingNodeId);
+            let visitedNodes = new Set();
+            let executionSteps = 0;
+            
+            while (nextNode) {
+              if (visitedNodes.has(nextNode.id) || executionSteps > 50) {
+                console.log(`[webhook] Loop detetado ou limite excedido (nó ${nextNode.id}). Interrompendo automação para evitar falha.`);
                     break;
                   }
                   visitedNodes.add(nextNode.id);
                   executionSteps++;
 
                   if (nextNode.type === 'messageNode') {
-                    const msgText = nextNode.data?.label || '';
-                    if (msgText) {
+                    const msgTextRaw = nextNode.data?.label || '';
+                    if (msgTextRaw) {
+                      const msgText = await parseVariables(msgTextRaw, leadId);
                       await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
                         method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
                         body: JSON.stringify({ number: phone, text: msgText, options: { delay: 1500, presence: 'composing' } }),
@@ -496,7 +550,7 @@ Deno.serve(async (req: any) => {
                     const conditionValue = nextNode.data?.conditionValue;
                     let conditionMet = false;
                     
-                    const { data: leadData } = await supabase.from('leads').select('tags, telefone').eq('id', leadId).single();
+                    const { data: leadData } = await supabase.from('leads').select('tags, telefone, status, variaveis').eq('id', leadId).single();
                     if (conditionType === 'has_tag') {
                       conditionMet = (leadData?.tags || []).includes(conditionValue);
                     } else if (conditionType === 'no_tag') {
@@ -507,6 +561,30 @@ Deno.serve(async (req: any) => {
                       conditionMet = messageText.trim().toLowerCase() === conditionValue.trim().toLowerCase();
                     } else if (conditionType === 'match_contains') {
                       conditionMet = messageText.trim().toLowerCase().includes(conditionValue.trim().toLowerCase());
+                    } else if (conditionType === 'has_status') {
+                      conditionMet = (leadData?.status || '').toLowerCase() === conditionValue.trim().toLowerCase();
+                    } else if (conditionType === 'not_status') {
+                      conditionMet = (leadData?.status || '').toLowerCase() !== conditionValue.trim().toLowerCase();
+                    } else if (conditionType === 'hour_between') {
+                      const [start, end] = conditionValue.split('-');
+                      if (start && end) {
+                        const currentHour = new Date().getHours() + (new Date().getMinutes() / 60);
+                        const [sH, sM] = start.split(':').map(Number);
+                        const [eH, eM] = end.split(':').map(Number);
+                        const sT = sH + (sM || 0)/60;
+                        const eT = eH + (eM || 0)/60;
+                        conditionMet = (currentHour >= sT && currentHour <= eT);
+                      }
+                    } else if (conditionType === 'day_of_week') {
+                      const day = new Date().getDay(); // 0-6 (Sun-Sat)
+                      const cDay = Number(conditionValue);
+                      conditionMet = (day === cDay);
+                    } else if (conditionType === 'var_equals') {
+                      // Format expected: "varName=value"
+                      const [vName, vVal] = conditionValue.split('=');
+                      if (vName && vVal && leadData?.variaveis) {
+                        conditionMet = String(leadData.variaveis[vName.trim()]).toLowerCase() === vVal.trim().toLowerCase();
+                      }
                     }
                     
                     const trueEdge = edges.find((e: any) => e.source === nextNode.id && String(e.sourceHandle).includes('true'));
@@ -560,22 +638,48 @@ Deno.serve(async (req: any) => {
                   }
                   else if (nextNode.type === 'inputNode') {
                     // Pedir input — envia a pergunta e para o fluxo (espera resposta na próxima mensagem)
-                    const question = nextNode.data?.label || '';
-                    const varName = nextNode.data?.variable || 'resposta';
-                    if (question) {
+                    const questionRaw = nextNode.data?.label || '';
+                    if (questionRaw) {
+                      const question = await parseVariables(questionRaw, leadId);
                       await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
                         method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
                         body: JSON.stringify({ number: phone, text: question, options: { delay: 1500, presence: 'composing' } }),
                       });
                       await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: question, tipo: 'enviada', is_bot: true, loja_id: storeId });
-                      // Guardar estado de espera de input
+                      // Guardar estado de espera de input em automacoes_pendentes
                       try {
-                        await supabase.from('leads').update({ interesse: `aguardando_input:${varName}` }).eq('id', leadId);
+                        await supabase.from('automacoes_pendentes').insert({
+                          lead_id: leadId, loja_id: storeId, automacao_id: matchedAuto.id,
+                          node_id: nextNode.id, status: 'waiting_input', execute_at: new Date('2099-12-31').toISOString()
+                        });
                       } catch (e) {
                         console.warn('[webhook] Não foi possível guardar estado de input:', e);
                       }
                     }
                     break; // Para o fluxo — continua quando o cliente responder
+                  }
+                  else if (nextNode.type === 'stopNode') {
+                    console.log(`[webhook] stopNode atingido. Terminando fluxo e devolvendo controlo.`);
+                    await supabase.from('leads').update({ controle_conversa: 'humano' }).eq('id', leadId);
+                    break;
+                  }
+                  else if (nextNode.type === 'timerNode') {
+                    const timeStr = nextNode.data?.time || '09:00';
+                    const [tH, tM] = timeStr.split(':').map(Number);
+                    let targetDate = new Date();
+                    targetDate.setHours(tH, tM, 0, 0);
+                    if (targetDate <= new Date()) {
+                      targetDate.setDate(targetDate.getDate() + 1); // Amanhã
+                    }
+                    const edgeAfterDelay = edges.find((e: any) => e.source === nextNode.id);
+                    if (edgeAfterDelay) {
+                      await supabase.from('automacoes_pendentes').insert({
+                        lead_id: leadId, loja_id: storeId, automacao_id: matchedAuto.id,
+                        node_id: edgeAfterDelay.target, execute_at: targetDate.toISOString()
+                      });
+                      console.log(`[webhook] timerNode agendou para ${targetDate.toISOString()}`);
+                    }
+                    break;
                   }
                   else if (nextNode.type === 'randomizerNode') {
                     // Teste A/B — divide aleatoriamente

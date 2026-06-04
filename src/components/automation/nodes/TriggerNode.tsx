@@ -33,8 +33,18 @@ export default function TriggerNode({ id, data }: { id: string, data: any }) {
         <span className="text-xs font-bold text-[#1da650] uppercase tracking-wider">Gatilho Inicial</span>
       </div>
       <div className="p-4 bg-white">
-        <p className="text-sm font-medium text-slate-700">{data.label}</p>
-        <p className="text-xs text-slate-500 mt-1">Quando um cliente enviar esta mensagem, o fluxo começa.</p>
+        <p className="text-sm font-medium text-slate-700">
+          {data.triggerType === 'any_message' ? 'Qualquer mensagem recebida' : 
+           data.triggerType === 'first_message' ? 'Primeira mensagem do lead' : 
+           data.triggerType === 'tag_added' ? `Etiqueta adicionada: ${data.label}` :
+           data.label || 'Palavra-chave'}
+        </p>
+        <p className="text-xs text-slate-500 mt-1">
+          {data.triggerType === 'any_message' ? 'O fluxo começa com qualquer mensagem.' : 
+           data.triggerType === 'first_message' ? 'O fluxo começa no primeiro contato.' : 
+           data.triggerType === 'tag_added' ? 'O fluxo começa quando esta etiqueta for adicionada.' :
+           'Quando o cliente enviar isto, o fluxo começa.'}
+        </p>
       </div>
       </div>
       <Handle 
