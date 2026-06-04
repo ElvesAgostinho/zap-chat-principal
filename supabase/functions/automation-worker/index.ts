@@ -47,8 +47,8 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const nodes = Array.isArray(auto.flow_data?.nodes) ? auto.flow_data.nodes : [];
-      const edges = Array.isArray(auto.flow_data?.edges) ? auto.flow_data.edges : [];
+      const nodes = Array.isArray(auto.nodes) ? auto.nodes : (Array.isArray(auto.flow_data?.nodes) ? auto.flow_data.nodes : []);
+      const edges = Array.isArray(auto.edges) ? auto.edges : (Array.isArray(auto.flow_data?.edges) ? auto.flow_data.edges : []);
 
       let nextNode = nodes.find((n: any) => n.id === startNodeId);
 

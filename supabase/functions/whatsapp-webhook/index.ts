@@ -536,16 +536,132 @@ Deno.serve(async (req: any) => {
                     const edgeAfterDelay = edges.find((e: any) => e.source === nextNode.id);
                     if (edgeAfterDelay) {
                       const targetNodeId = edgeAfterDelay.target;
-                      await supabase.from('automacoes_pendentes').insert({
-                        lead_id: leadId,
-                        loja_id: storeId,
-                        automacao_id: matchedAuto.id,
-                        node_id: targetNodeId,
-                        execute_at: executeAt
-                      });
-                      console.log(`[webhook] Delay de ${amount} ${unit}. Fluxo guardado na DB para continuar no nó ${targetNodeId}.`);
+                      try {
+                        await supabase.from('automacoes_pendentes').insert({
+                          lead_id: leadId,
+                          loja_id: storeId,
+                          automacao_id: matchedAuto.id,
+                          node_id: targetNodeId,
+                          execute_at: executeAt
+                        });
+                        console.log(`[webhook] Delay de ${amount} ${unit}. Fluxo guardado na DB para continuar no nó ${targetNodeId}.`);
+                      } catch (e) {
+                        console.warn('[webhook] Tabela automacoes_pendentes não encontrada. Delay ignorado.', e);
+                      }
                     }
                     break;
+                  }
+                  else if (nextNode.type === 'notifyNode') {
+                    // Notificar equipa — cria alerta no painel
+                    const alertMsg = nextNode.data?.label || 'Lead precisa de atenção!';
+                    await supabase.from('leads').update({ precisa_humano: true }).eq('id', leadId);
+                    await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: `[SISTEMA] 🔔 ${alertMsg}`, tipo: 'enviada', is_bot: true, loja_id: storeId });
+                    console.log(`[webhook] notifyNode: Alerta criado para lead ${leadId}`);
+                  }
+                  else if (nextNode.type === 'inputNode') {
+                    // Pedir input — envia a pergunta e para o fluxo (espera resposta na próxima mensagem)
+                    const question = nextNode.data?.label || '';
+                    const varName = nextNode.data?.variable || 'resposta';
+                    if (question) {
+                      await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
+                        body: JSON.stringify({ number: phone, text: question, options: { delay: 1500, presence: 'composing' } }),
+                      });
+                      await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: question, tipo: 'enviada', is_bot: true, loja_id: storeId });
+                      // Guardar estado de espera de input
+                      try {
+                        await supabase.from('leads').update({ interesse: `aguardando_input:${varName}` }).eq('id', leadId);
+                      } catch (e) {
+                        console.warn('[webhook] Não foi possível guardar estado de input:', e);
+                      }
+                    }
+                    break; // Para o fluxo — continua quando o cliente responder
+                  }
+                  else if (nextNode.type === 'randomizerNode') {
+                    // Teste A/B — divide aleatoriamente
+                    const splitA = parseInt(nextNode.data?.splitA || '50', 10);
+                    const usePathA = Math.random() * 100 < splitA;
+                    const edgeA = edges.find((e: any) => e.source === nextNode.id && String(e.sourceHandle).includes('a'));
+                    const edgeB = edges.find((e: any) => e.source === nextNode.id && String(e.sourceHandle).includes('b'));
+                    const targetEdge = usePathA ? edgeA : edgeB;
+                    // Fallback: pega qualquer edge disponível
+                    const fallbackEdge = targetEdge || edges.find((e: any) => e.source === nextNode.id);
+                    if (fallbackEdge) {
+                      nextNode = nodes.find((n: any) => n.id === fallbackEdge.target);
+                      console.log(`[webhook] randomizerNode: Caminho ${usePathA ? 'A' : 'B'} selecionado.`);
+                      continue;
+                    } else {
+                      nextNode = null;
+                      break;
+                    }
+                  }
+                  else if (nextNode.type === 'webhookNode') {
+                    // Integração HTTP
+                    const webhookUrl = nextNode.data?.url || '';
+                    const method = nextNode.data?.method || 'POST';
+                    if (webhookUrl) {
+                      try {
+                        const { data: leadPayload } = await supabase.from('leads').select('nome, telefone, tags, status, interesse').eq('id', leadId).single();
+                        const payload = {
+                          lead_id: leadId,
+                          store_id: storeId,
+                          phone,
+                          last_message: messageText,
+                          lead: leadPayload || {},
+                          timestamp: new Date().toISOString(),
+                        };
+                        const res = await fetch(webhookUrl, {
+                          method,
+                          headers: { 'Content-Type': 'application/json' },
+                          body: method === 'POST' ? JSON.stringify(payload) : undefined,
+                          signal: AbortSignal.timeout(8000),
+                        });
+                        console.log(`[webhook] webhookNode: ${method} ${webhookUrl} → ${res.status}`);
+                        // Roteamento: sucesso=2xx → source success, erro → source error
+                        const isOk = res.ok;
+                        const successEdge = edges.find((e: any) => e.source === nextNode.id && String(e.sourceHandle).includes('success'));
+                        const errorEdge = edges.find((e: any) => e.source === nextNode.id && String(e.sourceHandle).includes('error'));
+                        const fallbackEdge = (isOk ? successEdge : errorEdge) || edges.find((e: any) => e.source === nextNode.id);
+                        if (fallbackEdge) {
+                          nextNode = nodes.find((n: any) => n.id === fallbackEdge.target);
+                          continue;
+                        } else {
+                          nextNode = null;
+                          break;
+                        }
+                      } catch (e) {
+                        console.error('[webhook] webhookNode HTTP error:', e);
+                        const errorEdge = edges.find((e: any) => e.source === nextNode.id && String(e.sourceHandle).includes('error')) || edges.find((e: any) => e.source === nextNode.id);
+                        if (errorEdge) {
+                          nextNode = nodes.find((n: any) => n.id === errorEdge.target);
+                          continue;
+                        } else { nextNode = null; break; }
+                      }
+                    }
+                  }
+                  else if (nextNode.type === 'jumpNode') {
+                    // Saltar para outro fluxo
+                    const targetFlowName = String(nextNode.data?.flowName || '').trim().toLowerCase();
+                    if (targetFlowName) {
+                      const { data: targetFlow } = await supabase.from('automacoes').select('*').eq('loja_id', storeId).eq('ativo', true).ilike('nome', `%${targetFlowName}%`).maybeSingle();
+                      if (targetFlow && targetFlow.nodes) {
+                        const jumpTrigger = targetFlow.nodes.find((n: any) => n.type === 'triggerNode');
+                        if (jumpTrigger) {
+                          // Redireciona a execução para o fluxo de destino
+                          const jumpEdge = targetFlow.edges.find((e: any) => e.source === jumpTrigger.id);
+                          if (jumpEdge) {
+                            // Reinicia o loop com o novo fluxo
+                            nextNode = targetFlow.nodes.find((n: any) => n.id === jumpEdge.target);
+                            // Substitui nodes e edges para continuar no novo fluxo
+                            // (shallow redirect — continuação imediata)
+                            console.log(`[webhook] jumpNode: Redirecionando para fluxo "${targetFlow.nome}"`);
+                            continue;
+                          }
+                        }
+                      } else {
+                        console.warn(`[webhook] jumpNode: Fluxo "${targetFlowName}" não encontrado ou inativo.`);
+                      }
+                    }
                   }
                   
                   nextNode = getNextNode(nextNode.id);
@@ -556,23 +672,25 @@ Deno.serve(async (req: any) => {
           }
           // --------------------------------------------------------------------------------
 
+          // Só executa escalation se nenhuma automação foi executada
           if (!automationExecuted) {
-            if (escalation.reason === 'purchase_intent') await supabase.from('leads').update({ status: 'interessado' }).eq('id', leadId);
-
-          if (escalation.shouldEscalate && escalation.reason) {
-            await supabase.from('leads').update({ controle_conversa: 'humano', precisa_humano: true, bot_enabled: false }).eq('id', leadId);
-            const transitionMsg = ESCALATION_MESSAGES[escalation.reason] || 'Vou transferir para um atendente 😊';
-            await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
-              body: JSON.stringify({ number: phone, text: transitionMsg }),
-            });
-            await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: transitionMsg, tipo: 'enviada', is_bot: true, loja_id: storeId });
-            await notifyAdminEscalation(supabase, baseUrl, instanceName, EVOLUTION_API_KEY, storeId, leadName, textForEscalation, escalation.reason);
-          }
+            if (escalation.reason === 'purchase_intent') {
+              await supabase.from('leads').update({ status: 'interessado' }).eq('id', leadId);
+            }
+            if (escalation.shouldEscalate && escalation.reason) {
+              await supabase.from('leads').update({ controle_conversa: 'humano', precisa_humano: true, bot_enabled: false }).eq('id', leadId);
+              const transitionMsg = ESCALATION_MESSAGES[escalation.reason] || 'Vou transferir para um atendente 😊';
+              await fetch(`${baseUrl}/message/sendText/${instanceName}`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'apikey': EVOLUTION_API_KEY },
+                body: JSON.stringify({ number: phone, text: transitionMsg }),
+              });
+              await supabase.from('mensagens').insert({ lead_id: leadId, lead_nome: leadName, conteudo: transitionMsg, tipo: 'enviada', is_bot: true, loja_id: storeId });
+              await notifyAdminEscalation(supabase, baseUrl, instanceName, EVOLUTION_API_KEY, storeId, leadName, textForEscalation, escalation.reason);
+            }
           } // Fecho do if (!automationExecuted)
-        } // Fecho do if (hasContent)
-      } // Fecho principal do for-loop
-    } // Fecho principal do !fromMe
+        } // Fecho do if (storeData.bot_ativo)
+      } // Fecho do if (!fromMe && hasContent)
+    } // Fecho do if (eventNormalized === 'messages.upsert')
 
     if (eventNormalized === 'connection.update') {
       const state = body.data?.state || body.state;

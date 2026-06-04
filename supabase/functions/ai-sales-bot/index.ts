@@ -5,6 +5,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+// ============================================================
+// BOT OPENAI DESATIVADO
+// O sistema de automação nativo do ZapChat (Workflow Builder)
+// é agora a única fonte de respostas automáticas.
+// Este endpoint está desativado intencionalmente.
+// ============================================================
+
 const slugify = (text: string) => {
   return text
     .toString()
@@ -28,9 +35,18 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const now = new Date();
-  const todayLabel = now.toLocaleDateString('pt-PT', { weekday: 'long', year: 'numeric', month: 'long', day: '2-digit' });
-  const todayISO = now.toISOString().split('T')[0];
+  // BOT OPENAI DESATIVADO — retorna erro imediatamente
+  return new Response(JSON.stringify({
+    success: false,
+    disabled: true,
+    message: 'Bot OpenAI desativado. Use o Workflow Builder nativo do ZapChat para criar automações.',
+  }), {
+    status: 503,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+
+  // ⬇️ CÓDIGO LEGADO ABAIXO (MANTIDO PARA REFERÊNCIA, NÃO EXECUTA) ⬇️
+
 
   const SYSTEM_PROMPT = `DATA ATUAL: ${todayLabel} (${todayISO}).
 És o Assistente Virtual Inteligente do CRM da Loja. Atuas como um funcionário digital altamente profissional, combinando atendimento ao cliente, vendas, agendamento e suporte.
