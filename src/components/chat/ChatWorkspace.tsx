@@ -337,6 +337,18 @@ export default function ChatWorkspace({ leadId }: { leadId: string }) {
             <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-bold mt-0.5 opacity-70">{leadPhone}</p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={controleConversa === 'bot' ? assumeConversation : returnToBot}
+              className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${
+                controleConversa === 'bot' 
+                  ? 'bg-primary/10 text-primary hover:bg-primary/20' 
+                  : 'bg-orange-500/10 text-orange-600 hover:bg-orange-500/20'
+              }`}
+              title={controleConversa === 'bot' ? 'Transferir para Atendente' : 'Reativar Bot'}
+            >
+              {controleConversa === 'bot' ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
+              <span className="hidden sm:inline">{controleConversa === 'bot' ? 'Bot Ativo' : 'Em Atendimento'}</span>
+            </button>
             <button 
               onClick={() => setShowProfile(!showProfile)} 
               className={`p-2 rounded-xl transition-all ${showProfile ? 'bg-primary text-primary-foreground shadow-glow' : 'text-foreground hover:bg-secondary'}`}
