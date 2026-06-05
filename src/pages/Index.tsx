@@ -226,8 +226,8 @@ export default function Index() {
                 <Plus className="w-4 h-4" /> Novo Lead
               </button>
             </div>
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-              <table className="w-full text-left text-sm">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+              <table className="w-full text-left text-sm min-w-[900px]">
                 <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-medium">
                   <tr>
                     <th className="px-6 py-4">Nome do Contato</th>
