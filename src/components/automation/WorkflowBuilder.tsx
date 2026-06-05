@@ -283,6 +283,43 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
   const { screenToFlowPosition } = useReactFlow();
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [copiedNode, setCopiedNode] = useState<Node | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        document.activeElement?.tagName === 'INPUT' ||
+        document.activeElement?.tagName === 'TEXTAREA' ||
+        (document.activeElement as HTMLElement)?.isContentEditable
+      ) {
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+        if (selectedNode) {
+          setCopiedNode(selectedNode);
+          toast.success('Nó copiado!');
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+        if (copiedNode) {
+          const newNodeId = getId();
+          const newNode = {
+            ...copiedNode,
+            id: newNodeId,
+            position: {
+              x: copiedNode.position.x + 50,
+              y: copiedNode.position.y + 50,
+            },
+            selected: true,
+          };
+          setNodes((nds: any) => [...nds.map((n: any) => ({...n, selected: false})), newNode]);
+          setSelectedNode(newNode);
+          toast.success('Nó colado!');
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNode, copiedNode, setNodes]);
 
   const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -377,9 +414,60 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
         data: { label },
       };
 
+      const THRESHOLD = 40;
+      let interceptedEdge: Edge | null = null;
+
+      const distToSegment = (p: {x: number, y: number}, v: {x: number, y: number}, w: {x: number, y: number}) => {
+        const l2 = (w.x - v.x) ** 2 + (w.y - v.y) ** 2;
+        if (l2 === 0) return Math.hypot(p.x - v.x, p.y - v.y);
+        let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+        t = Math.max(0, Math.min(1, t));
+        return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
+      };
+
+      for (const edge of edges) {
+        const sourceNode = nodes.find((n: Node) => n.id === edge.source);
+        const targetNode = nodes.find((n: Node) => n.id === edge.target);
+        if (sourceNode && targetNode) {
+          const sourcePos = { 
+            x: sourceNode.position.x + (sourceNode.measured?.width || 200), 
+            y: sourceNode.position.y + (sourceNode.measured?.height || 100) / 2 
+          };
+          const targetPos = { 
+            x: targetNode.position.x, 
+            y: targetNode.position.y + (targetNode.measured?.height || 100) / 2 
+          };
+          
+          if (distToSegment(position, sourcePos, targetPos) < THRESHOLD) {
+            interceptedEdge = edge;
+            break;
+          }
+        }
+      }
+
       setNodes((nds: any) => nds.concat(newNode));
+
+      if (interceptedEdge) {
+        setEdges((eds: any) => {
+          const newEdges = eds.filter((e: any) => e.id !== interceptedEdge!.id);
+          newEdges.push({
+            id: `e_${interceptedEdge!.source}_${newNode.id}`,
+            source: interceptedEdge!.source,
+            sourceHandle: interceptedEdge!.sourceHandle,
+            target: newNode.id,
+          });
+          newEdges.push({
+            id: `e_${newNode.id}_${interceptedEdge!.target}`,
+            source: newNode.id,
+            target: interceptedEdge!.target,
+            targetHandle: interceptedEdge!.targetHandle,
+          });
+          return newEdges;
+        });
+        toast.success('Nó inserido na ligação!');
+      }
     },
-    [screenToFlowPosition, setNodes]
+    [screenToFlowPosition, setNodes, setEdges, edges, nodes]
   );
 
   const onNodeClick = useCallback((_: React.MouseEvent, node: any) => {
