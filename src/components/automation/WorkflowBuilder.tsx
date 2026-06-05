@@ -583,12 +583,12 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
                     value={(selectedNode.data.amount as string) || '1'}
                     onChange={(e) => {
                       updateNodeData('amount', e.target.value);
-                      updateNodeLabel(`Atraso: ${e.target.value} ${(selectedNode.data.unit as string) || 'min'}`);
+                      updateNodeLabel(`Atraso: ${e.target.value} ${(selectedNode.data.unit as string) || 'minutos'}`);
                     }}
                   />
                   <select
                     className="flex-1 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
-                    value={(selectedNode.data.unit as string) || 'min'}
+                    value={(selectedNode.data.unit as string) || 'minutos'}
                     onChange={(e) => {
                       updateNodeData('unit', e.target.value);
                       updateNodeLabel(`Atraso: ${(selectedNode.data.amount as string) || '1'} ${e.target.value}`);
