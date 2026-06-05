@@ -231,7 +231,8 @@ Deno.serve(async (req) => {
             try {
               await supabase.from('automacoes_pendentes').insert({
                 lead_id: lead.id, loja_id: store.id, automacao_id: auto.id,
-                node_id: nextNode.id, status: 'waiting_input', execute_at: new Date('2099-12-31').toISOString(),
+                node_id: nextNode.id, status: 'waiting_input', 
+                execute_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h timeout
               });
             } catch (e) {
               console.warn('[worker] Erro ao guardar estado de input:', e);
@@ -241,8 +242,13 @@ Deno.serve(async (req) => {
         }
         // ── stopNode ─────────────────────────────────────────────────────────
         else if (nextNode.type === 'stopNode') {
-          console.log(`[worker] stopNode atingido. Transferindo para humano.`);
-          await supabase.from('leads').update({ controle_conversa: 'humano' }).eq('id', lead.id);
+          const stopMode = nextNode.data?.stopMode || 'stop_flow';
+          if (stopMode === 'transfer_human') {
+            console.log(`[worker] stopNode: Transferindo para humano.`);
+            await supabase.from('leads').update({ controle_conversa: 'humano', precisa_humano: true }).eq('id', lead.id);
+          } else {
+            console.log(`[worker] stopNode: Parando automação.`);
+          }
           break;
         }
         // ── timerNode ────────────────────────────────────────────────────────

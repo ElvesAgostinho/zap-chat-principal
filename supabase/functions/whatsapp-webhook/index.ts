@@ -658,7 +658,8 @@ Deno.serve(async (req: any) => {
                   try {
                     await supabase.from('automacoes_pendentes').insert({
                       lead_id: leadId, loja_id: storeId, automacao_id: matchedAuto.id,
-                      node_id: nextNode.id, status: 'waiting_input', execute_at: new Date('2099-12-31').toISOString()
+                      node_id: nextNode.id, status: 'waiting_input',
+                      execute_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24h timeout
                     });
                   } catch (e) {
                     console.warn('[webhook] Não foi possível guardar estado de input:', e);
@@ -668,8 +669,13 @@ Deno.serve(async (req: any) => {
               }
               // ── stopNode ─────────────────────────────────────────────────────
               else if (nextNode.type === 'stopNode') {
-                console.log(`[webhook] stopNode atingido. Transferindo para humano.`);
-                await supabase.from('leads').update({ controle_conversa: 'humano' }).eq('id', leadId);
+                const stopMode = nextNode.data?.stopMode || 'stop_flow';
+                if (stopMode === 'transfer_human') {
+                  console.log(`[webhook] stopNode: Transferindo para humano.`);
+                  await supabase.from('leads').update({ controle_conversa: 'humano', precisa_humano: true }).eq('id', leadId);
+                } else {
+                  console.log(`[webhook] stopNode: Parando automação.`);
+                }
                 break;
               }
               // ── timerNode ────────────────────────────────────────────────────

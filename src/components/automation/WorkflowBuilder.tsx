@@ -556,6 +556,24 @@ function FlowArea({ nodes, edges, setNodes, setEdges, onNodesChange, onEdgesChan
 
           <div className="space-y-4">
             
+            {/* STOP SPECIFIC */}
+            {selectedNode.type === 'stopNode' && (
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Comportamento ao Parar</label>
+                <select
+                  className="w-full border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  value={(selectedNode.data.stopMode as string) || 'stop_flow'}
+                  onChange={(e) => {
+                    updateNodeData('stopMode', e.target.value);
+                    updateNodeLabel(e.target.value === 'transfer_human' ? 'Transferir para Humano' : 'Terminar Automação');
+                  }}
+                >
+                  <option value="stop_flow">🛑 Parar Fluxo (Bot continua)</option>
+                  <option value="transfer_human">👤 Transferir para Humano</option>
+                </select>
+              </div>
+            )}
+
             {/* COMMON LABEL */}
             {!['delayNode', 'randomizerNode', 'webhookNode', 'jumpNode', 'stopNode', 'timerNode', 'triggerNode'].includes(selectedNode.type) && (
               <div>
