@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Store, Wifi, WifiOff, Users, Trash2, Loader2, Copy, CheckCircle, UserCheck, XCircle, KeyRound, Code, ShieldCheck, QrCode } from 'lucide-react';
+import { Plus, Store, Wifi, WifiOff, Users, Trash2, Loader2, Copy, CheckCircle, UserCheck, XCircle, KeyRound, Code, ShieldCheck, QrCode, UserPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -34,6 +34,7 @@ export default function AdminPanel() {
   const [copied, setCopied] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [showQrModal, setShowQrModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'geral' | 'api'>('geral');
   const [connectingInProcess, setConnectingInProcess] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -318,7 +319,12 @@ export default function AdminPanel() {
 
           {/* Approved Employees */}
           <div className="space-y-3">
-            <h2 className="text-metadata"><Users className="w-3.5 h-3.5 inline mr-1" />{approvedEmployees.length} membro(s) aprovado(s)</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-metadata"><Users className="w-3.5 h-3.5 inline mr-1" />{approvedEmployees.length} membro(s) aprovado(s)</h2>
+              <button onClick={() => setShowInviteModal(true)} className="px-3 py-1.5 rounded-lg bg-primary/10 text-primary text-xs font-bold hover:bg-primary/20 transition-colors flex items-center gap-1.5">
+                <Plus className="w-3 h-3" /> Convidar Membro
+              </button>
+            </div>
             {approvedEmployees.map(emp => (
               <div key={emp.id} className="bg-card p-3 rounded-2xl shadow-card flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center"><Users className="w-4 h-4 text-primary" /></div>
@@ -359,6 +365,39 @@ export default function AdminPanel() {
           </div>
           <div className="flex justify-center mt-4">
             <button onClick={() => setShowQrModal(false)} className="text-xs font-bold text-muted-foreground hover:text-foreground transition-colors">Cancelar Operação</button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite Modal */}
+      <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
+        <DialogContent className="sm:max-w-md bg-card border-border rounded-[2rem] p-8 shadow-elevated">
+          <DialogHeader className="flex flex-col items-center text-center">
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+              <UserPlus className="w-8 h-8 text-primary" />
+            </div>
+            <DialogTitle className="text-2xl font-black text-foreground uppercase tracking-tight">Convidar Equipa</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground mt-2 font-medium">
+              Para adicionar funcionários ao seu atendimento, copie a mensagem abaixo e envie para eles pelo WhatsApp.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="bg-secondary/50 p-4 rounded-2xl border border-border mt-4 text-sm text-foreground relative group">
+            <p className="whitespace-pre-wrap">Olá! Para acederes ao sistema de atendimento da nossa loja, clica neste link e escolhe a opção "Sou Funcionário":{'\n\n'}🔗 https://zapchat.com/signup{'\n\n'}Quando pedir o Código da Loja, insere: *{loja?.codigo_unico}*</p>
+            <button 
+              onClick={() => {
+                const text = `Olá! Para acederes ao sistema de atendimento da nossa loja, clica neste link e escolhe a opção "Sou Funcionário":\n\n🔗 https://zapchat.com/signup\n\nQuando pedir o Código da Loja, insere: *${loja?.codigo_unico}*`;
+                navigator.clipboard.writeText(text);
+                toast({ title: 'Convite copiado!' });
+              }}
+              className="absolute top-2 right-2 p-2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-border/50 opacity-0 group-hover:opacity-100 transition-opacity"
+            >
+              <Copy className="w-4 h-4 text-primary" />
+            </button>
+          </div>
+          
+          <div className="flex justify-center mt-6">
+            <button onClick={() => setShowInviteModal(false)} className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-bold shadow-sm">Entendido</button>
           </div>
         </DialogContent>
       </Dialog>

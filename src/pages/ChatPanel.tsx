@@ -321,6 +321,24 @@ export default function ChatPanel() {
             <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-bold mt-0.5 opacity-70">{leadPhone}</p>
           </div>
           <div className="flex items-center gap-2">
+            {agents.length > 0 && (
+              <select
+                value={atendenteId || 'none'}
+                onChange={(e) => {
+                   const val = e.target.value === 'none' ? null : e.target.value;
+                   setAtendenteId(val);
+                   (supabase as any).from('leads').update({ atendente_id: val }).eq('id', leadId).then(() => {
+                     fetchTimeline();
+                     toast.success('Atendente alterado!');
+                   });
+                }}
+                className="hidden sm:block bg-secondary text-foreground text-[11px] font-black uppercase tracking-wider px-3 py-2 rounded-xl outline-none border border-border/50 focus:ring-2 focus:ring-primary/20 cursor-pointer max-w-[140px] truncate"
+                title="Atribuir Atendente"
+              >
+                <option value="none">👤 Atribuir...</option>
+                {agents.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
+              </select>
+            )}
             <button
               onClick={controleConversa === 'bot' ? assumeConversation : returnToBot}
               className={`flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${
